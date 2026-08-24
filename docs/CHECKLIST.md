@@ -4,8 +4,8 @@ Updated as stages/roles complete. A checkbox moves only after its gate passes.
 
 ## Stages
 
-- [ ] Stage 0 — Project foundation (structure, env, logging, validation, errors, auth skeleton, tenant context, DB connection, health, both frontends boot)
-- [ ] Stage 1 — Database & domain model
+- [x] Stage 0 — Project foundation (structure, env, logging, validation, errors, auth skeleton, tenant context, DB connection, health, both frontends boot)
+- [x] Stage 1 — Database & domain model
 - [ ] Stage 2 — Multi-tenancy, authentication, security (isolation verified)
 - [ ] Stage 3 — Platform Owner Portal complete A→Z
 - [ ] Stage 4 — Company creation & branding/theme variables
@@ -29,8 +29,8 @@ A migration counts as done only when applied to BOTH databases and its quality g
 - [x] 0007_payments (virtual_accounts, payments, allocations, reversals, webhook_exceptions, pipeline_jobs, savings)
 - [x] 0008_finance (gl_accounts, journal entries/lines, receipts, reconciliation_items, immutability)
 - [x] 0009_comms_audit (notifications, full-field audit_logs)
-- [ ] 0010_rls (FORCE RLS, tenant+branch policies, grants, security-definer VA resolver)
-- [ ] Stage 1 model/security/isolation tests green
+- [x] 0010_rls (FORCE RLS, tenant+branch policies, grants, security-definer VA resolver)
+- [x] Stage 1 model/security/isolation tests green (20/20: model 8, isolation 6, auth 4, health 2)
 
 ## Roles (implement one-by-one; mark each sub-item when that role's gate passes)
 
