@@ -28,7 +28,7 @@ A migration counts as done only when applied to BOTH databases and its quality g
 - [x] 0006_lending (loan_products, approval chains/steps, applications, documents, credit assessments, loans, repayment_schedule_rows)
 - [x] 0007_payments (virtual_accounts, payments, allocations, reversals, webhook_exceptions, pipeline_jobs, savings)
 - [x] 0008_finance (gl_accounts, journal entries/lines, receipts, reconciliation_items, immutability)
-- [ ] 0009_comms_audit (notifications, full-field audit_logs)
+- [x] 0009_comms_audit (notifications, full-field audit_logs)
 - [ ] 0010_rls (FORCE RLS, tenant+branch policies, grants, security-definer VA resolver)
 - [ ] Stage 1 model/security/isolation tests green
 
