@@ -16,6 +16,8 @@ export interface PrincipalPayload {
   companyId: string;
   branchId?: string | null;
   roles: PrincipalRoleRef[];
+  /** must-change-password: session limited until first credential change. */
+  mcp?: boolean;
 }
 
 const TOKEN_OPTIONS: jwt.VerifyOptions = { algorithms: ["HS256"] };
@@ -48,6 +50,19 @@ export function attachPrincipal(req: Request, _res: Response, next: NextFunction
 export function requireAuth(req: Request, _res: Response, next: NextFunction): void {
   if (!req.principal) {
     next(AppError.unauthorized());
+    return;
+  }
+  next();
+}
+
+/** Blocks token holders who have not completed their first password change. */
+export function requireCompleteSession(req: Request, _res: Response, next: NextFunction): void {
+  if (!req.principal) {
+    next(AppError.unauthorized());
+    return;
+  }
+  if (req.principal.mcp === true) {
+    next(new AppError(403, "MUST_CHANGE_PASSWORD", "Change your password to continue"));
     return;
   }
   next();

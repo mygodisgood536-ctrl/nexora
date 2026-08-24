@@ -1,8 +1,13 @@
+import bcrypt from "bcryptjs";
 import pg from "pg";
 
 const TEST_URL = process.env.DATABASE_URL ?? "postgres://nexora:nexora@localhost:5432/nexora_test";
 export const ADMIN_URL =
   process.env.ADMIN_DATABASE_URL ?? "postgres://postgres:nexora-dev@localhost:5432/postgres";
+
+/** Shared known password for seeded login-enabled users. */
+export const SEED_PASSWORD = "TestPassword!123";
+const SEED_HASH = bcrypt.hashSync(SEED_PASSWORD, 8);
 
 type uuid = string;
 
@@ -75,6 +80,13 @@ async function loadWorld(db: pg.Client): Promise<TestWorld> {
   const customerB1 = await one(`SELECT id FROM customers WHERE company_id=$1 AND customer_code='CUST-0001'`, [companyB]);
   const vaA1 = await one(`SELECT id FROM virtual_accounts WHERE company_id=$1 AND account_number='1000000001'`, [companyA]);
   const loanA1 = await one(`SELECT id FROM loans WHERE company_id=$1 LIMIT 1`, [companyA]);
+  // Stage 2 entities are part of the world's completeness contract.
+  await one(
+    `SELECT ra.id FROM role_assignments ra
+      JOIN roles r ON r.id = ra.role_id
+     WHERE ra.user_id=$1 AND r.role_key='collection_officer' LIMIT 1`,
+    [userA]
+  );
 
   return { companyA, companyB, branchA1, branchA2, branchB1, userA, userB, customerA1, customerA2, customerB1, vaA1, loanA1 };
 }
@@ -118,6 +130,86 @@ export async function seedWorld(): Promise<TestWorld> {
            FROM companies co
           WHERE co.id = c.company_id AND co.slug = 'alpha-test'`
       );
+      // Reset Stage 2 lifecycle mutations: credentials, flags, sessions.
+      await db.query(
+        `UPDATE users u SET password_hash=$1, must_change_password=false,
+                temp_password_expires_at=NULL, status='active'
+           FROM companies c
+          WHERE c.id=u.company_id AND c.slug IN ('alpha-test','beta-test')
+            AND u.username IN ('alice','bob')`,
+        [SEED_HASH]
+      );
+
+      // Restore canonical Stage 2 assignments (tests end/mutate them).
+      const idOf = async (sql: string, params: unknown[]): Promise<uuid> => {
+        const row = (await db.query<{ id: uuid }>(sql, params)).rows[0];
+        if (!row) throw new Error(`fixture reset: missing row for ${sql}`);
+        return row.id;
+      };
+      const companyA = await idOf(`SELECT id FROM companies WHERE slug='alpha-test'`, []);
+      const companyB = await idOf(`SELECT id FROM companies WHERE slug='beta-test'`, []);
+      const branchA1 = await idOf(`SELECT id FROM branches WHERE company_id=$1 AND code='ALP-001'`, [companyA]);
+      const userA = await idOf(`SELECT id FROM users WHERE company_id=$1 AND username='alice'`, [companyA]);
+      const userB = await idOf(`SELECT id FROM users WHERE company_id=$1 AND username='bob'`, [companyB]);
+      const coRole = await idOf(`SELECT id FROM roles WHERE company_id=$1 AND role_key='collection_officer'`, [companyA]);
+      const bmRole = await idOf(`SELECT id FROM roles WHERE company_id=$1 AND role_key='branch_manager'`, [companyA]);
+      const mdRole = await idOf(`SELECT id FROM roles WHERE company_id=$1 AND role_key='md'`, [companyB]);
+
+      await db.query(
+        `DELETE FROM role_assignments ra USING users u, companies c
+          WHERE ra.user_id=u.id AND c.id=u.company_id AND c.slug IN ('alpha-test','beta-test')`
+      );
+      const day = 24 * 60 * 60 * 1000;
+      const coId = (
+        await db.query(
+          `INSERT INTO role_assignments (company_id,user_id,role_id,scope_type,assignment_type,starts_at,status,assigned_by)
+           VALUES ($1,$2,$3,'single_branch','permanent', now() - interval '10 days','active',$2) RETURNING id`,
+          [companyA, userA, coRole]
+        )
+      ).rows[0]!.id;
+      const bmId = (
+        await db.query(
+          `INSERT INTO role_assignments (company_id,user_id,role_id,scope_type,assignment_type,starts_at,ends_at,status,assigned_by)
+           VALUES ($1,$2,$3,'single_branch','temporary', $4, $5,'active',$2) RETURNING id`,
+          [companyA, userA, bmRole, new Date(Date.now() - day), new Date(Date.now() + day)]
+        )
+      ).rows[0]!.id;
+      await db.query(
+        `INSERT INTO role_assignments (company_id,user_id,role_id,scope_type,assignment_type,starts_at,status,assigned_by)
+         VALUES ($1,$2,$3,'company_wide','permanent', now(),'active',$2)`,
+        [companyB, userB, mdRole]
+      );
+      await db.query(`INSERT INTO role_assignment_branches VALUES ($1,$2),($3,$4)`, [
+        coId,
+        branchA1,
+        bmId,
+        branchA1
+      ]);
+
+      // tempuser: expired temporary credential, restored or recreated.
+      const tempReset = await db.query(
+        `UPDATE users u SET password_hash=$1, must_change_password=true,
+                temp_password_expires_at = now() - interval '1 hour', status='active'
+           FROM companies c
+          WHERE c.id=u.company_id AND c.slug='alpha-test' AND u.username='tempuser'`,
+        [SEED_HASH]
+      );
+      if (tempReset.rowCount === 0) {
+        const branchA1b = await idOf(`SELECT id FROM branches WHERE company_id=$1 AND code='ALP-001'`, [companyA]);
+        await db.query(
+          `INSERT INTO users (company_id, branch_id, worker_code, username, password_hash,
+                              first_name, last_name, birth_day, birth_month, status,
+                              must_change_password, temp_password_expires_at)
+           VALUES ($1,$2,'W003','tempuser',$3,'Temp','User',1,1,'active',true,
+                   now() - interval '1 hour')`,
+          [companyA, branchA1b, SEED_HASH]
+        );
+      }
+      await db.query(
+        `DELETE FROM refresh_tokens rt USING users u, companies c
+          WHERE rt.user_id=u.id AND c.id=u.company_id
+            AND c.slug IN ('alpha-test','beta-test')`
+      );
     }
 
     await db.query("COMMIT");
@@ -154,12 +246,27 @@ async function insertWorld(db: pg.Client): Promise<TestWorld> {
     const branchA2 = await branch(companyA, "ALP-002", "knj", "Kano");
     const branchB1 = await branch(companyB, "BTA-001", "los", "Lagos");
 
-    const user = async (c: uuid, b: uuid | null, code: string, uname: string): Promise<uuid> =>
+    const user = async (
+      c: uuid,
+      b: uuid | null,
+      code: string,
+      uname: string,
+      opts: { mustChange?: boolean; tempExpiresPast?: boolean } = {}
+    ): Promise<uuid> =>
       (await db.query(
         `INSERT INTO users (company_id, branch_id, worker_code, username, password_hash,
-                            first_name, last_name, birth_day, birth_month, status, must_change_password)
-         VALUES ($1,$2,$3,$4,'x','Test','Worker',1,1,'active',false) RETURNING id`,
-        [c, b, code, uname]
+                            first_name, last_name, birth_day, birth_month, status,
+                            must_change_password, temp_password_expires_at)
+         VALUES ($1,$2,$3,$4,$5,'Test','Worker',1,1,'active',$6,$7) RETURNING id`,
+        [
+          c,
+          b,
+          code,
+          uname,
+          SEED_HASH,
+          opts.mustChange ?? false,
+          opts.tempExpiresPast ? new Date(Date.now() - 60 * 60 * 1000) : null
+        ]
       )).rows[0].id;
 
     const userA = await user(companyA, branchA1, "W001", "alice");
@@ -170,6 +277,69 @@ async function insertWorld(db: pg.Client): Promise<TestWorld> {
        VALUES ($1,'md','MD','executive',true) RETURNING id`,
       [companyA]
     )).rows[0].id as uuid;
+
+    // --- Stage 2 auth fixtures: roles, permission bundles, assignments ---
+    const role = async (c: uuid, key: string, name: string, category: string): Promise<uuid> =>
+      (await db.query(
+        `INSERT INTO roles (company_id, role_key, name, category, is_system)
+         VALUES ($1,$2,$3,$4,true) RETURNING id`,
+        [c, key, name, category]
+      )).rows[0].id;
+
+    const coRoleA = await role(companyA, "collection_officer", "Collection Officer", "operations_field");
+    const bmRoleA = await role(companyA, "branch_manager", "Branch Manager", "operations_field");
+    const mdRoleB = await role(companyB, "md", "MD", "executive");
+
+    const grant = async (roleId: uuid, verbs: string[]): Promise<void> => {
+      for (const verb of verbs) {
+        await db.query(`INSERT INTO role_permissions (role_id, verb) VALUES ($1,$2)`, [roleId, verb]);
+      }
+    };
+    await grant(coRoleA, ["view", "create", "export"]);
+    await grant(bmRoleA, ["view", "approve", "assign", "suspend", "edit"]);
+    await db.query(
+      `INSERT INTO role_permissions (role_id, verb) SELECT $1, verb FROM permission_verbs`,
+      [mdRoleB]
+    );
+    await db.query(
+      `INSERT INTO role_permissions (role_id, verb) SELECT $1, verb FROM permission_verbs`,
+      [mdRoleA]
+    );
+
+    const assignment = async (
+      c: uuid,
+      u: uuid,
+      roleId: uuid,
+      scopeType: string,
+      opts: { type?: string; starts?: Date; ends?: Date | null } = {}
+    ): Promise<uuid> =>
+      (await db.query(
+        `INSERT INTO role_assignments (company_id, user_id, role_id, scope_type,
+                                       assignment_type, starts_at, ends_at, status, assigned_by)
+         VALUES ($1,$2,$3,$4,$5, COALESCE($6, now()), $7, 'active', $2) RETURNING id`,
+        [c, u, roleId, scopeType, opts.type ?? "permanent", opts.starts ?? null, opts.ends ?? null]
+      )).rows[0].id;
+
+    const day = 24 * 60 * 60 * 1000;
+    const aliceCo = await assignment(companyA, userA, coRoleA, "single_branch");
+    const aliceBm = await assignment(companyA, userA, bmRoleA, "single_branch", {
+      type: "temporary",
+      starts: new Date(Date.now() - day),
+      ends: new Date(Date.now() + day)
+    });
+    await db.query(`INSERT INTO role_assignment_branches VALUES ($1,$2), ($3,$4)`, [
+      aliceCo,
+      branchA1,
+      aliceBm,
+      branchA1
+    ]);
+    await assignment(companyB, userB, mdRoleB, "company_wide");
+
+    // Expired temporary-password user for the login lifecycle test.
+    await user(companyA, branchA1, "W003", "tempuser", {
+      mustChange: true,
+      tempExpiresPast: true
+    });
 
     const chainA = (await db.query(
       `INSERT INTO approval_chains (company_id, name) VALUES ($1,'default') RETURNING id`,

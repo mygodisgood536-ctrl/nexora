@@ -11,6 +11,7 @@ import { notFoundHandler } from "./middleware/not-found";
 import { healthRouter } from "./routes/health";
 import { whoamiRouter } from "./routes/whoami";
 import { platformRouter } from "./routes/platform";
+import { authRouter } from "./modules/auth/routes";
 
 export function createApp(): express.Express {
   const app = express();
@@ -39,6 +40,7 @@ export function createApp(): express.Express {
   const api = express.Router();
   api.use(healthRouter);
   api.use(whoamiRouter);
+  api.use("/auth", authRouter);
   app.use("/api/v1", api);
 
   const platformApi = express.Router();

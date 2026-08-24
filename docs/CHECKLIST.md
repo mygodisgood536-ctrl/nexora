@@ -6,7 +6,7 @@ Updated as stages/roles complete. A checkbox moves only after its gate passes.
 
 - [x] Stage 0 — Project foundation (structure, env, logging, validation, errors, auth skeleton, tenant context, DB connection, health, both frontends boot)
 - [x] Stage 1 — Database & domain model
-- [ ] Stage 2 — Multi-tenancy, authentication, security (isolation verified)
+- [x] Stage 2 — Multi-tenancy, authentication, security (isolation verified)
 - [ ] Stage 3 — Platform Owner Portal complete A→Z
 - [ ] Stage 4 — Company creation & branding/theme variables
 - [ ] Stage 5 — Branch system (codes, URLs, drill-down)
@@ -31,6 +31,27 @@ A migration counts as done only when applied to BOTH databases and its quality g
 - [x] 0009_comms_audit (notifications, full-field audit_logs)
 - [x] 0010_rls (FORCE RLS, tenant+branch policies, grants, security-definer VA resolver)
 - [x] Stage 1 model/security/isolation tests green (20/20: model 8, isolation 6, auth 4, health 2)
+
+### Stage 2 progress
+
+Gate: auth + sessions + passwords + permission merge + scope resolution +
+isolation behavior, all tested.
+
+- [x] Migration 0011_auth_access (companies/refresh_tokens bypass-aware
+      policies; role-engine join-table grants)
+- [x] Permission merge engine in shared (union over active assignments,
+      temporary windows, scope coverage, no-downgrade rule) — unit-tested
+- [x] Login resolving company (+branch) from portal host BEFORE credentials;
+      uniform credential errors; suspended/terminated rejection
+- [x] bcrypt credentials; expired temporary-password distinct error code
+- [x] Forced first-login change (mcp claim) gating full-session routes;
+      change-password clears flag, rotates all refresh tokens
+- [x] JWT access tokens (HS256, 15m) + rotating httpOnly refresh cookies
+      (7d, sha256-at-rest); replay of rotated tokens rejected; logout revokes
+- [x] /auth/me re-resolves the live principal (assignment changes apply
+      without re-login)
+- [x] Fail-closed withTenant repo base; audited withBypass path
+- [x] Isolation verified by the Stage 1 RLS suite (cross-company/cross-branch)
 
 ## Roles (implement one-by-one; mark each sub-item when that role's gate passes)
 
