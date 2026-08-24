@@ -23,6 +23,18 @@ export enum AssignmentType {
   Temporary = "temporary"
 }
 
+export enum CustomerStatus {
+  VaPending = "va_pending",
+  Active = "active",
+  Suspended = "suspended",
+  Closed = "closed"
+}
+
+export enum GroupStatus {
+  Active = "active",
+  Closed = "closed"
+}
+
 export enum VirtualAccountStatus {
   Pending = "pending",
   Active = "active",

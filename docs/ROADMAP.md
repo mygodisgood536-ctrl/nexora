@@ -222,3 +222,23 @@ The 11 Custom Role templates (Finance Officer, HR Assistant, Administrative Offi
 Officer, Credit Analyst, Assistant Account Officer, Field Officer, Operations Officer, Portfolio
 Manager, Treasury Officer, Data/Reporting Analyst) ship as cloneable templates per the preserved
 catalogue decision — not as pre-built dashboards.
+
+---
+
+## 12. Implementation Log
+
+Chronological record of verified milestones. A milestone is logged only after its quality gate
+(typecheck + lint + tests + database verification against both `nexora_dev` and `nexora_test`)
+passes and the work is committed.
+
+| Milestone | Contents | Gate | Commit |
+|---|---|---|---|
+| baseline | Stage 0 foundation + migration runner + 0001_platform / 0002_tenants / 0003_branches / 0004_rbac (pre-existing OpenCode work, committed as-is) | initial commit | `8376b8d` |
+| 0005_customers | `customers` (one branch per Part 1 §5; status starts `va_pending` per §22 onboarding rule; KYC documents jsonb + `kyc_complete`; unique `(company_id, customer_code)`), `groups` (branch-level, no financial columns, Part 2 §27), `group_members` (composite PK); indexes + update triggers; `CustomerStatus`/`GroupStatus` added to shared domain enums; lint fix: CLI console statement scoped in migrate.ts | typecheck ✓ lint ✓ tests 6/6 ✓ both DBs verified ✓ | (this commit) |
+
+Virtual Account note (v2.1): the physical `virtual_accounts` table arrives with `0007_payments`
+(FK → `customers`, so ordering 0005 < 0007 is correct). The onboarding *behavior* required by
+Part 1 §22 — VA issued immediately at customer creation, never gated on loan approval, disbursement
+blocked while `va_pending` — is carried by `customers.status` from 0005 onward and will be enforced
+by the customers module + RLS resolver function in later milestones.
+

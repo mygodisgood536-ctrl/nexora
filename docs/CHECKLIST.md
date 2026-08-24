@@ -15,6 +15,23 @@ Updated as stages/roles complete. A checkbox moves only after its gate passes.
 - [ ] Stage 40 — Customer Portal
 - [ ] Stage 41 — Final verification vs all four specs
 
+### Stage 1 progress
+
+A migration counts as done only when applied to BOTH databases and its quality gate passes.
+
+- [x] Migration runner (`db/migrate.ts`, transactional, `_migrations` ledger) — pre-existing
+- [x] 0001_platform — pre-existing
+- [x] 0002_tenants — pre-existing
+- [x] 0003_branches — pre-existing
+- [x] 0004_rbac — pre-existing
+- [x] 0005_customers (customers / groups / group_members + shared domain enums)
+- [ ] 0006_lending (loan_products, approval chains/steps, applications, documents, credit assessments, loans, repayment_schedule_rows)
+- [ ] 0007_payments (virtual_accounts, payments, allocations, reversals, webhook_exceptions, pipeline_jobs, savings)
+- [ ] 0008_finance (gl_accounts, journal entries/lines, receipts, reconciliation_items, immutability)
+- [ ] 0009_comms_audit (notifications, full-field audit_logs)
+- [ ] 0010_rls (FORCE RLS, tenant+branch policies, grants, security-definer VA resolver)
+- [ ] Stage 1 model/security/isolation tests green
+
 ## Roles (implement one-by-one; mark each sub-item when that role's gate passes)
 
 Gate per role: A–Z implemented · permissions · scope · UI · dashboard · responsive (desktop/tablet/mobile) · workflows · audit behavior · performance visibility · regression green.

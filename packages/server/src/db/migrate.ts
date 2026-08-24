@@ -67,6 +67,7 @@ if (invokedDirectly) {
   const runtimeUrl = process.env.DATABASE_URL ?? "postgres://nexora:nexora@localhost:5432/nexora_dev";
   runMigrations(adminUrlFor(runtimeUrl))
     .then((executed) => {
+      // eslint-disable-next-line no-console -- CLI entry point
       console.log(executed.length ? `applied ${executed.length} migration(s)` : "already up to date");
       process.exit(0);
     })
