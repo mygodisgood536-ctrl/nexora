@@ -1,0 +1,31 @@
+{
+  "name": "nexora",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Nexora - multi-tenant microfinance operating system (SRS v2.1)",
+  "workspaces": [
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "npm run dev --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "lint": "eslint .",
+    "db:start": "powershell -ExecutionPolicy Bypass -File scripts/start-postgres.ps1",
+    "db:stop": "powershell -ExecutionPolicy Bypass -File scripts/stop-postgres.ps1",
+    "db:provision": "node packages/server/scripts/provision-db.mjs"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "eslint": "^9.30.0",
+    "typescript": "^5.8.0",
+    "typescript-eslint": "^8.35.0"
+  },
+  "allowScripts": {
+    "esbuild@0.28.2": true,
+    "esbuild@0.25.12": true
+  }
+}

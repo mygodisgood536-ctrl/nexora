@@ -1,0 +1,34 @@
+@import "tailwindcss";
+@import "@fontsource/poppins/400.css";
+@import "@fontsource/poppins/500.css";
+@import "@fontsource/poppins/600.css";
+@import "@fontsource/poppins/700.css";
+
+:root {
+  --nx-color-primary: #2547e0;
+  --nx-color-primary-strong: #1d38b8;
+  --nx-color-secondary: #ffffff;
+  --nx-color-navy: #0b1f4b;
+  --nx-color-accent: #f59e0b;
+  --nx-color-bg: #f5f7fb;
+  --nx-color-surface: #ffffff;
+  --nx-color-text: #12224a;
+  --nx-color-text-muted: #5a687f;
+  --nx-color-danger: #dc2626;
+  --nx-color-success: #16a34a;
+  --nx-radius-card: 14px;
+  --nx-shadow-card: 0 8px 24px rgba(11, 31, 75, 0.08);
+  --nx-font-family: "Poppins", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--nx-font-family);
+  background-color: var(--nx-color-bg);
+  color: var(--nx-color-text);
+}
