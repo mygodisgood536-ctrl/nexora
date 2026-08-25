@@ -8,10 +8,10 @@ import { requestContext } from "./middleware/request-context";
 import { attachPrincipal } from "./middleware/auth";
 import { errorHandler } from "./middleware/error-handler";
 import { notFoundHandler } from "./middleware/not-found";
-import { healthRouter } from "./routes/health";
 import { whoamiRouter } from "./routes/whoami";
-import { platformRouter } from "./routes/platform";
+import { platformRouter } from "./modules/platform/routes";
 import { authRouter } from "./modules/auth/routes";
+import { healthRouter } from "./routes/health";
 
 export function createApp(): express.Express {
   const app = express();
