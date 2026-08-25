@@ -1,0 +1,63 @@
+{
+  // Nexora development workflow (see docs/PREVIEW.md).
+  // "Nexora: Dev Servers" starts API + both Vite portals as ONE supervised
+  // stack; open either portal URL in VS Code's built-in Simple Browser and
+  // dock the tab on the left for a live side-by-side preview.
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Nexora: Dev Servers (API + Portals)",
+      "type": "shell",
+      "command": "node",
+      "args": ["scripts/dev-all.mjs"],
+      "options": { "cwd": "${workspaceFolder}" },
+      "isBackground": true,
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "group": "nexora-dev",
+        "clear": true
+      },
+      "runOptions": { "revealProblems": "onProblem" }
+    },
+    {
+      "label": "Nexora: Company Portal only (Vite :5173)",
+      "type": "shell",
+      "command": "npm",
+      "args": ["run", "dev"],
+      "options": { "cwd": "${workspaceFolder}/packages/web" },
+      "isBackground": true,
+      "problemMatcher": [],
+      "presentation": { "reveal": "always", "panel": "dedicated", "group": "nexora-web" }
+    },
+    {
+      "label": "Nexora: Platform Portal only (Vite :5174)",
+      "type": "shell",
+      "command": "npm",
+      "args": ["run", "dev"],
+      "options": { "cwd": "${workspaceFolder}/packages/platform-web" },
+      "isBackground": true,
+      "problemMatcher": [],
+      "presentation": { "reveal": "always", "panel": "dedicated", "group": "nexora-platform" }
+    },
+    {
+      "label": "Nexora: API only (:4000)",
+      "type": "shell",
+      "command": "npm",
+      "args": ["run", "dev"],
+      "options": { "cwd": "${workspaceFolder}/packages/server" },
+      "isBackground": true,
+      "problemMatcher": [],
+      "presentation": { "reveal": "always", "panel": "dedicated", "group": "nexora-api" }
+    },
+    {
+      "label": "Nexora: Full gate (typecheck + lint + tests)",
+      "type": "shell",
+      "command": "npm",
+      "args": ["run", "typecheck"],
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": []
+    }
+  ]
+}
