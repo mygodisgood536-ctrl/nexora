@@ -11,6 +11,7 @@ import { notFoundHandler } from "./middleware/not-found";
 import { whoamiRouter } from "./routes/whoami";
 import { platformRouter } from "./modules/platform/routes";
 import { authRouter } from "./modules/auth/routes";
+import { themeRouter } from "./modules/branding/routes";
 import { healthRouter } from "./routes/health";
 
 export function createApp(): express.Express {
@@ -39,6 +40,7 @@ export function createApp(): express.Express {
 
   const api = express.Router();
   api.use(healthRouter);
+  api.use(themeRouter); // public pre-auth branding (Part 1 §26)
   api.use(whoamiRouter);
   api.use("/auth", authRouter);
   app.use("/api/v1", api);

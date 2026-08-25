@@ -6,6 +6,7 @@ import { withTenantSession } from "../../db/pool";
 import { withBypass } from "../../db/repo";
 import { AppError } from "../../lib/errors";
 import { verifyTotp } from "../../lib/totp";
+import { BUILT_IN_ROLES } from "@nexora/shared";
 
 const PO_JWT_SECRET = env.JWT_SECRET + "|po";
 
@@ -211,7 +212,22 @@ function slugify(name: string): string {
 
 export async function createCompany(
   poEmail: string,
-  input: { name: string; contactEmail?: string; planTier?: string; codePrefix: string }
+  input: {
+    name: string;
+    contactEmail?: string;
+    planTier?: string;
+    codePrefix: string;
+    branding?: {
+      primaryColor?: string;
+      secondaryColor?: string;
+      accentColor?: string;
+      navyColor?: string;
+      logoUrl?: string | null;
+      loginBackgroundUrl?: string | null;
+      fontFamily?: string;
+    };
+    enabledRoleKeys?: string[];
+  }
 ): Promise<{ id: string; slug: string; code_prefix: string }> {
   return withBypass(async (db) => {
     const prefix = input.codePrefix.toUpperCase();
@@ -235,6 +251,7 @@ export async function createCompany(
     const companyId = rows[0]!.id;
 
     await db.query(`INSERT INTO themes (company_id) VALUES ($1)`, [companyId]);
+    await applyThemeUpdate(db, companyId, input.branding ?? {});
     await db.query(`INSERT INTO company_settings (company_id) VALUES ($1)`, [companyId]);
     await db.query(
       `INSERT INTO company_counters (company_id, counter_key, next_value)
@@ -246,6 +263,9 @@ export async function createCompany(
        SELECT $1, role_key, true FROM platform_role_catalogue`,
       [companyId]
     );
+    if (input.enabledRoleKeys !== undefined) {
+      await replaceEnabledRoles(db, companyId, input.enabledRoleKeys);
+    }
     await audit(
       db,
       poEmail,
@@ -258,6 +278,153 @@ export async function createCompany(
       companyId
     );
     return { id: companyId, slug, code_prefix: prefix };
+  });
+}
+
+const HEX_RE = /^#[0-9a-fA-F]{6}$/;
+
+/** Applies a partial brand-token update inside the caller's bypass txn. */
+async function applyThemeUpdate(
+  db: PoolClientLike,
+  companyId: string,
+  patch: {
+    primaryColor?: string;
+    secondaryColor?: string;
+    accentColor?: string;
+    navyColor?: string;
+    logoUrl?: string | null;
+    loginBackgroundUrl?: string | null;
+    fontFamily?: string;
+  }
+): Promise<void> {
+  const colors: Array<[string, string | undefined]> = [
+    ["primary_color", patch.primaryColor],
+    ["secondary_color", patch.secondaryColor],
+    ["accent_color", patch.accentColor],
+    ["navy_color", patch.navyColor]
+  ];
+  for (const [column, value] of colors) {
+    if (value === undefined) continue;
+    if (!HEX_RE.test(value)) throw AppError.unprocessable(`${column} must be #RRGGBB`);
+    await db.query(`UPDATE themes SET ${column}=$2, updated_at=now() WHERE company_id=$1`, [
+      companyId,
+      value
+    ]);
+  }
+  const urls: Array<[string, string | null | undefined]> = [
+    ["logo_url", patch.logoUrl],
+    ["login_background_url", patch.loginBackgroundUrl]
+  ];
+  for (const [column, value] of urls) {
+    if (value === undefined) continue;
+    if (value !== null && !/^(https:\/\/|\/)/.test(value)) {
+      throw AppError.unprocessable(`${column} must be an https:// or root-relative URL`);
+    }
+    await db.query(`UPDATE themes SET ${column}=$2, updated_at=now() WHERE company_id=$1`, [
+      companyId,
+      value
+    ]);
+  }
+  if (patch.fontFamily !== undefined) {
+    if (!/^[A-Za-z0-9 _-]{2,60}$/.test(patch.fontFamily)) {
+      throw AppError.unprocessable("fontFamily must be 2-60 letters/digits/spaces");
+    }
+    await db.query(`UPDATE themes SET font_family=$2, updated_at=now() WHERE company_id=$1`, [
+      companyId,
+      patch.fontFamily
+    ]);
+  }
+}
+
+function assertKnownRoleKeys(keys: string[]): void {
+  if (keys.length === 0) throw AppError.unprocessable("At least one role must stay enabled");
+  const known = new Set(BUILT_IN_ROLES.map((r) => r.key));
+  for (const key of keys) {
+    if (!known.has(key)) throw AppError.unprocessable(`Unknown role key: ${key}`);
+  }
+}
+
+async function replaceEnabledRoles(
+  db: PoolClientLike,
+  companyId: string,
+  keys: string[]
+): Promise<void> {
+  assertKnownRoleKeys(keys);
+  const unique = [...new Set(keys)];
+  await db.query(`DELETE FROM company_enabled_roles WHERE company_id=$1`, [companyId]);
+  for (const key of unique) {
+    await db.query(
+      `INSERT INTO company_enabled_roles (company_id, role_key, enabled) VALUES ($1,$2,true)`,
+      [companyId, key]
+    );
+  }
+}
+
+export async function getCompanyTheme(companyId: string): Promise<unknown> {
+  return withBypass(async (db) => {
+    const { rows } = await db.query(
+      `SELECT t.*, c.name AS company_name FROM themes t
+         JOIN companies c ON c.id=t.company_id WHERE t.company_id=$1`,
+      [companyId]
+    );
+    if (rows.length === 0) throw AppError.notFound("Company not found");
+    return rows[0];
+  });
+}
+
+export async function updateCompanyTheme(
+  poEmail: string,
+  companyId: string,
+  patch: Parameters<typeof applyThemeUpdate>[2]
+): Promise<unknown> {
+  return withBypass(async (db) => {
+    const before = await db.query(`SELECT * FROM themes WHERE company_id=$1`, [companyId]);
+    if (before.rowCount === 0) throw AppError.notFound("Company not found");
+    await applyThemeUpdate(db, companyId, patch);
+    const after = await db.query(`SELECT * FROM themes WHERE company_id=$1`, [companyId]);
+    await audit(db, poEmail, "updated", "themes", companyId, before.rows[0], after.rows[0], undefined, companyId);
+    return after.rows[0];
+  });
+}
+
+export async function listEnabledRoles(companyId: string): Promise<unknown> {
+  return withBypass(async (db) => {
+    const { rows } = await db.query(
+      `SELECT role_key FROM company_enabled_roles
+        WHERE company_id=$1 AND enabled ORDER BY role_key`,
+      [companyId]
+    );
+    return rows.map((r) => r.role_key);
+  });
+}
+
+export async function setEnabledRoles(
+  poEmail: string,
+  companyId: string,
+  keys: string[]
+): Promise<{ enabled: string[] }> {
+  return withBypass(async (db) => {
+    const company = await db.query(`SELECT id FROM companies WHERE id=$1`, [companyId]);
+    if (company.rowCount === 0) throw AppError.notFound("Company not found");
+    const before = await db.query(
+      `SELECT role_key FROM company_enabled_roles WHERE company_id=$1 AND enabled ORDER BY role_key`,
+      [companyId]
+    );
+    await replaceEnabledRoles(db, companyId, keys);
+    // Disabling a role never touches existing assignments (Part 2 §48) — it
+    // only hides the role from future pickers; nothing cascades by design.
+    await audit(
+      db,
+      poEmail,
+      "enabled_roles_changed",
+      "companies",
+      companyId,
+      { enabled: before.rows.map((r) => r.role_key) },
+      { enabled: [...new Set(keys)].sort() },
+      undefined,
+      companyId
+    );
+    return { enabled: [...new Set(keys)].sort() };
   });
 }
 

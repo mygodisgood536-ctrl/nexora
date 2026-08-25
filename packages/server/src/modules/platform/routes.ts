@@ -7,9 +7,11 @@ import {
   companySummary,
   createAnnouncement,
   createCompany,
+  getCompanyTheme,
   getGlobalSettings,
   listAnnouncements,
   listCompanies,
+  listEnabledRoles,
   listPlatformAudit,
   listSupportSessions,
   openSupportSession,
@@ -19,6 +21,8 @@ import {
   putGlobalSetting,
   setAnnouncementStatus,
   setCompanyStatus,
+  setEnabledRoles,
+  updateCompanyTheme,
   verifyPoToken
 } from "./service";
 
@@ -113,11 +117,28 @@ platformRouter.get("/me", authed(async (po, _req, res) => {
   res.json({ ownerId: po.sub, email: po.email });
 }));
 
+const hexColor = z.string().regex(/^#[0-9a-fA-F]{6}$/, "must be #RRGGBB");
+const urlish = z.string().max(500).regex(/^(https:\/\/|\/)/, "must be https:// or root-relative");
+
+const brandingSchema = z
+  .object({
+    primaryColor: hexColor.optional(),
+    secondaryColor: hexColor.optional(),
+    accentColor: hexColor.optional(),
+    navyColor: hexColor.optional(),
+    logoUrl: urlish.nullable().optional(),
+    loginBackgroundUrl: urlish.nullable().optional(),
+    fontFamily: z.string().regex(/^[A-Za-z0-9 _-]{2,60}$/).optional()
+  })
+  .strict();
+
 const companySchema = z.object({
   name: z.string().min(2).max(100),
   codePrefix: z.string().regex(/^[A-Za-z]{3,6}$/),
   contactEmail: z.string().email().optional(),
-  planTier: z.string().max(40).optional()
+  planTier: z.string().max(40).optional(),
+  branding: brandingSchema.optional(),
+  enabledRoleKeys: z.array(z.string()).optional()
 });
 
 platformRouter.get("/companies", authed(async (_po, _req, res) => {
@@ -224,4 +245,41 @@ platformRouter.get("/audit", authed(async (_po, req, res) => {
   void _po;
   const limit = Number(req.query.limit ?? 100);
   res.json(await listPlatformAudit(Number.isFinite(limit) ? limit : 100));
+}));
+
+// ---------- branding & enabled roles (Part 1 §26; PO Spec §8/§9/§10) ----------
+
+const uuidParam = (req: Request): string => {
+  const id = String(req.params.id);
+  if (!UUID_RE.test(id)) throw AppError.badRequest("Invalid company id");
+  return id;
+};
+
+platformRouter.get("/companies/:id/theme", authed(async (_po, req, res) => {
+  void _po;
+  res.json(await getCompanyTheme(uuidParam(req)));
+}));
+
+platformRouter.put("/companies/:id/theme", authed(async (po, req, res) => {
+  const parsed = brandingSchema.safeParse(req.body ?? {});
+  if (!parsed.success) {
+    throw new AppError(422, "VALIDATION_ERROR", "Validation failed",
+      parsed.error.issues.map((i) => ({ path: i.path.join("."), message: i.message })));
+  }
+  const row = await updateCompanyTheme(po.email, uuidParam(req), parsed.data);
+  res.json(row);
+}));
+
+platformRouter.get("/companies/:id/enabled-roles", authed(async (_po, req, res) => {
+  void _po;
+  res.json(await listEnabledRoles(uuidParam(req)));
+}));
+
+const enabledRolesSchema = z.object({ enabledRoleKeys: z.array(z.string().min(1)).max(32) });
+
+platformRouter.put("/companies/:id/enabled-roles", authed(async (po, req, res) => {
+  const parsed = enabledRolesSchema.safeParse(req.body ?? {});
+  if (!parsed.success) throw AppError.unprocessable("Validation failed");
+  const result = await setEnabledRoles(po.email, uuidParam(req), parsed.data.enabledRoleKeys);
+  res.json(result);
 }));

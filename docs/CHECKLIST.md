@@ -8,7 +8,7 @@ Updated as stages/roles complete. A checkbox moves only after its gate passes.
 - [x] Stage 1 — Database & domain model
 - [x] Stage 2 — Multi-tenancy, authentication, security (isolation verified)
 - [x] Stage 3 — Platform Owner Portal complete A→Z
-- [ ] Stage 4 — Company creation & branding/theme variables
+- [x] Stage 4 — Company creation & branding/theme variables
 - [ ] Stage 5 — Branch system (codes, URLs, drill-down)
 - [ ] Stage 6 — Staff/users & role architecture (multiple roles, temporary roles, custom roles)
 - [ ] Stage 7 — Core engines (Performance Engine, payment pipeline + exceptions, allocation, ledger, accounting, reconciliation, notifications, audit, reports infra)
@@ -89,6 +89,45 @@ tested against both databases.
 - [x] Tests: stage3 suite 6/6 (TOTP+lockout, prefix dedup+scaffolding, audited
       status walk, settings audit, drill-down gating, unauthenticated 401
       sweep) — **39/39 total green** (34 server + 5 shared)
+
+### Stage 4 progress
+
+Gate: wizard completion with live branding preview, theme tokens end-to-end
+via --nx-* CSS variables only (zero hard-coded hex), enabled-role catalogue,
+validation, isolation by host, two-brand render proof.
+
+- [x] shared/theme.ts: THEME_VAR_MAP (themes columns → --nx-* vars),
+      #RRGGBB grammar, themeRowToCssVars w/ font-fallback stack and
+      skip-null fallback semantics; unit-tested in shared package
+- [x] Wizard step 1–2–4 complete (PO Spec §9): Profile → Branding (color
+      pickers + hex inputs, logo/login-background URLs, font family, Reset
+      to Nexora defaults, LIVE preview rendering login+dashboard miniatures
+      through the same custom-property mechanism) → Review & Confirm
+      (read-only summary, explicit confirmation checkbox gating Create);
+      enabled-role selection included at creation
+- [x] Branding persisted per company: PUT /platform/v1/companies/:id/theme
+      validates tokens (strict schema; service-side re-checks), writes
+      themes row, audits `themes.updated` with before/after values
+- [x] Enabled roles config: GET/PUT /companies/:id/enabled-roles; replace-all
+      transaction; keys validated against the 32 built-ins; ≥1 enforced;
+      disabling never touches existing assignments (Part 2 §48); audited
+      `enabled_roles_changed`
+- [x] createCompany accepts branding + enabledRoleKeys applied in the same
+      provisioning txn as scaffolding seeds
+- [x] Public pre-auth GET /api/v1/theme resolves the portal host via the
+      slug grammar and returns that company's CSS-var token map — login
+      screens render tenant identity; unknown host fails closed 404
+- [x] web main.tsx applies the resolved tokens to document root BEFORE first
+      paint (1.5s bounded); stylesheet Nexora defaults remain the fallback
+- [x] Platform portal UI: per-company Branding panel (edit tokens, enabled
+      roles, reset, live preview)
+- [x] Structural guard test: no hex literals in packages/web/src components
+- [x] Two-brand render proof at the API layer: alpha vs beta hosts receive
+      different token maps from the same endpoint/tree
+- [x] Deferred (documented): wizard seed-HOA-admin account creation lands in
+      the workers-lifecycle stage where full users A–Z exists
+- [x] Tests: stage4 suite 5/5 + shared theme 5/5 — **49/49 total green**
+      (server 39 + shared 10)
 
 ## Roles (implement one-by-one; mark each sub-item when that role's gate passes)
 

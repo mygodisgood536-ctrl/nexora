@@ -4,3 +4,4 @@ export * from "./permissions";
 export * from "./domain";
 export * from "./api";
 export * from "./auth";
+export * from "./theme";

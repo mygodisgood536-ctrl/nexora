@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
+import { BrandingPanel } from "./BrandingPanel";
+import { CreateWizard } from "./CreateWizard";
 
 type Json = Record<string, unknown>;
 
@@ -44,7 +46,7 @@ export default function Portal() {
   });
   const [summary, setSummary] = useState<Json | null>(null);
   const [draft, setDraft] = useState({ title: "", body: "", severity: "info" });
-  const [form, setForm] = useState({ name: "", codePrefix: "", contactEmail: "", planTier: "" });
+  const [brandingId, setBrandingId] = useState<string | null>(null);
 
   const authed: Authed = useCallback(
     (path, init = {}) => api(path, { ...init, token }),
@@ -139,15 +141,7 @@ export default function Portal() {
 
       {view === "companies" && (
         <section className="mt-6 space-y-4">
-          <div className={card}>
-            <div className="grid gap-2 md:grid-cols-5">
-              <input placeholder="Name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className={inp} />
-              <input placeholder="Prefix (ABC)" value={form.codePrefix} onChange={(e) => setForm({ ...form, codePrefix: e.target.value.toUpperCase() })} className={inp} />
-              <input placeholder="Contact email" value={form.contactEmail} onChange={(e) => setForm({ ...form, contactEmail: e.target.value })} className={inp} />
-              <input placeholder="Plan tier" value={form.planTier} onChange={(e) => setForm({ ...form, planTier: e.target.value })} className={inp} />
-              <button onClick={() => act("/companies", form)} className="rounded bg-[var(--nxp-color-primary)] p-2">Create</button>
-            </div>
-          </div>
+          <CreateWizard authed={authed} onCreated={() => void loadAll()} onError={(m) => setError(m)} />
           <table className="w-full text-sm"><tbody>
             {data.companies.map((c) => (
               <tr key={String(c.id)} className="border-b border-[var(--nxp-color-surface-raised)]">
@@ -161,6 +155,9 @@ export default function Portal() {
                     <button className="underline" onClick={() => { const r = window.prompt("Suspension reason"); if (r) void act(`/companies/${c.id}/status`, { action: "suspend", reason: r }); }}>Suspend</button>}
                   {c.status === "suspended" &&
                     <button className="underline" onClick={() => act(`/companies/${c.id}/status`, { action: "reactivate" })}>Reactivate</button>}
+                  <button className="underline" onClick={() => setBrandingId(brandingId === c.id ? null : (typeof c.id === "string" ? c.id : null))}>
+                    Branding{brandingId === c.id ? " ▲" : ""}
+                  </button>
                   <button className="underline" onClick={() => { const r = window.prompt("Support reason (10+ chars)"); if (typeof c.id === "string" && r) void act("/support-access", { companyId: c.id, reason: r, durationMinutes: 30 }); }}>Support</button>
                   <button className="underline" onClick={async () => {
                     const open = data.sessions.find((s) => s.company_name === c.name && s.is_open);
@@ -174,6 +171,9 @@ export default function Portal() {
               </tr>
             ))}
           </tbody></table>
+          {brandingId && (
+            <BrandingPanel authed={authed} companyId={brandingId} onError={(m) => setError(m)} />
+          )}
         </section>
       )}
 
