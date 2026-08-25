@@ -7,7 +7,7 @@ Updated as stages/roles complete. A checkbox moves only after its gate passes.
 - [x] Stage 0 — Project foundation (structure, env, logging, validation, errors, auth skeleton, tenant context, DB connection, health, both frontends boot)
 - [x] Stage 1 — Database & domain model
 - [x] Stage 2 — Multi-tenancy, authentication, security (isolation verified)
-- [ ] Stage 3 — Platform Owner Portal complete A→Z
+- [x] Stage 3 — Platform Owner Portal complete A→Z
 - [ ] Stage 4 — Company creation & branding/theme variables
 - [ ] Stage 5 — Branch system (codes, URLs, drill-down)
 - [ ] Stage 6 — Staff/users & role architecture (multiple roles, temporary roles, custom roles)
@@ -52,6 +52,43 @@ isolation behavior, all tested.
       without re-login)
 - [x] Fail-closed withTenant repo base; audited withBypass path
 - [x] Isolation verified by the Stage 1 RLS suite (cross-company/cross-branch)
+
+### Stage 3 progress
+
+Gate: PO auth (password + mandatory TOTP + lockout), company lifecycle
+(create/scaffold/status machine), settings, announcements, time-bound support
+access with aggregate-only drill-down, platform audit trail, portal UI — all
+tested against both databases.
+
+- [x] Migration 0012_platform_auth applied to BOTH databases: refresh_tokens
+      nullable `company_id`/`user_id` + `platform_owner_id` + exactly-one-
+      principal CHECK; PO grants on all platform tables; bypass-aware policies
+      on refresh_tokens/themes/company_settings/company_counters/
+      company_enabled_roles/support_access_sessions
+- [x] RFC 6238 TOTP verification (`lib/totp.ts`) +
+      `bootstrap-platform-owner.mjs` seeding the owner account
+- [x] PO login on `/platform/v1`: password step (uniform 401s) → TOTP step
+      (`TOTP_REQUIRED`); configurable lockout threshold read from
+      global_settings security_policy with self-reset after the window;
+      dedicated PO JWT (`typ:"po"`) + rotating httpOnly refresh cookie scoped
+      to `/platform/v1`; logout revocation
+- [x] Company creation wizard backend: letters-only code prefix (route schema
+      + DB CHECK), platform-wide dedup → 409 on collision, slug derivation,
+      scaffolding seeds (theme defaults, counters, enabled roles), audited
+      `companies.created` with company linkage
+- [x] Status transition machine: invalid transition → 409, suspend without
+      reason → 422; every change audited with previous/new values
+- [x] Global settings get/edit with before/after audit entries
+- [x] Announcements create/list
+- [x] Support access sessions: reason + TTL, open/close lifecycle; aggregate
+      drill-down summary fails closed (403) without an open session id
+- [x] `/platform/v1/audit` feed (actor/action/company/before/after/reason)
+- [x] Portal UI (`packages/platform-web`): adaptive TOTP login, companies view
+      with create form + status actions, settings, announcements, support
+      drill-down, audit views; router mounted in `app.ts`
+- [x] Tests: stage3 suite 6/6 (TOTP+lockout, prefix dedup+scaffolding, audited
+      status walk, settings audit, drill-down gating, unauthenticated 401
+      sweep) — **39/39 total green** (34 server + 5 shared)
 
 ## Roles (implement one-by-one; mark each sub-item when that role's gate passes)
 

@@ -68,6 +68,11 @@ const loginSchema = z.object({
   totp: z.string().optional()
 });
 
+platformRouter.get("/healthz", wrap(async (_req, res) => {
+  void _req;
+  res.status(200).json({ status: "ok", service: "nexora-platform-api" });
+}));
+
 platformRouter.post("/auth/login", wrap(async (req, res) => {
   const parsed = loginSchema.safeParse(req.body);
   if (!parsed.success) throw AppError.unprocessable("Validation failed");
@@ -122,7 +127,10 @@ platformRouter.get("/companies", authed(async (_po, _req, res) => {
 
 platformRouter.post("/companies", authed(async (po, req, res) => {
   const parsed = companySchema.safeParse(req.body);
-  if (!parsed.success) throw AppError.unprocessable("Validation failed");
+  if (!parsed.success) {
+    throw new AppError(422, "VALIDATION_ERROR", "Validation failed",
+      parsed.error.issues.map((i) => ({ path: i.path.join("."), message: i.message })));
+  }
   res.status(201).json(await createCompany(po.email, parsed.data));
 }));
 
@@ -163,8 +171,12 @@ platformRouter.post("/announcements", authed(async (po, req, res) => {
   res.status(201).json(await createAnnouncement(po.email, parsed.data));
 }));
 
-platformRouter.post("/announcements/:id/:status(active|expired)", authed(async (po, req, res) => {
-  await setAnnouncementStatus(po.email, String(req.params.id), req.params.status as "active" | "expired");
+platformRouter.post("/announcements/:id/:status", authed(async (po, req, res) => {
+  const status = req.params.status;
+  if (status !== "active" && status !== "expired") {
+    throw AppError.badRequest("Status must be active or expired");
+  }
+  await setAnnouncementStatus(po.email, String(req.params.id), status);
   res.status(204).end();
 }));
 
@@ -192,9 +204,20 @@ platformRouter.post("/support-access/:id/close", authed(async (po, req, res) => 
 }));
 
 // Aggregate-only drill-down; requires an OPEN support session for the company.
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 platformRouter.get("/companies/:id/summary", authed(async (po, req, res) => {
   const sessionId = (req.query.sessionId as string | undefined) ?? "";
-  res.json(await companySummary(po.email, sessionId, String(req.params.id)));
+  const companyId = String(req.params.id);
+  if (!UUID_RE.test(sessionId) || !UUID_RE.test(companyId)) {
+    // Malformed ids can never match an open session: fail closed with the
+    // same envelope as a missing session rather than a 500.
+    res.status(403).json({
+      error: { code: "SUPPORT_SESSION_REQUIRED", message: "No open support access session" }
+    });
+    return;
+  }
+  res.json(await companySummary(po.email, sessionId, companyId));
 }));
 
 platformRouter.get("/audit", authed(async (_po, req, res) => {

@@ -2,12 +2,16 @@ import bcrypt from "bcryptjs";
 import crypto from "node:crypto";
 import jwt from "jsonwebtoken";
 import { env } from "../../config/env";
-import { pool, withTenantSession } from "../../db/pool";
+import { withTenantSession } from "../../db/pool";
 import { withBypass } from "../../db/repo";
 import { AppError } from "../../lib/errors";
 import { verifyTotp } from "../../lib/totp";
 
 const PO_JWT_SECRET = env.JWT_SECRET + "|po";
+
+type PoolClientLike = {
+  query: (sql: string, params?: unknown[]) => Promise<{ rows: Record<string, unknown>[]; rowCount: number | null }>;
+};
 
 export interface PoClaims {
   sub: string;
@@ -42,8 +46,6 @@ async function lockoutThreshold(db: PoolClientLike): Promise<number> {
   const value = (r.rows[0] as { value?: { po_lockout_threshold?: number } } | undefined)?.value;
   return value?.po_lockout_threshold ?? 5;
 }
-
-type PoolClientLike = { query: (sql: string, params?: unknown[]) => Promise<any> };
 
 export interface PoSession {
   accessToken: string;
@@ -244,11 +246,17 @@ export async function createCompany(
        SELECT $1, role_key, true FROM platform_role_catalogue`,
       [companyId]
     );
-    await audit(db, poEmail, "created", "companies", companyId, null, {
-      name: input.name,
-      code_prefix: prefix,
-      slug
-    });
+    await audit(
+      db,
+      poEmail,
+      "created",
+      "companies",
+      companyId,
+      null,
+      { name: input.name, code_prefix: prefix, slug },
+      undefined,
+      companyId
+    );
     return { id: companyId, slug, code_prefix: prefix };
   });
 }
@@ -269,7 +277,6 @@ export async function setCompanyStatus(
   return withBypass(async (db) => {
     const t = TRANSITIONS[action];
     if (!t) throw AppError.badRequest("Unknown status action");
-    if (t.needsReason && !reason) throw AppError.unprocessable("Reason is required");
 
     const found = await db.query<{ id: string; status: string }>(
       `SELECT id, status FROM companies WHERE id=$1`,
@@ -280,6 +287,7 @@ export async function setCompanyStatus(
     if (!t.from.includes(before)) {
       throw new AppError(409, "INVALID_TRANSITION", `Cannot ${action} from ${before}`);
     }
+    if (t.needsReason && !reason) throw AppError.unprocessable("Reason is required");
 
     const sets =
       t.to === "active"
@@ -320,18 +328,6 @@ export async function listCompanies(): Promise<unknown[]> {
 }
 
 // ---------- support access (PO Spec §39/§40) ----------
-
-async function requireOpenSession(sessionId: string, companyId: string): Promise<void> {
-  const ok = await withBypass(async (db) => {
-    const r = await db.query(
-      `SELECT 1 FROM support_access_sessions
-        WHERE id=$1 AND company_id=$2 AND closed_at IS NULL AND expires_at > now()`,
-      [sessionId, companyId]
-    );
-    return r.rowCount === 1;
-  });
-  if (!ok) throw new AppError(403, "SUPPORT_SESSION_REQUIRED", "No open support access session");
-}
 
 export async function openSupportSession(
   poEmail: string,
