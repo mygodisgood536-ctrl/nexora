@@ -494,6 +494,22 @@ export async function listCompanies(): Promise<unknown[]> {
   });
 }
 
+/**
+ * Branches Overview tab (PO Spec §8): structural/administrative fields ONLY —
+ * names, codes, portal URLs, lifecycle status. No financial or performance
+ * figures exist on branches, and none may ever be added here (§40 boundary).
+ */
+export async function listCompanyBranches(companyId: string): Promise<unknown[]> {
+  return withBypass(async (db) => {
+    const { rows } = await db.query(
+      `SELECT id, code, slug, name, status, portal_url, created_at, closed_at
+         FROM branches WHERE company_id=$1 ORDER BY created_at ASC`,
+      [companyId]
+    );
+    return rows;
+  });
+}
+
 // ---------- support access (PO Spec §39/§40) ----------
 
 export async function openSupportSession(

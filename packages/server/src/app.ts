@@ -12,6 +12,7 @@ import { whoamiRouter } from "./routes/whoami";
 import { platformRouter } from "./modules/platform/routes";
 import { authRouter } from "./modules/auth/routes";
 import { themeRouter } from "./modules/branding/routes";
+import { branchesRouter } from "./modules/branches/routes";
 import { healthRouter } from "./routes/health";
 
 export function createApp(): express.Express {
@@ -43,6 +44,7 @@ export function createApp(): express.Express {
   api.use(themeRouter); // public pre-auth branding (Part 1 §26)
   api.use(whoamiRouter);
   api.use("/auth", authRouter);
+  api.use("/branches", branchesRouter); // branch lifecycle (Part 1 §7–9)
   app.use("/api/v1", api);
 
   const platformApi = express.Router();

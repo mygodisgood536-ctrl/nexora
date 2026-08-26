@@ -25,6 +25,15 @@ describe("stage 4 — company branding & theme variables", () => {
     const token = await poLogin(app);
     const companyId = await alphaCompanyId();
 
+    // Pin a known previous state first: the dev database persists across runs,
+    // so without this the audit's before-value could legitimately already be
+    // #123456 from an earlier run (non-idempotent flake).
+    const reset = await request(app)
+      .put(`/platform/v1/companies/${companyId}/theme`)
+      .set("Authorization", `Bearer ${token}`)
+      .send({ primaryColor: "#0000ff" });
+    expect(reset.status).toBe(200);
+
     const put = await request(app)
       .put(`/platform/v1/companies/${companyId}/theme`)
       .set("Authorization", `Bearer ${token}`)
@@ -41,7 +50,7 @@ describe("stage 4 — company branding & theme variables", () => {
         [companyId]
       );
       expect(row.rowCount).toBe(1);
-      expect(row.rows[0].previous_value.primary_color).not.toBe("#123456");
+      expect(row.rows[0].previous_value.primary_color).toBe("#0000ff");
       expect(row.rows[0].new_value.primary_color).toBe("#123456");
     });
 

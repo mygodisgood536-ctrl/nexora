@@ -9,7 +9,7 @@ Updated as stages/roles complete. A checkbox moves only after its gate passes.
 - [x] Stage 2 — Multi-tenancy, authentication, security (isolation verified)
 - [x] Stage 3 — Platform Owner Portal complete A→Z
 - [x] Stage 4 — Company creation & branding/theme variables
-- [ ] Stage 5 — Branch system (codes, URLs, drill-down)
+- [x] Stage 5 — Branch system (codes, URLs, drill-down)
 - [ ] Stage 6 — Staff/users & role architecture (multiple roles, temporary roles, custom roles)
 - [ ] Stage 7 — Core engines (Performance Engine, payment pipeline + exceptions, allocation, ledger, accounting, reconciliation, notifications, audit, reports infra)
 - [ ] Stage 40 — Customer Portal
@@ -128,6 +128,33 @@ validation, isolation by host, two-brand render proof.
       the workers-lifecycle stage where full users A–Z exists
 - [x] Tests: stage4 suite 5/5 + shared theme 5/5 — **49/49 total green**
       (server 39 + shared 10)
+
+### Stage 5 progress
+
+Gate: race-proof deterministic branch codes, per-company slugs + portal URLs,
+lifecycle state machine, tenant isolation, Platform-Owner structural-only
+drill-down — all tested.
+
+- [x] Migration 0013_branch_rls_bypass applied to BOTH databases: branches
+      policy mirrors the companies pattern (audited bypass flag OR own-company
+      match) so the PO drill-down reads through the bypass path instead of the
+      plain tenant policy failing closed to zero rows
+- [x] POST /api/v1/branches — `{PREFIX}-{SEQ}` codes allocated under a
+      per-company pg_advisory_xact_lock + atomic company_counters upsert:
+      gap-free, distinct, never reused (closed branches included); unique
+      per-company slugs (`name`, `name-2`, …); portal URL
+      `{company}-{branch}.nexora.app`; creation audited
+- [x] POST /api/v1/branches/:id/status — suspend/reactivate/close machine:
+      invalid transition 409 before missing-reason 422; close requires a
+      reason, is terminal (sets closed_at), codes stay monotonic afterwards;
+      every change audited previous/new under SELECT … FOR UPDATE
+- [x] GET /api/v1/branches RLS-scoped to the caller's company; cross-company
+      writes fail closed
+- [x] GET /platform/v1/companies/:id/branches — structural fields ONLY
+      (PO Spec §40 aggregate boundary enforced by response shape); 401 unauthed
+- [x] Platform portal UI: per-company Branches overview panel (BranchesPanel)
+- [x] Tests: stage5 suite 4/4 incl. an 8-way concurrent creation race —
+      **53/53 total green** (server 43 + shared 10)
 
 ## Roles (implement one-by-one; mark each sub-item when that role's gate passes)
 

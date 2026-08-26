@@ -69,6 +69,24 @@ export async function poLogin(app: Express): Promise<string> {
   return res.body.accessToken as string;
 }
 
+/** Staff login against a portal host; returns the access token. */
+export async function staffLogin(
+  app: Express,
+  host: string,
+  username: string,
+  password: string = "TestPassword!123"
+): Promise<{ token: string; mustChangePassword: boolean }> {
+  const res = await request(app)
+    .post("/api/v1/auth/login")
+    .set("Host", host)
+    .send({ username, password });
+  expect(res.status).toBe(200);
+  return {
+    token: res.body.accessToken as string,
+    mustChangePassword: res.body.mustChangePassword === true
+  };
+}
+
 /** Unique letters-only prefix per run so re-runs against the same DB stay valid. */
 export function randomPrefix(): string {
   const A = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";

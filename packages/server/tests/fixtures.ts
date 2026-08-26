@@ -210,6 +210,26 @@ export async function seedWorld(): Promise<TestWorld> {
           WHERE rt.user_id=u.id AND c.id=u.company_id
             AND c.slug IN ('alpha-test','beta-test')`
       );
+
+      // Heal counters so they always exist and sit past existing codes
+      // (Stage 5 never-reuse contract survives any prior run's mutations).
+      await db.query(
+        `INSERT INTO company_counters (company_id, counter_key, next_value)
+         SELECT sub.company_id, sub.counter_key, sub.floor + 1
+           FROM (
+             SELECT c.id AS company_id, 'branch_seq' AS counter_key,
+                    COALESCE(NULLIF(regexp_replace(max(b.code), '^.*-', ''), '')::int, 0) AS floor
+               FROM companies c JOIN branches b ON b.company_id=c.id
+              WHERE c.slug IN ('alpha-test','beta-test') GROUP BY c.id
+             UNION ALL
+             SELECT c.id, 'customer_seq',
+                    COALESCE(NULLIF(regexp_replace(max(cu.customer_code), '^.*-', ''), '')::int, 0)
+               FROM companies c JOIN customers cu ON cu.company_id=c.id
+              WHERE c.slug IN ('alpha-test','beta-test') GROUP BY c.id
+           ) sub
+         ON CONFLICT (company_id, counter_key)
+         DO UPDATE SET next_value = GREATEST(company_counters.next_value, EXCLUDED.next_value)`
+      );
     }
 
     await db.query("COMMIT");
@@ -369,6 +389,17 @@ async function insertWorld(db: pg.Client): Promise<TestWorld> {
     const customerA1 = await customer(companyA, branchA1, "CUST-0001", "Ada");
     const customerA2 = await customer(companyA, branchA2, "CUST-0002", "Bola");
     const customerB1 = await customer(companyB, branchB1, "CUST-0001", "Chidi");
+
+    // Counters must start PAST every manually-inserted code so Stage 5
+    // allocation never collides with fixture rows (never-reused contract).
+    await db.query(
+      `INSERT INTO company_counters (company_id, counter_key, next_value)
+       VALUES ($1,'branch_seq',3),($1,'customer_seq',3),
+              ($2,'branch_seq',2),($2,'customer_seq',2)
+       ON CONFLICT (company_id, counter_key) DO UPDATE
+         SET next_value = EXCLUDED.next_value`,
+      [companyA, companyB]
+    );
 
     const vaA1 = (await db.query(
       `INSERT INTO virtual_accounts (company_id, branch_id, customer_id, provider,

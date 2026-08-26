@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { BrandingPanel } from "./BrandingPanel";
 import { CreateWizard } from "./CreateWizard";
+import { BranchesPanel } from "./BranchesPanel";
 
 type Json = Record<string, unknown>;
 
@@ -47,6 +48,7 @@ export default function Portal() {
   const [summary, setSummary] = useState<Json | null>(null);
   const [draft, setDraft] = useState({ title: "", body: "", severity: "info" });
   const [brandingId, setBrandingId] = useState<string | null>(null);
+  const [branchesId, setBranchesId] = useState<string | null>(null);
 
   const authed: Authed = useCallback(
     (path, init = {}) => api(path, { ...init, token }),
@@ -158,6 +160,9 @@ export default function Portal() {
                   <button className="underline" onClick={() => setBrandingId(brandingId === c.id ? null : (typeof c.id === "string" ? c.id : null))}>
                     Branding{brandingId === c.id ? " ▲" : ""}
                   </button>
+                  <button className="underline" onClick={() => { setBranchesId(branchesId === c.id ? null : (typeof c.id === "string" ? c.id : null)); setBrandingId(null); }}>
+                    Branches{branchesId === c.id ? " ▲" : ""}
+                  </button>
                   <button className="underline" onClick={() => { const r = window.prompt("Support reason (10+ chars)"); if (typeof c.id === "string" && r) void act("/support-access", { companyId: c.id, reason: r, durationMinutes: 30 }); }}>Support</button>
                   <button className="underline" onClick={async () => {
                     const open = data.sessions.find((s) => s.company_name === c.name && s.is_open);
@@ -173,6 +178,9 @@ export default function Portal() {
           </tbody></table>
           {brandingId && (
             <BrandingPanel authed={authed} companyId={brandingId} onError={(m) => setError(m)} />
+          )}
+          {branchesId && (
+            <BranchesPanel authed={authed} companyId={branchesId} onError={(m) => setError(m)} />
           )}
         </section>
       )}

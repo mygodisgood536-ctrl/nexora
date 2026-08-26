@@ -11,6 +11,7 @@ import {
   getGlobalSettings,
   listAnnouncements,
   listCompanies,
+  listCompanyBranches,
   listEnabledRoles,
   listPlatformAudit,
   listSupportSessions,
@@ -239,6 +240,11 @@ platformRouter.get("/companies/:id/summary", authed(async (po, req, res) => {
     return;
   }
   res.json(await companySummary(po.email, sessionId, companyId));
+}));
+
+platformRouter.get("/companies/:id/branches", authed(async (_po, req, res) => {
+  void _po;
+  res.json(await listCompanyBranches(uuidParam(req)));
 }));
 
 platformRouter.get("/audit", authed(async (_po, req, res) => {
