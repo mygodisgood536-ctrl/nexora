@@ -2,6 +2,20 @@
 
 Updated as stages/roles complete. A checkbox moves only after its gate passes.
 
+> **STATUS AS OF 3b128bc:** Stages 0–5 are complete. Stage 6 (Staff/Users/Role
+> Architecture) is the next planned stage and is **NOT YET STARTED** in this
+> repository. The Roles table below correctly marks every one of the 32 built-in
+> roles as `☐ Implemented / ☐ Verified` — **none of the 32 role dashboards
+> have been built.** A role's existence in a database enum, in `BUILT_IN_ROLES`
+> (`packages/shared/src/roles.ts`), or as a row in `roles` does **not** make it
+> implemented. A role is implemented only when its specific dashboard, scope,
+> KPIs, workflows, permission gating, audit behavior, performance visibility,
+> and responsive (desktop/tablet/mobile) behavior all exist and are tested.
+> A role is verified only when those tests pass.
+>
+> **Do not change any role's status to "implemented" or "verified" without
+> actual code, integration, and tests proving it.**
+
 ## Stages
 
 - [x] Stage 0 — Project foundation (structure, env, logging, validation, errors, auth skeleton, tenant context, DB connection, health, both frontends boot)
