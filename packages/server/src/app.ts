@@ -13,6 +13,7 @@ import { platformRouter } from "./modules/platform/routes";
 import { authRouter } from "./modules/auth/routes";
 import { themeRouter } from "./modules/branding/routes";
 import { branchesRouter } from "./modules/branches/routes";
+import { workersRouter, rolesRouter } from "./modules/workers/routes";
 import { healthRouter } from "./routes/health";
 
 export function createApp(): express.Express {
@@ -45,6 +46,8 @@ export function createApp(): express.Express {
   api.use(whoamiRouter);
   api.use("/auth", authRouter);
   api.use("/branches", branchesRouter); // branch lifecycle (Part 1 §7–9)
+  api.use("/workers", workersRouter); // workers + role assignments (Stage 6, Part 1 §12–17)
+  api.use("/roles", rolesRouter); // role catalogue + custom roles (Stage 6, Part 1 §15)
   app.use("/api/v1", api);
 
   const platformApi = express.Router();
