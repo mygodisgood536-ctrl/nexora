@@ -46,11 +46,11 @@ interface CatalogueResponse {
   templates: BuiltInRoleOption[];
 }
 
-const STATUS_COLOR: Record<WorkerRow["status"], string> = {
-  invited: "#1E40AF",
-  active: "#0F766E",
-  suspended: "#B45309",
-  terminated: "#7F1D1D"
+const STATUS_CLASS: Record<WorkerRow["status"], string> = {
+  invited: "var(--nx-color-accent)",
+  active: "var(--nx-color-success)",
+  suspended: "var(--nx-color-danger)",
+  terminated: "var(--nx-color-danger)"
 };
 
 export function WorkersPage(): JSX.Element {
@@ -183,12 +183,12 @@ export function WorkersPage(): JSX.Element {
         Workers
       </h1>
       {error && (
-        <div className="mb-4 p-3 rounded" style={{ background: "#FEE2E2", color: "#7F1D1D" }}>
+        <div className="mb-4 p-3 rounded" style={{ background: "color-mix(in srgb, var(--nx-color-danger) 10%, transparent)", color: "var(--nx-color-danger)" }}>
           {error}
         </div>
       )}
       {lastCreated && (
-        <div className="mb-4 p-3 rounded" style={{ background: "#D1FAE5", color: "#065F46" }} data-testid="created-banner">
+        <div className="mb-4 p-3 rounded" style={{ background: "color-mix(in srgb, var(--nx-color-success) 10%, transparent)", color: "var(--nx-color-success)" }} data-testid="created-banner">
           Created {lastCreated.workerCode} ({lastCreated.username}). Temporary
           password (hand to the worker; never emailed):{" "}
           <code data-testid="temp-password">{lastCreated.temporaryPassword}</code>
@@ -234,23 +234,23 @@ export function WorkersPage(): JSX.Element {
                 <td className="p-2">{w.username}</td>
                 <td className="p-2">{[w.firstName, w.middleName, w.lastName].filter(Boolean).join(" ")}</td>
                 <td className="p-2">
-                  <span className="px-2 py-1 rounded text-white text-xs" style={{ background: STATUS_COLOR[w.status] }}>
+                  <span className="px-2 py-1 rounded text-white text-xs" style={{ background: STATUS_CLASS[w.status] }}>
                     {w.status}
                   </span>
                 </td>
                 <td className="p-2 space-x-2">
                   {w.status === "active" && (
-                    <button className="px-2 py-1 rounded text-white" style={{ background: "#B45309" }} onClick={() => { const reason = window.prompt("Reason for suspension?"); if (reason) void handleStatus(w.id, "suspend", reason); }}>
+                    <button className="px-2 py-1 rounded text-white" style={{ background: "var(--nx-color-accent)" }} onClick={() => { const reason = window.prompt("Reason for suspension?"); if (reason) void handleStatus(w.id, "suspend", reason); }}>
                       Suspend
                     </button>
                   )}
                   {w.status === "suspended" && (
-                    <button className="px-2 py-1 rounded text-white" style={{ background: "#0F766E" }} onClick={() => void handleStatus(w.id, "reactivate", "reactivate")}>
+                    <button className="px-2 py-1 rounded text-white" style={{ background: "var(--nx-color-success)" }} onClick={() => void handleStatus(w.id, "reactivate", "reactivate")}>
                       Reactivate
                     </button>
                   )}
                   {w.status !== "terminated" && (
-                    <button className="px-2 py-1 rounded text-white" style={{ background: "#7F1D1D" }} onClick={() => { const reason = window.prompt("Reason for termination?"); if (reason) void handleStatus(w.id, "terminate", reason); }}>
+                    <button className="px-2 py-1 rounded text-white" style={{ background: "var(--nx-color-danger)" }} onClick={() => { const reason = window.prompt("Reason for termination?"); if (reason) void handleStatus(w.id, "terminate", reason); }}>
                       Terminate
                     </button>
                   )}

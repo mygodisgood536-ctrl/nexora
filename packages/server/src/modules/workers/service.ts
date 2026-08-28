@@ -297,9 +297,9 @@ export async function createWorker(
     }>(
       `INSERT INTO users (company_id, branch_id, worker_code, username, password_hash,
                           must_change_password, temp_password_expires_at,
-                          first_name, middle_name, last_name, phone, email,
-                          birth_day, birth_month, status, created_by)
-       VALUES ($1,$2,$3,$4,$5,true,$6,$7,$8,$9,$10,$11,$12,$13,'invited',$14)
+                          first_name, middle_name, last_name, phone,
+                          status, created_by)
+       VALUES ($1,$2,$3,$4,$5,true,$6,$7,$8,$9,$10,'invited',$11)
        RETURNING id, worker_code, first_name, middle_name, last_name, username,
                  branch_id, status`,
       [
@@ -313,9 +313,6 @@ export async function createWorker(
         input.middleName ?? null,
         input.lastName,
         input.phone ?? null,
-        input.email ?? null,
-        input.birthDay ?? null,
-        input.birthMonth ?? null,
         actor.sub
       ]
     );

@@ -89,8 +89,8 @@ export async function staffLogin(
 
 /** Unique letters-only prefix per run so re-runs against the same DB stay valid. */
 export function randomPrefix(): string {
-  const A = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  const A = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
   let suffix = "";
-  for (let i = 0; i < 2; i++) suffix += A[Math.floor(Math.random() * 26)];
+  for (let i = 0; i < 6; i++) suffix += A[Math.floor(Math.random() * A.length)];
   return "ZQ" + suffix;
 }
