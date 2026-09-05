@@ -117,7 +117,11 @@ export async function seedWorld(): Promise<TestWorld> {
       await db.query(
         `DELETE FROM payments WHERE provider_txn_ref IN ('TX-TEST-001','TX-NEG-001','TX-IMM-001')`
       );
+      // Clean up VAs from previous runs and ensure seed VA is active.
       await db.query(`DELETE FROM virtual_accounts WHERE account_number = '3000000001'`);
+      await db.query(
+        `UPDATE virtual_accounts SET status='closed' WHERE account_number='1000000001'`
+      );
       await db.query(
         `UPDATE virtual_accounts SET status='active' WHERE account_number='1000000001'`
       );
@@ -133,11 +137,21 @@ export async function seedWorld(): Promise<TestWorld> {
       // Reset Stage 2 lifecycle mutations: credentials, flags, sessions.
       await db.query(
         `UPDATE users u SET password_hash=$1, must_change_password=false,
-                temp_password_expires_at=NULL, status='active'
+                temp_password_expires_at=NULL, status='active',
+                active_role_key=NULL
            FROM companies c
           WHERE c.id=u.company_id AND c.slug IN ('alpha-test','beta-test')
             AND u.username IN ('alice','bob')`,
         [SEED_HASH]
+      );
+
+      // Clean up workers created by Stage 6 tests so reruns are deterministic.
+      // (seed users alice/bob/tempuser are preserved above; everything else
+      //  in companies alpha-test/beta-test that isn't a seed user is removed.)
+      await db.query(
+        `DELETE FROM users u USING companies c
+          WHERE c.id=u.company_id AND c.slug IN ('alpha-test','beta-test')
+            AND u.username NOT IN ('alice','bob','tempuser')`
       );
 
       // Restore canonical Stage 2 assignments (tests end/mutate them).

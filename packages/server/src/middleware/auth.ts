@@ -18,6 +18,8 @@ export interface PrincipalPayload {
   roles: PrincipalRoleRef[];
   /** must-change-password: session limited until first credential change. */
   mcp?: boolean;
+  /** Active role lens for UI (Part 1 §16 role switcher). */
+  activeRoleKey?: string | null;
 }
 
 const TOKEN_OPTIONS: jwt.VerifyOptions = { algorithms: ["HS256"] };

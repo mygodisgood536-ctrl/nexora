@@ -32,9 +32,9 @@ export const workersRouter = Router();
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-function actor(req: Request): { sub: string; companyId: string } {
+function actor(req: Request): { sub: string; companyId: string; branchId: string | null } {
   const p = req.principal!;
-  return { sub: p.sub, companyId: p.companyId };
+  return { sub: p.sub, companyId: p.companyId, branchId: p.branchId ?? null };
 }
 
 function metaFrom(req: Request): { ip: string | null; userAgent: string | null; requestId: string | null } {
@@ -294,8 +294,14 @@ workersRouter.post(
 
 const endSchema = z.object({ reason: z.string().min(1).max(500) });
 
-workersRouter.post(
-  "/assignments/:assignmentId/end",
+// Assignment resource lives at /api/v1/assignments (REST-correct path).
+// The previous mount under /api/v1/workers/assignments/... was a
+// implementation leak — assignments are a first-class resource, not
+// a nested sub-resource of workers.
+export const assignmentsRouter = Router();
+
+assignmentsRouter.post(
+  "/:assignmentId/end",
   requireCompleteSession,
   requirePermission("assign"),
   wrap(async (req, res) => {

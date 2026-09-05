@@ -71,6 +71,7 @@ interface UserRow {
   must_change_password: boolean;
   temp_password_expires_at: Date | null;
   status: string;
+  active_role_key: string | null;
 }
 
 type AssignmentRow = AssignmentInput & { permissions: string[] };
@@ -115,15 +116,19 @@ async function loadAssignments(db: PoolClient, userId: string, companyId: string
 }
 
 function buildPrincipal(
-  user: Pick<UserRow, "id" | "company_id" | "branch_id">,
+  user: Pick<UserRow, "id" | "company_id" | "branch_id" | "active_role_key">,
   assignments: AssignmentRow[]
-): Principal {
-  return resolvePrincipal({
+): Principal & { activeRoleKey: string | null } {
+  const base = resolvePrincipal({
     userId: user.id,
     companyId: user.company_id,
     branchId: user.branch_id,
     assignments
   });
+  return {
+    ...base,
+    activeRoleKey: user.active_role_key
+  };
 }
 
 const sha256 = (value: string): string =>
@@ -132,7 +137,7 @@ const sha256 = (value: string): string =>
 export interface IssuedSession {
   accessToken: string;
   refreshToken: string;
-  principal: Principal;
+  principal: Principal & { activeRoleKey: string | null };
   mustChangePassword: boolean;
 }
 
@@ -154,6 +159,7 @@ async function issueSession(db: PoolClient, user: UserRow, meta: RequestMeta): P
       branchIds: [...r.branchIds],
       permissions: [...r.permissions]
     })),
+    activeRoleKey: principal.activeRoleKey,
     mcp: user.must_change_password
   });
 
@@ -191,7 +197,7 @@ export async function login(
   return withTenantSession(ctx.companyId, ctx.branchId, async (db) => {
     const found = await db.query<UserRow>(
       `SELECT id, company_id, branch_id, username, password_hash, must_change_password,
-              temp_password_expires_at, status
+              temp_password_expires_at, status, active_role_key
          FROM users WHERE company_id = $1 AND username = $2`,
       [ctx.companyId, username]
     );
@@ -281,10 +287,11 @@ export async function currentPrincipal(
   userId: string,
   companyId: string,
   branchId: string | null
-): Promise<Principal> {
+): Promise<Principal & { activeRoleKey: string | null }> {
   return withTenantSession(companyId, branchId, async (db) => {
     const assignments = await loadAssignments(db, userId, companyId);
-    return buildPrincipal({ id: userId, company_id: companyId, branch_id: branchId }, assignments);
+    const user = await db.query<UserRow>(`SELECT id, company_id, branch_id, active_role_key FROM users WHERE id=$1`, [userId]);
+    return buildPrincipal({ id: userId, company_id: companyId, branch_id: branchId, active_role_key: user.rows[0]?.active_role_key ?? null }, assignments);
   });
 }
 
@@ -316,5 +323,49 @@ export async function changePassword(
       `UPDATE refresh_tokens SET revoked_at = now() WHERE user_id=$1 AND revoked_at IS NULL`,
       [userId]
     );
+  });
+}
+
+/** Sets the user's active role lens (UI preference for dashboard/context). */
+export async function setActiveRoleLens(
+  userId: string,
+  companyId: string,
+  roleKey: string | null
+): Promise<void> {
+  return withTenantSession(companyId, null, async (db) => {
+    if (roleKey !== null) {
+      // Verify the user has an active assignment for this role at the current context
+      const hasRole = await db.query<{ 1: number }>(
+        `SELECT 1 FROM role_assignments ra
+           JOIN roles r ON r.id = ra.role_id
+          WHERE ra.user_id = $1 AND ra.company_id = $2
+            AND r.role_key = $3
+            AND ra.status = 'active'
+            AND (ra.assignment_type = 'permanent' OR (ra.starts_at <= now() AND (ra.ends_at IS NULL OR ra.ends_at > now())))
+          LIMIT 1`,
+        [userId, companyId, roleKey]
+      );
+      if (hasRole.rowCount === 0) {
+        throw AppError.forbidden("User does not have an active assignment for this role");
+      }
+    }
+    await db.query(
+      `UPDATE users SET active_role_key = $2, updated_at = now() WHERE id = $1`,
+      [userId, roleKey]
+    );
+  });
+}
+
+/** Gets the user's active role lens. */
+export async function getActiveRoleLens(
+  userId: string,
+  companyId: string
+): Promise<{ activeRoleKey: string | null }> {
+  return withTenantSession(companyId, null, async (db) => {
+    const found = await db.query<{ active_role_key: string | null }>(
+      `SELECT active_role_key FROM users WHERE id = $1`,
+      [userId]
+    );
+    return { activeRoleKey: found.rows[0]?.active_role_key ?? null };
   });
 }

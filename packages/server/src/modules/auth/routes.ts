@@ -6,9 +6,11 @@ import { requireAuth, requireCompleteSession } from "../../middleware/auth";
 import {
   changePassword,
   currentPrincipal,
+  getActiveRoleLens,
   login,
   logout,
-  refresh
+  refresh,
+  setActiveRoleLens
 } from "./service";
 
 export const authRouter = Router();
@@ -103,8 +105,35 @@ authRouter.get("/me", requireAuth, async (req, res, next) => {
       branchId: live.branchId,
       roles: live.roles,
       permissions: live.permissions,
+      activeRoleKey: live.activeRoleKey,
       mustChangePassword: claims.mcp === true
     });
+  } catch (err) {
+    next(err);
+  }
+});
+
+const activeRoleSchema = z.object({
+  roleKey: z.string().min(1).max(80).nullable()
+});
+
+authRouter.get("/active-role", requireAuth, async (req, res, next) => {
+  try {
+    const claims = req.principal!;
+    const result = await getActiveRoleLens(claims.sub, claims.companyId);
+    res.status(200).json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+authRouter.put("/active-role", requireAuth, async (req, res, next) => {
+  try {
+    const claims = req.principal!;
+    const parsed = activeRoleSchema.safeParse(req.body);
+    if (!parsed.success) throw AppError.unprocessable("Validation failed");
+    await setActiveRoleLens(claims.sub, claims.companyId, parsed.data.roleKey);
+    res.status(204).end();
   } catch (err) {
     next(err);
   }

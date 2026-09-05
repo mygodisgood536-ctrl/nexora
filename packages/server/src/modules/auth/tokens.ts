@@ -5,6 +5,8 @@ import type { PrincipalPayload } from "../../middleware/auth";
 export interface AccessTokenClaims extends PrincipalPayload {
   /** must-change-password: limits the session until first credential change. */
   mcp?: boolean;
+  /** Active role lens for UI (Part 1 §16 role switcher). */
+  activeRoleKey?: string | null;
 }
 
 export function signAccessToken(claims: AccessTokenClaims): string {

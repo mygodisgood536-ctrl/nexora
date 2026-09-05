@@ -87,10 +87,11 @@ export async function staffLogin(
   };
 }
 
-/** Unique letters-only prefix per run so re-runs against the same DB stay valid. */
+/** Unique uppercase-only prefix per run so re-runs against the same DB stay valid.
+ *  Schema constraint is /^[A-Z]{3,6}$/ — ZQ + 4 uppercase chars = 6 chars (max allowed). */
 export function randomPrefix(): string {
-  const A = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+  const A = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
   let suffix = "";
-  for (let i = 0; i < 6; i++) suffix += A[Math.floor(Math.random() * A.length)];
+  for (let i = 0; i < 4; i++) suffix += A[Math.floor(Math.random() * A.length)];
   return "ZQ" + suffix;
 }
