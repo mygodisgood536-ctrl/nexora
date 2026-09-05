@@ -129,6 +129,20 @@ export async function seedWorld(): Promise<TestWorld> {
         `DELETE FROM customers WHERE customer_code = 'CUST-7777'
             OR (first_name = 'Dup' AND last_name = 'One')`
       );
+      // Clean up customers created by Stage 7 tests (excluding seed ones).
+      await db.query(
+        `DELETE FROM virtual_accounts WHERE customer_id IN (
+           SELECT id FROM customers WHERE first_name IN
+             ('Amina','One','Two','Cross','Search','Other',
+              'Promote','StaysPending','Lifecycle','Reason',
+              'AlphaOnly','DUPTEST')
+         )`
+      );
+      await db.query(
+        `DELETE FROM customers WHERE first_name IN
+           ('Amina','One','Two','Cross','Search','Other',
+            'Promote','StaysPending','Lifecycle','Reason','AlphaOnly','DUPTEST')`
+      );
       await db.query(
         `UPDATE customers c SET status='active'
            FROM companies co
