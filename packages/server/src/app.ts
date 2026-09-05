@@ -15,6 +15,7 @@ import { themeRouter } from "./modules/branding/routes";
 import { branchesRouter } from "./modules/branches/routes";
 import { workersRouter, rolesRouter, assignmentsRouter } from "./modules/workers/routes";
 import { customersRouter } from "./modules/customers/routes";
+import { groupsRouter } from "./modules/groups/routes";
 import { healthRouter } from "./routes/health";
 
 export function createApp(): express.Express {
@@ -51,6 +52,7 @@ export function createApp(): express.Express {
   api.use("/roles", rolesRouter); // role catalogue + custom roles (Stage 6, Part 1 §15)
   api.use("/assignments", assignmentsRouter); // role-assignment lifecycle (Stage 6, Part 1 §17)
   api.use("/customers", customersRouter); // customer domain (Stage 7A, Part 1 §22)
+  api.use("/groups", groupsRouter); // group management (Stage 7B, Part 2 §27)
   app.use("/api/v1", api);
 
   const platformApi = express.Router();

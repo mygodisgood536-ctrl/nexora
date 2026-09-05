@@ -130,19 +130,41 @@ export async function seedWorld(): Promise<TestWorld> {
             OR (first_name = 'Dup' AND last_name = 'One')`
       );
       // Clean up customers created by Stage 7 tests (excluding seed ones).
-      await db.query(
-        `DELETE FROM virtual_accounts WHERE customer_id IN (
-           SELECT id FROM customers WHERE first_name IN
-             ('Amina','One','Two','Cross','Search','Other',
-              'Promote','StaysPending','Lifecycle','Reason',
-              'AlphaOnly','DUPTEST')
-         )`
-      );
-      await db.query(
-        `DELETE FROM customers WHERE first_name IN
-           ('Amina','One','Two','Cross','Search','Other',
-            'Promote','StaysPending','Lifecycle','Reason','AlphaOnly','DUPTEST')`
-      );
+      // Reference seeded companies via slug (resolved inline) so this runs
+      // before the later block that re-reads companyA/companyB.
+      await db.query(`
+        WITH seeded AS (
+          SELECT id AS company_id, slug FROM companies
+           WHERE slug IN ('alpha-test','beta-test')
+        ),
+        seed_customers AS (
+          SELECT c.id FROM customers c
+            JOIN seeded s ON s.company_id = c.company_id
+           WHERE (s.slug = 'alpha-test' AND c.customer_code IN ('CUST-0001','CUST-0002'))
+              OR (s.slug = 'beta-test'  AND c.customer_code IN ('CUST-0001'))
+        ),
+        non_seed AS (
+          SELECT c.id FROM customers c
+            JOIN seeded s ON s.company_id = c.company_id
+           WHERE c.id NOT IN (SELECT id FROM seed_customers)
+        )
+        DELETE FROM virtual_accounts WHERE customer_id IN (SELECT id FROM non_seed)
+      `);
+      await db.query(`
+        WITH seeded AS (
+          SELECT id AS company_id, slug FROM companies
+           WHERE slug IN ('alpha-test','beta-test')
+        )
+        DELETE FROM customers c
+         USING seeded s
+         WHERE s.company_id = c.company_id
+           AND c.id NOT IN (
+             SELECT c2.id FROM customers c2
+               JOIN seeded s2 ON s2.company_id = c2.company_id
+              WHERE (s2.slug = 'alpha-test' AND c2.customer_code IN ('CUST-0001','CUST-0002'))
+                 OR (s2.slug = 'beta-test'  AND c2.customer_code IN ('CUST-0001'))
+           )
+      `);
       await db.query(
         `UPDATE customers c SET status='active'
            FROM companies co
@@ -167,6 +189,24 @@ export async function seedWorld(): Promise<TestWorld> {
           WHERE c.id=u.company_id AND c.slug IN ('alpha-test','beta-test')
             AND u.username NOT IN ('alice','bob','tempuser')`
       );
+
+      // Clean up groups created by Stage 7B tests.
+      await db.query(
+        `DELETE FROM group_members WHERE group_id IN (
+           SELECT id FROM groups WHERE name IN
+             ('Test Group Alpha','Members Test Group','Branch Isolation Test',
+              'Rename Test Original','Rename Test New','Close Test Group','Alpha Only Group',
+              'Cross Branch Group')
+         )`
+      );
+      await db.query(
+        `DELETE FROM groups WHERE name IN
+           ('Test Group Alpha','Members Test Group','Branch Isolation Test',
+            'Rename Test Original','Rename Test New','Close Test Group','Alpha Only Group',
+            'Cross Branch Group')`
+      );
+      // Clean up the cross-branch customer created by Stage 7B tests
+      // (handled by the comprehensive customers cleanup above).
 
       // Restore canonical Stage 2 assignments (tests end/mutate them).
       const idOf = async (sql: string, params: unknown[]): Promise<uuid> => {
