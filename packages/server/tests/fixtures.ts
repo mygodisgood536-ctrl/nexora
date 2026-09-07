@@ -129,6 +129,66 @@ export async function seedWorld(): Promise<TestWorld> {
         `DELETE FROM customers WHERE customer_code = 'CUST-7777'
             OR (first_name = 'Dup' AND last_name = 'One')`
       );
+      // Clean up Stage 7C lending artifacts FIRST (loans/applications/products/chains),
+      // because loan_applications and loans have FKs back to customers that the
+      // customer cleanup below would otherwise hit.
+      await db.query(`
+        WITH seeded AS (
+          SELECT id AS company_id, slug FROM companies
+           WHERE slug IN ('alpha-test','beta-test')
+        )
+        DELETE FROM repayment_schedule_rows rsr
+         USING loans l, seeded s
+         WHERE l.id = rsr.loan_id
+           AND l.company_id = s.company_id
+           AND s.slug = 'alpha-test'
+           AND l.principal_amount = '5000'
+      `);
+      await db.query(`
+        WITH seeded AS (
+          SELECT id AS company_id, slug FROM companies
+           WHERE slug IN ('alpha-test','beta-test')
+        )
+        DELETE FROM loans l
+         USING seeded s
+         WHERE l.company_id = s.company_id
+           AND s.slug = 'alpha-test'
+           AND l.principal_amount = '5000'
+      `);
+      await db.query(`
+        WITH seeded AS (
+          SELECT id AS company_id, slug FROM companies
+           WHERE slug IN ('alpha-test','beta-test')
+        )
+        DELETE FROM loan_applications a
+         USING seeded s
+         WHERE a.company_id = s.company_id
+           AND s.slug = 'alpha-test'
+           AND a.principal_amount IN ('5000', '10000')
+      `);
+      await db.query(`
+        WITH seeded AS (
+          SELECT id AS company_id, slug FROM companies
+           WHERE slug IN ('alpha-test','beta-test')
+        )
+        DELETE FROM loan_products lp
+         USING seeded s
+         WHERE lp.company_id = s.company_id
+           AND s.slug = 'alpha-test'
+           AND lp.name = 'Standard Microloan'
+      `);
+      await db.query(`
+        WITH seeded AS (
+          SELECT id AS company_id, slug FROM companies
+           WHERE slug IN ('alpha-test','beta-test')
+        )
+        DELETE FROM approval_chains ac
+         USING seeded s
+         WHERE ac.company_id = s.company_id
+           AND s.slug = 'alpha-test'
+           AND ac.name = 'Standard One-Stage'
+      `);
+
       // Clean up customers created by Stage 7 tests (excluding seed ones).
       // Reference seeded companies via slug (resolved inline) so this runs
       // before the later block that re-reads companyA/companyB.
@@ -205,6 +265,64 @@ export async function seedWorld(): Promise<TestWorld> {
             'Rename Test Original','Rename Test New','Close Test Group','Alpha Only Group',
             'Cross Branch Group')`
       );
+      // Clean up Stage 7C lending artifacts: loans, applications, products,
+      // chains. Deleting in dependency order so FKs are not violated.
+      await db.query(`
+        WITH seeded AS (
+          SELECT id AS company_id, slug FROM companies
+           WHERE slug IN ('alpha-test','beta-test')
+        )
+        DELETE FROM repayment_schedule_rows rsr
+         USING loans l, seeded s
+         WHERE l.id = rsr.loan_id
+           AND l.company_id = s.company_id
+           AND s.slug = 'alpha-test'
+           AND l.principal_amount = '5000'
+      `);
+      await db.query(`
+        WITH seeded AS (
+          SELECT id AS company_id, slug FROM companies
+           WHERE slug IN ('alpha-test','beta-test')
+        )
+        DELETE FROM loans l
+         USING seeded s
+         WHERE l.company_id = s.company_id
+           AND s.slug = 'alpha-test'
+           AND l.principal_amount = '5000'
+      `);
+      await db.query(`
+        WITH seeded AS (
+          SELECT id AS company_id, slug FROM companies
+           WHERE slug IN ('alpha-test','beta-test')
+        )
+        DELETE FROM loan_applications a
+         USING seeded s
+         WHERE a.company_id = s.company_id
+           AND s.slug = 'alpha-test'
+           AND a.principal_amount IN ('5000', '10000')
+      `);
+      await db.query(`
+        WITH seeded AS (
+          SELECT id AS company_id, slug FROM companies
+           WHERE slug IN ('alpha-test','beta-test')
+        )
+        DELETE FROM loan_products lp
+         USING seeded s
+         WHERE lp.company_id = s.company_id
+           AND s.slug = 'alpha-test'
+           AND lp.name = 'Standard Microloan'
+      `);
+      await db.query(`
+        WITH seeded AS (
+          SELECT id AS company_id, slug FROM companies
+           WHERE slug IN ('alpha-test','beta-test')
+        )
+        DELETE FROM approval_chains ac
+         USING seeded s
+         WHERE ac.company_id = s.company_id
+           AND s.slug = 'alpha-test'
+           AND ac.name = 'Standard One-Stage'
+      `);
       // Clean up the cross-branch customer created by Stage 7B tests
       // (handled by the comprehensive customers cleanup above).
 

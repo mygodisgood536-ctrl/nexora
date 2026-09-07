@@ -16,6 +16,12 @@ import { branchesRouter } from "./modules/branches/routes";
 import { workersRouter, rolesRouter, assignmentsRouter } from "./modules/workers/routes";
 import { customersRouter } from "./modules/customers/routes";
 import { groupsRouter } from "./modules/groups/routes";
+import {
+  loanProductsRouter,
+  approvalChainsRouter,
+  loanApplicationsRouter,
+  loanDisbursementsRouter,
+} from "./modules/loans/routes";
 import { healthRouter } from "./routes/health";
 
 export function createApp(): express.Express {
@@ -53,6 +59,10 @@ export function createApp(): express.Express {
   api.use("/assignments", assignmentsRouter); // role-assignment lifecycle (Stage 6, Part 1 §17)
   api.use("/customers", customersRouter); // customer domain (Stage 7A, Part 1 §22)
   api.use("/groups", groupsRouter); // group management (Stage 7B, Part 2 §27)
+  api.use("/loan-products", loanProductsRouter); // loan product catalogue (Stage 7C, Part 1 §23)
+  api.use("/approval-chains", approvalChainsRouter); // approval chains (Stage 7C, Part 1 §23)
+  api.use("/loan-applications", loanApplicationsRouter); // loan applications (Stage 7C, Part 1 §23)
+  api.use("/loan-disbursements", loanDisbursementsRouter); // disbursement trigger (Stage 7C, Part 1 §22-23)
   app.use("/api/v1", api);
 
   const platformApi = express.Router();
