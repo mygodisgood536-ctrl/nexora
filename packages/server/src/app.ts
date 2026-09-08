@@ -22,6 +22,13 @@ import {
   loanApplicationsRouter,
   loanDisbursementsRouter,
 } from "./modules/loans/routes";
+import {
+  paymentsRouter,
+  paymentProvidersRouter,
+  webhookRouter,
+  reconciliationItemsRouter,
+  webhookExceptionsRouter,
+} from "./modules/payments/routes";
 import { healthRouter } from "./routes/health";
 
 export function createApp(): express.Express {
@@ -63,6 +70,14 @@ export function createApp(): express.Express {
   api.use("/approval-chains", approvalChainsRouter); // approval chains (Stage 7C, Part 1 §23)
   api.use("/loan-applications", loanApplicationsRouter); // loan applications (Stage 7C, Part 1 §23)
   api.use("/loan-disbursements", loanDisbursementsRouter); // disbursement trigger (Stage 7C, Part 1 §22-23)
+  api.use("/payment-providers", paymentProvidersRouter); // per-company payment provider config (Stage 7D, Part 1 §21)
+  api.use("/payments", paymentsRouter); // payment pipeline queries (Stage 7D, Part 1 §21)
+  api.use("/reconciliation-items", reconciliationItemsRouter); // reconciliation diff queue (Stage 7D, Part 1 §21)
+  api.use("/webhook-exceptions", webhookExceptionsRouter); // signature/schema exceptions (Stage 7D, Part 1 §21)
+  // Webhook entry is signature-authenticated, not session-authenticated.
+  // The provider supplies the company slug in a header so the per-company
+  // signing secret can be loaded.
+  api.use("/webhooks", webhookRouter);
   app.use("/api/v1", api);
 
   const platformApi = express.Router();
