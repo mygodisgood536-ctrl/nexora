@@ -1,0 +1,62 @@
+    1956 Can: everything in his own company: approve, reject, create branches, create any worker, assign any role, enable or disa
+    1957 Cannot: edit money; enter a payment; bypass his own ritual or authenticator; see another company.
+    1963 Can: everything the MD can, except finalising company-defining settings, branding or the role catalogue, unless the MD d
+    1964 Cannot: act without a delegation on settings/branding/role catalogue; edit money; enter a payment.
+    1970 Can: approve and reject at his chain stage; create branches and workers where the company's configuration grants it; ass
+    1971 Cannot: edit money; enter a payment; change company branding unless granted; approve his own provider change.
+    1977 Can: view everything the GM views; approve at the chain stage only if the chain includes this role; assign temporary rol
+    1978 Cannot: create branches; terminate workers; approve provider changes on their own; edit money.
+    1984 Can: create branches and branch workers where granted; open every Branch Workplace; act on process exceptions; assign te
+    1985 Cannot: edit money; approve loans outside the chain; change providers alone; touch HR records or audit entries.
+    1991 Can: view and act within operations scope: branch inspection, branch-worker creation where granted, process exception fo
+    1992 Cannot: create branches; change settings; edit money; approve provider changes.
+    1998 Can: maintain company profile and branding; enable or disable built-in roles for the company; create branches; create wo
+    1999 Cannot: edit money; authorise provider changes; approve loans outside the chain; delete history.
+    2005 Can: work and close reconciliation exceptions with notes; prepare and route reversal/correction requests for the require
+    2006 Cannot: enter or edit any payment, allocation, balance or ledger figure; delete records; approve provider changes withou
+    2012 Can: produce statements and schedules, view the ledger in full, assist in reconciliation with notes where the company pe
+    2013 Cannot: enter or edit money; prepare reversal/correction requests where permitted, but never directly post them; change 
+    2019 Can: prepare schedules, view the ledger, assist on reconciliation, export reports within scope.
+    2020 Cannot: enter or edit money; post financial reversals; change providers; see HR records.
+    2026 Can: match settlements, raise and annotate exceptions, confirm provider transaction lists against recorded payments, exp
+    2027 Cannot: edit or allocate money; execute reversals; close an exception without Finance's note where the company requires 
+    2033 Can: create any worker except MD and Deputy MD; edit worker details and passports; freeze, unfreeze, suspend, reactivate
+    2034 Cannot: create or edit any financial record; allocate money; enter a payment; execute a reversal; change a provider; byp
+    2040 Can: create workers where granted; maintain worker records and passports; raise actions for approval by the HR Manager w
+    2041 Cannot: freeze login, hold or transfer a portfolio, or terminate, unless the company explicitly grants it; edit money; c
+    2047 Can: read everything; walk the entire traceability chain; open every Branch Workplace; open any worker's book; record fi
+    2048 Cannot: edit any transaction, record, setting, role, customer, loan, payment or allocation; operate HR controls; change 
+    2054 Can: read everything the Internal Auditor reads; draft findings for the Internal Auditor; export within scope.
+    2055 Cannot: publish findings as the Auditor does, unless granted; edit anything; operate HR controls.
+    2061 Can: read broadly across the company; raise compliance findings; require remediation with a due date; open every Branch 
+    2062 Cannot: edit records, settings, roles, loans, payments or allocations; operate HR controls; change providers.
+    2068 Can: read portfolio, customer and loan data company-wide; raise risk findings; open every Branch Workplace read-only.
+    2069 Cannot: edit anything; approve or reject loans; operate HR controls; change providers.
+    2075 Can: define loan products and approval chains; decide credit stages; approve or reject at his stage with reasons; open e
+    2076 Cannot: edit money; enter a payment; disburse without the chain; operate HR controls; change providers.
+    2082 Can: assess applications, record the credit decision with a reason, request more information, escalate.
+    2083 Cannot: approve beyond his own stage; edit money; disburse; change products or chains unless granted.
+    2089 Can: look up any customer and his real records; raise and resolve service tickets; raise a refund or correction request 
+    2090 Cannot: edit customers' financial records; allocate money; execute a reversal; change providers.
+    2096 Can: answer queries from real customer data; raise tickets and corrections; update permitted profile fields.
+    2097 Cannot: change financial records; allocate money; see other branches' customers unless granted.
+    2103 Can: build and run any report; schedule recurring exports; read company, branch and worker performance.
+    2104 Cannot: create, edit, approve, reject, assign, reverse or allocate anything.
+    2110 Can: view provider health and webhook queues; set, replace and rotate provider credentials through the technical provide
+    2111 Cannot: resolve money exceptions; allocate or edit money; create or alter financial records; approve a provider business
+    2117 Can: see everything in his branch; open any worker's book in his branch; create the branch roles the company permits; re
+    2118 Cannot: see another branch; create branches; edit money; enter a payment; allocate money that is not his allocated book;
+    2124 Can: everything the company delegates to him in the branch; view the branch's full book; act at his chain stage where in
+    2125 Cannot: exceed the delegated limits; create branches; edit money; change the provider unless the company grants it.
+    2131 Can: see every branch in his area and every worker's book in those branches; move applications at his chain stage; open 
+    2132 Cannot: see branches outside his area; create branches; edit money; change providers.
+    2148 Can: register customers with live face capture; submit applications with live face capture; view his customers, their lo
+    2149 Cannot: create a payment or a ledger figure; edit or delete any payment, allocation or balance; approve a loan; approve 
+    2156 Can: everything a Collection Officer can, plus see junior officers' open overdue cases at his branch and suggest reassig
+    2157 Cannot: see junior officers' full private performance figures; execute a reassignment himself; edit money; approve loans
+    2163 Can: work assigned overdue and legacy cases; view those customers' loans and payments read-only; log contact attempts an
+    2164 Cannot: edit loans, payments or balances; decide a write-off; create a payment; see unrelated customers.
+    2170 Can: exactly what the assembled permission set grants, at the assembled scope.
+    2171 Cannot: exceed the permission vocabulary, bypass the ritual, edit money, or exceed the platform's role catalogue ceiling
+    2178 Can: see his own real records; copy his virtual account details; download receipts; pay by transfer to his virtual accou
+    2179 Cannot: see another customer; edit any payment, balance or schedule; see internal company information.

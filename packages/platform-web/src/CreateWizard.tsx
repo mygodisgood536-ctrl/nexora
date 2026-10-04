@@ -53,6 +53,8 @@ export function CreateWizard(props: {
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState(0);
   const [profile, setProfile] = useState({ name: "", codePrefix: "", contactEmail: "", planTier: "" });
+  const [md, setMd] = useState({ mdFullName: "", mdPhone: "", mdEmail: "" });
+  const [panel, setPanel] = useState<Record<string, unknown> | null>(null);
   const [branding, setBranding] = useState<BrandingForm>(EMPTY_BRANDING);
   const [roles, setRoles] = useState<string[]>(BUILT_IN_ROLES.map((r) => r.key));
   const [confirmed, setConfirmed] = useState(false);
@@ -65,6 +67,16 @@ export function CreateWizard(props: {
           onClick={() => { setOpen(true); setStep(0); setConfirmed(false); }}>
           + Create Company (wizard)
         </button>
+        {panel && (
+          <div className="mt-3 rounded border border-[var(--nxp-color-surface-raised)] p-3 text-sm">
+            <strong>MD credentials — shown once, never retrievable again</strong>
+            <div>Username: <code>{String(panel.username)}</code></div>
+            <div>Initial password: <code>{String(panel.initial_password)}</code></div>
+            <div>Worker code: <code>{String(panel.worker_code)}</code></div>
+            <div>Expires: <code>{String(panel.expires_at)}</code></div>
+            <button className="mt-2 underline" onClick={() => setPanel(null)}>I have recorded these</button>
+          </div>
+        )}
       </div>
     );
   }
@@ -80,12 +92,16 @@ export function CreateWizard(props: {
   async function submit() {
     setBusy(true);
     try {
-      await authed("/companies", {
-        json: { ...profile, branding: brandingPayload(branding), enabledRoleKeys: roles }
+      const created = await authed<{ md?: Record<string, unknown> }>("/companies", {
+        json: { ...profile, ...md, branding: brandingPayload(branding), enabledRoleKeys: roles }
       });
+      // RULE 3.4.1 / 3.4.3 — the one-time credential panel is shown here and is
+      // never retrievable again.
+      setPanel(created?.md ?? null);
       setOpen(false);
       setStep(0);
       setProfile({ name: "", codePrefix: "", contactEmail: "", planTier: "" });
+      setMd({ mdFullName: "", mdPhone: "", mdEmail: "" });
       setBranding(EMPTY_BRANDING);
       setConfirmed(false);
       onCreated();
@@ -109,6 +125,9 @@ export function CreateWizard(props: {
           <input placeholder="Prefix (ABC)" value={profile.codePrefix} onChange={(e) => setProfile({ ...profile, codePrefix: e.target.value.toUpperCase() })} className={INP} />
           <input placeholder="Contact/MD email" value={profile.contactEmail} onChange={(e) => setProfile({ ...profile, contactEmail: e.target.value })} className={INP} />
           <input placeholder="Plan tier (optional)" value={profile.planTier} onChange={(e) => setProfile({ ...profile, planTier: e.target.value })} className={INP} />
+          <input placeholder="MD full name (required)" value={md.mdFullName} onChange={(e) => setMd({ ...md, mdFullName: e.target.value })} className={INP} />
+          <input placeholder="MD phone (required)" value={md.mdPhone} onChange={(e) => setMd({ ...md, mdPhone: e.target.value })} className={INP} />
+          <input placeholder="MD email (optional)" value={md.mdEmail} onChange={(e) => setMd({ ...md, mdEmail: e.target.value })} className={INP} />
         </div>
       )}
 
@@ -164,7 +183,7 @@ export function CreateWizard(props: {
         {step < 2 ? (
           <button onClick={() => setStep(step + 1)} className="rounded bg-[var(--nxp-color-primary)] px-3 py-1 text-sm">Next</button>
         ) : (
-          <button disabled={!confirmed || busy} onClick={() => void submit()}
+          <button disabled={!confirmed || busy || !md.mdFullName.trim() || !md.mdPhone.trim()} onClick={() => void submit()}
             className="rounded bg-[var(--nxp-color-primary)] px-3 py-1 text-sm disabled:opacity-40">
             {busy ? "Creating…" : "Create Company"}
           </button>

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { BUILT_IN_ROLES } from "@nexora/shared";
+import { BUILT_IN_ROLES, contrastWarning } from "@nexora/shared";
 import { BrandPreview } from "./BrandPreview";
 import { brandingPayload, EMPTY_BRANDING, NEXORA_DEFAULTS } from "./CreateWizard";
 import type { AuthFn, BrandingForm } from "./CreateWizard";
@@ -34,6 +34,8 @@ export function BrandingPanel(props: {
   const [companyName, setCompanyName] = useState("");
   const [roles, setRoles] = useState<string[]>([]);
   const [status, setStatus] = useState("");
+  // RULE 13.5.2 — a non-blocking contrast warning for the chosen accent.
+  const warning = contrastWarning(form.primaryColor);
 
   const load = useCallback(async () => {
     try {
@@ -92,6 +94,22 @@ export function BrandingPanel(props: {
           <input placeholder="Logo URL" value={form.logoUrl} onChange={(e) => setForm({ ...form, logoUrl: e.target.value })} className={`w-full ${INP}`} />
           <input placeholder="Login background URL" value={form.loginBackgroundUrl} onChange={(e) => setForm({ ...form, loginBackgroundUrl: e.target.value })} className={`w-full ${INP}`} />
           <input placeholder="Font family" value={form.fontFamily} onChange={(e) => setForm({ ...form, fontFamily: e.target.value })} className={`w-full ${INP}`} />
+          {/* RULE 13.5.2 — warn, WITHOUT blocking, when the chosen colour makes
+              text hard to read, and suggest a shade of the same colour that
+              passes contrast. */}
+          {warning && (
+            <div role="status" data-testid="branding-contrast-warning"
+              className="rounded border border-[var(--nxp-color-accent)] p-2 text-xs">
+              <div>
+                This colour is hard to read (contrast {warning.actual}:1). Suggested:{" "}
+                <code>{warning.suggested}</code> (contrast {warning.suggestedRatio}:1)
+              </div>
+              <button type="button" className="mt-1 underline"
+                onClick={() => setForm({ ...form, primaryColor: warning.suggested, accentColor: warning.suggested })}>
+                Use the suggested shade
+              </button>
+            </div>
+          )}
           <div className="space-x-3">
             <button className="rounded bg-[var(--nxp-color-primary)] px-3 py-1 text-sm" onClick={() => void save("theme")}>Save branding</button>
             <button className="text-sm underline"

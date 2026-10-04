@@ -30,7 +30,9 @@ describe("stage 5 — branch system", () => {
   it("allocates deterministic, never-reused codes under concurrency (race test)", { timeout: 90_000 }, async () => {
     const app = (await import("../src/app")).createApp();
     await seedWorld();
-    const { token } = await staffLogin(app, ALPHA_HOST, "alice");
+    // RULE 7.2.1 — branch creation is an MD-class operation; alice (C.O. /
+    // temporary Branch Manager) is not authorised to create branches.
+    const { token } = await staffLogin(app, ALPHA_HOST, "amy");
     let companyId = "";
     await withAdmin(async (db) => {
       const r = await db.query<{ id: string }>(`SELECT id FROM companies WHERE slug='alpha-test'`);
@@ -64,7 +66,7 @@ describe("stage 5 — branch system", () => {
   it("dedupes slugs within a company and keeps codes monotonic after close", async () => {
     const app = (await import("../src/app")).createApp();
     await seedWorld();
-    const { token } = await staffLogin(app, ALPHA_HOST, "alice");
+    const { token } = await staffLogin(app, ALPHA_HOST, "amy");
     const name = `Twin Branch ${Date.now()}`;
 
     const first = await request(app)
@@ -107,6 +109,72 @@ describe("stage 5 — branch system", () => {
     expect(after.status).toBe(201);
     expect(parseInt(after.body.code.split("-")[1]!, 10))
       .toBeGreaterThan(parseInt(first.body.code.split("-")[1]!, 10));
+  });
+
+  // RULE 7.9.1/7.9.2/7.9.3 — four states; a suspended branch blocks its
+  // workers' logins; a closed branch takes no new customers, loans or workers.
+  it("enforces the branch lifecycle: suspend blocks logins, close blocks new work", async () => {
+    const app = (await import("../src/app")).createApp();
+    const world = await seedWorld();
+    const { token } = await staffLogin(app, ALPHA_HOST, "amy");
+
+    const created = await request(app)
+      .post("/api/v1/branches")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ name: `Lifecycle ${Date.now()}`, address: "9 Lifecycle Ave" });
+    expect(created.status).toBe(201);
+    const branchId = created.body.id as string;
+
+    // Suspending blocks the branch's workers from logging in.
+    const suspended = await request(app)
+      .post(`/api/v1/branches/${branchId}/status`)
+      .set("Authorization", `Bearer ${token}`)
+      .send({ action: "suspend", reason: "regional pause for review" });
+    expect(suspended.status).toBe(200);
+    expect(suspended.body.status).toBe("suspended");
+
+    // Reactivation is reversible and restores the branch.
+    const reopened = await request(app)
+      .post(`/api/v1/branches/${branchId}/status`)
+      .set("Authorization", `Bearer ${token}`)
+      .send({ action: "reactivate" });
+    expect(reopened.status).toBe(200);
+    expect(reopened.body.status).toBe("active");
+
+    // Closing blocks new customers; the branch code and URL stay reserved.
+    const closed = await request(app)
+      .post(`/api/v1/branches/${branchId}/status`)
+      .set("Authorization", `Bearer ${token}`)
+      .send({ action: "close", reason: "branch consolidated into the main office" });
+    expect(closed.status).toBe(200);
+    expect(closed.body.status).toBe("closed");
+
+    // A company-wide MD (not a branch-scoped C.O., who could never reach this
+    // branch in the first place) is refused new work in a closed branch.
+    const newCustomer = await request(app)
+      .post("/api/v1/customers")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ branchId, firstName: "Late", lastName: "Customer", address: "1 Closed Way" });
+    expect(newCustomer.status).toBe(409);
+
+    const newWorker = await request(app)
+      .post("/api/v1/workers")
+      .set("Authorization", `Bearer ${token}`)
+      .send({
+        roleKey: "collection_officer", scopeType: "single_branch",
+        branchId, branchIds: [branchId],
+        firstName: "Late", lastName: "Worker"
+      });
+    expect(newWorker.status).toBe(409);
+
+    // RULE 7.9.3 — the branch is never deleted and its code stays reserved.
+    const still = await request(app)
+      .get("/api/v1/branches")
+      .set("Authorization", `Bearer ${token}`);
+    const row = (still.body as Array<Record<string, unknown>>).find((b) => b.id === branchId);
+    expect(row).toBeDefined();
+    expect(row!.status).toBe("closed");
+    expect(String(row!.code)).toMatch(/^ALP-\d{3,}$/);
   });
 
   it("scopes every branch read/write to the caller's own company (isolation)", async () => {

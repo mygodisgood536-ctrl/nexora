@@ -3,7 +3,7 @@ import bcrypt from "bcryptjs";
 import request from "supertest";
 import type { Express } from "express";
 import crypto from "node:crypto";
-import { seedWorld, withAdmin } from "./fixtures";
+import { seedWorld, withAdmin, withAdminValue } from "./fixtures";
 
 const PO_EMAIL = "owner@nexora.test";
 const PO_PASSWORD = "OwnerPassword!123";
@@ -110,18 +110,40 @@ describe("stage 3 — platform owner portal", () => {
     const created = await request(app)
       .post("/platform/v1/companies")
       .set("Authorization", `Bearer ${token}`)
-      .send({ name: "Zeta Finance", codePrefix: RUN_PREFIX, contactEmail: "hello@zeta.test" });
+      .send({
+        name: "Zeta Finance",
+        codePrefix: RUN_PREFIX,
+        contactEmail: "hello@zeta.test",
+        mdFullName: "Zeta Managing",
+        mdPhone: "+2348000000001",
+        mdEmail: "md@zeta.test"
+      });
     if (created.status !== 201) {
-       
+      
       console.error("[createCompany failed]", created.status, JSON.stringify(created.body), "prefix=", RUN_PREFIX);
     }
     expect(created.status).toBe(201);
     const zetaId = created.body.id as string;
 
+    // RULE 3.3.1 / 3.4.1 — the create generates the MD, the company URL and a
+    // one-time credential panel that is shown once and never retrievable.
+    const panel = created.body.md as Record<string, unknown>;
+    expect(panel).toBeDefined();
+    expect(panel.username).toBe("Zeta Managing");
+    expect(panel.initial_password).toBe("@Zeta");
+    expect(panel.worker_code).toMatch(/-HO-MD-001$/);
+    expect(panel.credential_state).toBe("credential_issued");
+    expect(created.body.company_url).toBe(`${created.body.slug}.nexora.app`);
+
     const dup = await request(app)
       .post("/platform/v1/companies")
       .set("Authorization", `Bearer ${token}`)
-      .send({ name: "Other", codePrefix: RUN_PREFIX });
+      .send({
+        name: "Other",
+        codePrefix: RUN_PREFIX,
+        mdFullName: "Other Managing",
+        mdPhone: "+2348000000002"
+      });
     expect(dup.status).toBe(409);
 
     await withAdmin(async (db) => {
@@ -129,6 +151,16 @@ describe("stage 3 — platform owner portal", () => {
         created.body.id
       ]);
       expect(theme.rowCount).toBe(1);
+      // The MD's role must carry its platform permission bundle, otherwise
+      // every requirePermission gate would refuse the MD itself.
+      const mdPerms = await db.query<{ n: string }>(
+        `SELECT count(*)::text AS n
+           FROM role_permissions rp
+           JOIN roles r ON r.id = rp.role_id
+          WHERE r.company_id=$1 AND r.role_key='md'`,
+        [created.body.id]
+      );
+      expect(Number(mdPerms.rows[0]!.n)).toBeGreaterThan(0);
       const counters = await db.query(
         `SELECT count(*)::int AS n FROM company_counters WHERE company_id=$1`,
         [created.body.id]
@@ -139,8 +171,14 @@ describe("stage 3 — platform owner portal", () => {
     const list = await request(app)
       .get("/platform/v1/companies")
       .set("Authorization", `Bearer ${token}`);
-    const zeta = (list.body as Array<Record<string, unknown>>).find((c) => c.id === zetaId);
-    expect(String(zeta?.status)).toBe("in_setup");
+    // RULE 3.6.6 - the workspace list is paginated and each item is addressed
+    // by its own exact company id.
+    const items = (list.body as { items: Array<Record<string, unknown>> }).items;
+    expect(list.status).toBe(200);
+    expect(Array.isArray(items)).toBe(true);
+    const zeta = items.find((c) => c.id === zetaId);
+    // RULE 3.3.3 - a completed Create Company is live immediately.
+    expect(String(zeta?.status)).toBe("active");
   });
 
   it("walks company status transitions with reason-on-suspend, fully audited", async () => {
@@ -150,15 +188,22 @@ describe("stage 3 — platform owner portal", () => {
     const created = await request(app)
       .post("/platform/v1/companies")
       .set("Authorization", `Bearer ${token}`)
-      .send({ name: `Walk Co ${Date.now()}`, codePrefix: randomPrefix() });
+      .send({
+        name: `Walk Co ${Date.now()}`,
+        codePrefix: randomPrefix(),
+        mdFullName: "Walk Managing",
+        mdPhone: "+2348000000003"
+      });
     expect(created.status).toBe(201);
     const companyId = created.body.id as string;
 
-    const activate = await request(app)
-      .post(`/platform/v1/companies/${companyId}/status`)
-      .set("Authorization", `Bearer ${token}`)
-      .send({ action: "activate" });
-    expect(activate.body.status).toBe("active");
+    // RULE 3.3.3 - the completed Create Company is already live, so the walk
+    // starts from "active" rather than having to activate it.
+    const createdStatus = await withAdminValue(async (db) =>
+      (await db.query<{ status: string }>(`SELECT status FROM companies WHERE id=$1`, [companyId]))
+        .rows[0]!.status
+    );
+    expect(createdStatus).toBe("active");
 
     const noReason = await request(app)
       .post(`/platform/v1/companies/${companyId}/status`)
@@ -186,7 +231,7 @@ describe("stage 3 — platform owner portal", () => {
       );
       const actions = logs.rows.map((r) => r.action.replace(/^companies\./, ""));
       expect(actions).toContain("created");
-      expect(actions).toContain("activate");
+      // RULE 3.3.3 - no explicit "activate" occurs: the company is born live.
       expect(actions).toContain("suspend");
     });
   });

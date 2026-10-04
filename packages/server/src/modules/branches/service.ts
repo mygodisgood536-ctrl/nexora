@@ -1,5 +1,7 @@
 import { withBypass, withTenant } from "../../db/repo";
 import { AppError } from "../../lib/errors";
+import type pg from "pg";
+import { insertNotificationsToMds } from "../notifications/service";
 
 /**
  * Branch system (Part 1 §7–9): creation, deterministic never-reused codes
@@ -11,6 +13,35 @@ import { AppError } from "../../lib/errors";
 export interface BranchActor {
   sub: string;
   companyId: string;
+}
+
+// RULE 7.2.1 — roles that may create branches and change branch state: MD's
+// group plus HR. Auditors/Compliance/Risk are read-only in the Workplace
+// (inspect, change nothing).
+export const BRANCH_WRITE_ROLES = [
+  "md",
+  "deputy_md",
+  "gm",
+  "assistant_gm",
+  "operations_manager",
+  "assistant_operations_manager",
+  "hr_manager",
+  "hr_officer",
+];
+
+export async function actorHoldsBranchWriteRole(
+  db: pg.PoolClient,
+  actor: BranchActor
+): Promise<boolean> {
+  const r = await db.query<{ ok: number }>(
+    `SELECT 1 AS ok FROM role_assignments ra
+       JOIN roles r ON r.id = ra.role_id
+      WHERE ra.user_id=$1 AND ra.company_id=$2 AND ra.status='active'
+        AND r.role_key = ANY($3::text[])
+      LIMIT 1`,
+    [actor.sub, actor.companyId, BRANCH_WRITE_ROLES]
+  );
+  return (r.rowCount ?? 0) > 0;
 }
 
 export interface CreateBranchInput {
@@ -81,6 +112,11 @@ export async function createBranch(
   if (!company) throw AppError.notFound("Company not found");
 
   return withTenant(actor.companyId, null, async (db) => {
+    if (!(await actorHoldsBranchWriteRole(db, actor))) {
+      throw AppError.forbidden(
+        "Only MD, Deputy MD, GM, Assistant GM, Operations or HR may create branches"
+      );
+    }
     // Per-company serialization for code allocation: guarantees gap-free,
     // never-reused `{PREFIX}-{SEQ}` codes even under concurrent creation,
     // without relying on row-lock wait ordering.
@@ -136,10 +172,40 @@ export async function createBranch(
 }
 
 const BRANCH_TRANSITIONS: Record<string, { from: string[]; to: string; needsReason?: boolean; terminal?: boolean }> = {
+  open: { from: ["in_setup"], to: "active" },
   suspend: { from: ["active"], to: "suspended", needsReason: true },
   reactivate: { from: ["suspended"], to: "active" },
-  close: { from: ["active", "suspended"], to: "closed", needsReason: true, terminal: true }
+  close: { from: ["in_setup", "active", "suspended"], to: "closed", needsReason: true, terminal: true }
 };
+
+/**
+ * RULE 7.9.3 — a closed branch accepts no new customers, no new loans and no
+ * new workers. Existing customers and loans keep being collected and reported.
+ * Only a branch that can actually take new work passes this gate.
+ */
+export async function assertBranchAcceptsNewWork(
+  db: pg.PoolClient,
+  branchId: string,
+  what: string
+): Promise<void> {
+  const r = await db.query<{ status: string }>(
+    `SELECT status FROM branches WHERE id=$1`,
+    [branchId]
+  );
+  if ((r.rowCount ?? 0) === 0) throw AppError.notFound("Branch not found");
+  const status = r.rows[0]!.status;
+  if (status === "closed") {
+    throw AppError.conflict(
+      `This branch is closed and cannot take new ${what}; ` +
+      `its branch code and URL remain reserved and its existing records stay auditable`
+    );
+  }
+  if (status !== "active") {
+    throw AppError.conflict(
+      `This branch is ${status.replace(/_/g, " ")} and cannot take new ${what}`
+    );
+  }
+}
 
 export async function listBranches(actor: BranchActor): Promise<unknown[]> {
   // RLS scopes every row to the caller's company automatically.
@@ -165,6 +231,11 @@ export async function setBranchStatus(
     throw AppError.unprocessable("Reason is required");
   }
   return withTenant(actor.companyId, null, async (db) => {
+    if (!(await actorHoldsBranchWriteRole(db, actor))) {
+      throw AppError.forbidden(
+        "Only MD, Deputy MD, GM, Assistant GM, Operations or HR may change branch status"
+      );
+    }
     const found = await db.query<{ id: string; status: string }>(
       `SELECT id, status FROM branches WHERE id=$1 FOR UPDATE`,
       [branchId]
@@ -187,6 +258,14 @@ export async function setBranchStatus(
       reason,
       meta
     );
+    // RULE 7.9.4 — every branch state change notifies the MD.
+    await insertNotificationsToMds(db, actor.companyId, "branch.status_changed", {
+      branch_id: branchId,
+      action,
+      from: before,
+      to: t.to,
+      reason: reason ?? null
+    });
     return { status: t.to };
   });
 }

@@ -30,7 +30,7 @@ async function getAlphaBranchA2(): Promise<string> {
 }
 
 describe("stage 7 - customer domain", () => {
-  it("creates a customer with auto-allocated code, auto-issued VA, and va_pending status", async () => {
+  it("creates a customer with auto-allocated code and active status, without a VA (RULE 9.5.2: no VA at registration)", async () => {
     const app = (await import("../src/app")).createApp();
     await seedWorld();
     const { token } = await staffLogin(app, ALPHA_HOST, "alice");
@@ -48,14 +48,12 @@ describe("stage 7 - customer domain", () => {
       });
     expect(res.status).toBe(201);
     expect(res.body.customerCode).toMatch(/^CUST-\d{4,}$/);
-    expect(res.body.status).toBe("va_pending");
+    expect(res.body.status).toBe("active");
     expect(res.body.kycComplete).toBe(false);
-    expect(res.body.virtualAccount).toBeDefined();
-    expect(res.body.virtualAccount.status).toBe("pending");
-    expect(res.body.virtualAccount.accountNumber).toMatch(/^\d{10}$/);
+    expect(res.body.virtualAccount).toBeNull();
   });
 
-  it("VA account numbers are monotonically increasing and never reused", async () => {
+  it("customer codes are monotonically increasing and never reused", async () => {
     const app = (await import("../src/app")).createApp();
     await seedWorld();
     const { token } = await staffLogin(app, ALPHA_HOST, "alice");
@@ -71,8 +69,8 @@ describe("stage 7 - customer domain", () => {
       .set("Authorization", `Bearer ${token}`)
       .send({ branchId: branchA1, firstName: "Two", lastName: "Second", address: "2 Second St" });
     expect(second.status).toBe(201);
-    const a = parseInt(first.body.virtualAccount.accountNumber, 10);
-    const b = parseInt(second.body.virtualAccount.accountNumber, 10);
+    const a = parseInt(first.body.customerCode.split("-")[1]!, 10);
+    const b = parseInt(second.body.customerCode.split("-")[1]!, 10);
     expect(b).toBeGreaterThan(a);
   });
 
@@ -119,7 +117,7 @@ describe("stage 7 - customer domain", () => {
     );
     expect(found.length).toBeGreaterThanOrEqual(2);
   });
-  it("promotes va_pending to active when KYC completes AND an active VA exists", async () => {
+  it("KYC completion is recorded on an already-active customer", async () => {
     const app = (await import("../src/app")).createApp();
     await seedWorld();
     const { token } = await staffLogin(app, ALPHA_HOST, "alice");
@@ -131,16 +129,7 @@ describe("stage 7 - customer domain", () => {
       .send({ branchId: branchA1, firstName: "Promote", lastName: "Me", address: "7 Promotion Ln" });
     expect(create.status).toBe(201);
     const customerId = create.body.id;
-    const vaId = create.body.virtualAccount.id;
-    expect(create.body.status).toBe("va_pending");
-
-    // Manually flip the VA to active (simulating the provider webhook).
-    await withAdmin(async (db) => {
-      await db.query(
-        `UPDATE virtual_accounts SET status='active' WHERE id=$1`,
-        [vaId]
-      );
-    });
+    expect(create.body.status).toBe("active");
 
     const kyc = await request(app)
       .put(`/api/v1/customers/${customerId}/kyc`)
@@ -151,7 +140,7 @@ describe("stage 7 - customer domain", () => {
     expect(kyc.body.kyc_complete).toBe(true);
   });
 
-  it("does NOT promote to active when KYC completes but no active VA exists", async () => {
+  it("KYC works for a customer that has never been issued a VA", async () => {
     const app = (await import("../src/app")).createApp();
     await seedWorld();
     const { token } = await staffLogin(app, ALPHA_HOST, "alice");
@@ -160,7 +149,7 @@ describe("stage 7 - customer domain", () => {
     const create = await request(app)
       .post("/api/v1/customers")
       .set("Authorization", `Bearer ${token}`)
-      .send({ branchId: branchA1, firstName: "StaysPending", lastName: "NoVA", address: "8 Pending Way" });
+      .send({ branchId: branchA1, firstName: "StaysActive", lastName: "NoVA", address: "8 Pending Way" });
     expect(create.status).toBe(201);
     const customerId = create.body.id;
 
@@ -169,7 +158,7 @@ describe("stage 7 - customer domain", () => {
       .set("Authorization", `Bearer ${token}`)
       .send({ kycComplete: true });
     expect(kyc.status).toBe(200);
-    expect(kyc.body.status).toBe("va_pending");
+    expect(kyc.body.status).toBe("active");
   });
 
   it("enforces the status machine: suspend -> active -> close", async () => {

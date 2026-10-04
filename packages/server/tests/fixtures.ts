@@ -19,6 +19,10 @@ export interface TestWorld {
   branchB1: string;
   userA: string;
   userB: string;
+  userAMD: string;
+  userAuditor: string;
+  userFinance: string;
+  userHr: string;
   customerA1: string;
   customerA2: string;
   customerB1: string;
@@ -39,6 +43,17 @@ export async function withAdmin(fn: (client: pg.Client) => Promise<void>): Promi
   await client.connect();
   try {
     await fn(client);
+  } finally {
+    await client.end();
+  }
+}
+
+/** As withAdmin, but returns the callback's value for convenience. */
+export async function withAdminValue<T>(fn: (client: pg.Client) => Promise<T>): Promise<T> {
+  const client = new pg.Client({ connectionString: adminUrlForTest() });
+  await client.connect();
+  try {
+    return await fn(client);
   } finally {
     await client.end();
   }
@@ -87,8 +102,18 @@ async function loadWorld(db: pg.Client): Promise<TestWorld> {
      WHERE ra.user_id=$1 AND r.role_key='collection_officer' LIMIT 1`,
     [userA]
   );
+  const userAMD = await one(`SELECT id FROM users WHERE company_id=$1 AND username='amy'`, [companyA]);
+  const userAuditor = await one(
+    `SELECT id FROM users WHERE company_id=$1 AND username='audrey'`, [companyA]
+  );
+  const userFinance = await one(
+    `SELECT id FROM users WHERE company_id=$1 AND username='fiona'`, [companyA]
+  );
+  const userHr = await one(
+    `SELECT id FROM users WHERE company_id=$1 AND username='harry'`, [companyA]
+  );
 
-  return { companyA, companyB, branchA1, branchA2, branchB1, userA, userB, customerA1, customerA2, customerB1, vaA1, loanA1 };
+  return { companyA, companyB, branchA1, branchA2, branchB1, userA, userB, userAMD, userAuditor, userFinance, userHr, customerA1, customerA2, customerB1, vaA1, loanA1 };
 }
 
 /** Idempotently seeds two isolated companies with branches/users/customers/VA/loan.
@@ -102,321 +127,8 @@ export async function seedWorld(): Promise<TestWorld> {
     await db.query("SELECT set_config('app.bypass_rls', 'on', true)");
     await db.query("SELECT pg_advisory_xact_lock(hashtext('nexora-seed-world'))");
 
-    let world: TestWorld | null = null;
-    try {
-      world = await loadWorld(db);
-    } catch {
-      world = null;
-    }
-
-    if (!world) {
-      await db.query(`TRUNCATE TABLE companies CASCADE`);
-      world = await insertWorld(db);
-    } else {
-      // Reset artifacts that integrity tests mutate, so reruns stay deterministic.
-      await db.query(
-        `DELETE FROM payments WHERE provider_txn_ref IN ('TX-TEST-001','TX-NEG-001','TX-IMM-001')`
-      );
-      // Clean up VAs from previous runs and ensure seed VA is active.
-      await db.query(`DELETE FROM virtual_accounts WHERE account_number = '3000000001'`);
-      await db.query(
-        `UPDATE virtual_accounts SET status='closed' WHERE account_number='1000000001'`
-      );
-      await db.query(
-        `UPDATE virtual_accounts SET status='active' WHERE account_number='1000000001'`
-      );
-      await db.query(
-        `DELETE FROM customers WHERE customer_code = 'CUST-7777'
-            OR (first_name = 'Dup' AND last_name = 'One')`
-      );
-      // Clean up Stage 7C lending artifacts FIRST (loans/applications/products/chains),
-      // because loan_applications and loans have FKs back to customers that the
-      // customer cleanup below would otherwise hit.
-      await db.query(`
-        WITH seeded AS (
-          SELECT id AS company_id, slug FROM companies
-           WHERE slug IN ('alpha-test','beta-test')
-        )
-        DELETE FROM repayment_schedule_rows rsr
-         USING loans l, seeded s
-         WHERE l.id = rsr.loan_id
-           AND l.company_id = s.company_id
-           AND s.slug = 'alpha-test'
-           AND l.principal_amount = '5000'
-      `);
-      await db.query(`
-        WITH seeded AS (
-          SELECT id AS company_id, slug FROM companies
-           WHERE slug IN ('alpha-test','beta-test')
-        )
-        DELETE FROM loans l
-         USING seeded s
-         WHERE l.company_id = s.company_id
-           AND s.slug = 'alpha-test'
-           AND l.principal_amount = '5000'
-      `);
-      await db.query(`
-        WITH seeded AS (
-          SELECT id AS company_id, slug FROM companies
-           WHERE slug IN ('alpha-test','beta-test')
-        )
-        DELETE FROM loan_applications a
-         USING seeded s
-         WHERE a.company_id = s.company_id
-           AND s.slug = 'alpha-test'
-           AND a.principal_amount IN ('5000', '10000')
-      `);
-      await db.query(`
-        WITH seeded AS (
-          SELECT id AS company_id, slug FROM companies
-           WHERE slug IN ('alpha-test','beta-test')
-        )
-        DELETE FROM loan_products lp
-         USING seeded s
-         WHERE lp.company_id = s.company_id
-           AND s.slug = 'alpha-test'
-           AND lp.name = 'Standard Microloan'
-      `);
-      await db.query(`
-        WITH seeded AS (
-          SELECT id AS company_id, slug FROM companies
-           WHERE slug IN ('alpha-test','beta-test')
-        )
-        DELETE FROM approval_chains ac
-         USING seeded s
-         WHERE ac.company_id = s.company_id
-           AND s.slug = 'alpha-test'
-           AND ac.name = 'Standard One-Stage'
-      `);
-
-      // Clean up customers created by Stage 7 tests (excluding seed ones).
-      // Reference seeded companies via slug (resolved inline) so this runs
-      // before the later block that re-reads companyA/companyB.
-      await db.query(`
-        WITH seeded AS (
-          SELECT id AS company_id, slug FROM companies
-           WHERE slug IN ('alpha-test','beta-test')
-        ),
-        seed_customers AS (
-          SELECT c.id FROM customers c
-            JOIN seeded s ON s.company_id = c.company_id
-           WHERE (s.slug = 'alpha-test' AND c.customer_code IN ('CUST-0001','CUST-0002'))
-              OR (s.slug = 'beta-test'  AND c.customer_code IN ('CUST-0001'))
-        ),
-        non_seed AS (
-          SELECT c.id FROM customers c
-            JOIN seeded s ON s.company_id = c.company_id
-           WHERE c.id NOT IN (SELECT id FROM seed_customers)
-        )
-        DELETE FROM virtual_accounts WHERE customer_id IN (SELECT id FROM non_seed)
-      `);
-      await db.query(`
-        WITH seeded AS (
-          SELECT id AS company_id, slug FROM companies
-           WHERE slug IN ('alpha-test','beta-test')
-        )
-        DELETE FROM customers c
-         USING seeded s
-         WHERE s.company_id = c.company_id
-           AND c.id NOT IN (
-             SELECT c2.id FROM customers c2
-               JOIN seeded s2 ON s2.company_id = c2.company_id
-              WHERE (s2.slug = 'alpha-test' AND c2.customer_code IN ('CUST-0001','CUST-0002'))
-                 OR (s2.slug = 'beta-test'  AND c2.customer_code IN ('CUST-0001'))
-           )
-      `);
-      await db.query(
-        `UPDATE customers c SET status='active'
-           FROM companies co
-          WHERE co.id = c.company_id AND co.slug = 'alpha-test'`
-      );
-      // Reset Stage 2 lifecycle mutations: credentials, flags, sessions.
-      await db.query(
-        `UPDATE users u SET password_hash=$1, must_change_password=false,
-                temp_password_expires_at=NULL, status='active',
-                active_role_key=NULL
-           FROM companies c
-          WHERE c.id=u.company_id AND c.slug IN ('alpha-test','beta-test')
-            AND u.username IN ('alice','bob')`,
-        [SEED_HASH]
-      );
-
-      // Clean up workers created by Stage 6 tests so reruns are deterministic.
-      // (seed users alice/bob/tempuser are preserved above; everything else
-      //  in companies alpha-test/beta-test that isn't a seed user is removed.)
-      await db.query(
-        `DELETE FROM users u USING companies c
-          WHERE c.id=u.company_id AND c.slug IN ('alpha-test','beta-test')
-            AND u.username NOT IN ('alice','bob','tempuser')`
-      );
-
-      // Clean up groups created by Stage 7B tests.
-      await db.query(
-        `DELETE FROM group_members WHERE group_id IN (
-           SELECT id FROM groups WHERE name IN
-             ('Test Group Alpha','Members Test Group','Branch Isolation Test',
-              'Rename Test Original','Rename Test New','Close Test Group','Alpha Only Group',
-              'Cross Branch Group')
-         )`
-      );
-      await db.query(
-        `DELETE FROM groups WHERE name IN
-           ('Test Group Alpha','Members Test Group','Branch Isolation Test',
-            'Rename Test Original','Rename Test New','Close Test Group','Alpha Only Group',
-            'Cross Branch Group')`
-      );
-      // Clean up Stage 7C lending artifacts: loans, applications, products,
-      // chains. Deleting in dependency order so FKs are not violated.
-      await db.query(`
-        WITH seeded AS (
-          SELECT id AS company_id, slug FROM companies
-           WHERE slug IN ('alpha-test','beta-test')
-        )
-        DELETE FROM repayment_schedule_rows rsr
-         USING loans l, seeded s
-         WHERE l.id = rsr.loan_id
-           AND l.company_id = s.company_id
-           AND s.slug = 'alpha-test'
-           AND l.principal_amount = '5000'
-      `);
-      await db.query(`
-        WITH seeded AS (
-          SELECT id AS company_id, slug FROM companies
-           WHERE slug IN ('alpha-test','beta-test')
-        )
-        DELETE FROM loans l
-         USING seeded s
-         WHERE l.company_id = s.company_id
-           AND s.slug = 'alpha-test'
-           AND l.principal_amount = '5000'
-      `);
-      await db.query(`
-        WITH seeded AS (
-          SELECT id AS company_id, slug FROM companies
-           WHERE slug IN ('alpha-test','beta-test')
-        )
-        DELETE FROM loan_applications a
-         USING seeded s
-         WHERE a.company_id = s.company_id
-           AND s.slug = 'alpha-test'
-           AND a.principal_amount IN ('5000', '10000')
-      `);
-      await db.query(`
-        WITH seeded AS (
-          SELECT id AS company_id, slug FROM companies
-           WHERE slug IN ('alpha-test','beta-test')
-        )
-        DELETE FROM loan_products lp
-         USING seeded s
-         WHERE lp.company_id = s.company_id
-           AND s.slug = 'alpha-test'
-           AND lp.name = 'Standard Microloan'
-      `);
-      await db.query(`
-        WITH seeded AS (
-          SELECT id AS company_id, slug FROM companies
-           WHERE slug IN ('alpha-test','beta-test')
-        )
-        DELETE FROM approval_chains ac
-         USING seeded s
-         WHERE ac.company_id = s.company_id
-           AND s.slug = 'alpha-test'
-           AND ac.name = 'Standard One-Stage'
-      `);
-      // Clean up the cross-branch customer created by Stage 7B tests
-      // (handled by the comprehensive customers cleanup above).
-
-      // Restore canonical Stage 2 assignments (tests end/mutate them).
-      const idOf = async (sql: string, params: unknown[]): Promise<uuid> => {
-        const row = (await db.query<{ id: uuid }>(sql, params)).rows[0];
-        if (!row) throw new Error(`fixture reset: missing row for ${sql}`);
-        return row.id;
-      };
-      const companyA = await idOf(`SELECT id FROM companies WHERE slug='alpha-test'`, []);
-      const companyB = await idOf(`SELECT id FROM companies WHERE slug='beta-test'`, []);
-      const branchA1 = await idOf(`SELECT id FROM branches WHERE company_id=$1 AND code='ALP-001'`, [companyA]);
-      const userA = await idOf(`SELECT id FROM users WHERE company_id=$1 AND username='alice'`, [companyA]);
-      const userB = await idOf(`SELECT id FROM users WHERE company_id=$1 AND username='bob'`, [companyB]);
-      const coRole = await idOf(`SELECT id FROM roles WHERE company_id=$1 AND role_key='collection_officer'`, [companyA]);
-      const bmRole = await idOf(`SELECT id FROM roles WHERE company_id=$1 AND role_key='branch_manager'`, [companyA]);
-      const mdRole = await idOf(`SELECT id FROM roles WHERE company_id=$1 AND role_key='md'`, [companyB]);
-
-      await db.query(
-        `DELETE FROM role_assignments ra USING users u, companies c
-          WHERE ra.user_id=u.id AND c.id=u.company_id AND c.slug IN ('alpha-test','beta-test')`
-      );
-      const day = 24 * 60 * 60 * 1000;
-      const coId = (
-        await db.query(
-          `INSERT INTO role_assignments (company_id,user_id,role_id,scope_type,assignment_type,starts_at,status,assigned_by)
-           VALUES ($1,$2,$3,'single_branch','permanent', now() - interval '10 days','active',$2) RETURNING id`,
-          [companyA, userA, coRole]
-        )
-      ).rows[0]!.id;
-      const bmId = (
-        await db.query(
-          `INSERT INTO role_assignments (company_id,user_id,role_id,scope_type,assignment_type,starts_at,ends_at,status,assigned_by)
-           VALUES ($1,$2,$3,'single_branch','temporary', $4, $5,'active',$2) RETURNING id`,
-          [companyA, userA, bmRole, new Date(Date.now() - day), new Date(Date.now() + day)]
-        )
-      ).rows[0]!.id;
-      await db.query(
-        `INSERT INTO role_assignments (company_id,user_id,role_id,scope_type,assignment_type,starts_at,status,assigned_by)
-         VALUES ($1,$2,$3,'company_wide','permanent', now(),'active',$2)`,
-        [companyB, userB, mdRole]
-      );
-      await db.query(`INSERT INTO role_assignment_branches VALUES ($1,$2),($3,$4)`, [
-        coId,
-        branchA1,
-        bmId,
-        branchA1
-      ]);
-
-      // tempuser: expired temporary credential, restored or recreated.
-      const tempReset = await db.query(
-        `UPDATE users u SET password_hash=$1, must_change_password=true,
-                temp_password_expires_at = now() - interval '1 hour', status='active'
-           FROM companies c
-          WHERE c.id=u.company_id AND c.slug='alpha-test' AND u.username='tempuser'`,
-        [SEED_HASH]
-      );
-      if (tempReset.rowCount === 0) {
-        const branchA1b = await idOf(`SELECT id FROM branches WHERE company_id=$1 AND code='ALP-001'`, [companyA]);
-        await db.query(
-          `INSERT INTO users (company_id, branch_id, worker_code, username, password_hash,
-                              first_name, last_name, birth_day, birth_month, status,
-                              must_change_password, temp_password_expires_at)
-           VALUES ($1,$2,'W003','tempuser',$3,'Temp','User',1,1,'active',true,
-                   now() - interval '1 hour')`,
-          [companyA, branchA1b, SEED_HASH]
-        );
-      }
-      await db.query(
-        `DELETE FROM refresh_tokens rt USING users u, companies c
-          WHERE rt.user_id=u.id AND c.id=u.company_id
-            AND c.slug IN ('alpha-test','beta-test')`
-      );
-
-      // Heal counters so they always exist and sit past existing codes
-      // (Stage 5 never-reuse contract survives any prior run's mutations).
-      await db.query(
-        `INSERT INTO company_counters (company_id, counter_key, next_value)
-         SELECT sub.company_id, sub.counter_key, sub.floor + 1
-           FROM (
-             SELECT c.id AS company_id, 'branch_seq' AS counter_key,
-                    COALESCE(NULLIF(regexp_replace(max(b.code), '^.*-', ''), '')::int, 0) AS floor
-               FROM companies c JOIN branches b ON b.company_id=c.id
-              WHERE c.slug IN ('alpha-test','beta-test') GROUP BY c.id
-             UNION ALL
-             SELECT c.id, 'customer_seq',
-                    COALESCE(NULLIF(regexp_replace(max(cu.customer_code), '^.*-', ''), '')::int, 0)
-               FROM companies c JOIN customers cu ON cu.company_id=c.id
-              WHERE c.slug IN ('alpha-test','beta-test') GROUP BY c.id
-           ) sub
-         ON CONFLICT (company_id, counter_key)
-         DO UPDATE SET next_value = GREATEST(company_counters.next_value, EXCLUDED.next_value)`
-      );
-    }
+    await db.query(`TRUNCATE TABLE companies CASCADE`);
+    const world = await insertWorld(db);
 
     await db.query("COMMIT");
     cached = world;
@@ -457,26 +169,42 @@ async function insertWorld(db: pg.Client): Promise<TestWorld> {
       b: uuid | null,
       code: string,
       uname: string,
+      name: string,
       opts: { mustChange?: boolean; tempExpiresPast?: boolean } = {}
     ): Promise<uuid> =>
       (await db.query(
         `INSERT INTO users (company_id, branch_id, worker_code, username, password_hash,
                             first_name, last_name, birth_day, birth_month, status,
-                            must_change_password, temp_password_expires_at)
-         VALUES ($1,$2,$3,$4,$5,'Test','Worker',1,1,'active',$6,$7) RETURNING id`,
+                            must_change_password, temp_password_expires_at,
+                            credential_state, credential_issued_at, credential_expires_at,
+                            password_changed_at, profile_completed_at)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,1,1,'active',$8,$9,$10,$11,$12,$13,$14)
+         RETURNING id`,
         [
           c,
           b,
           code,
           uname,
           SEED_HASH,
+          "Test",
+          name.split(" ").slice(1).join(" ") || "Worker",
           opts.mustChange ?? false,
-          opts.tempExpiresPast ? new Date(Date.now() - 60 * 60 * 1000) : null
+          opts.tempExpiresPast ? new Date(Date.now() - 60 * 60 * 1000) : null,
+          opts.mustChange ? "credential_issued" : "secured",
+          opts.mustChange ? new Date(Date.now() - 60 * 60 * 1000) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
+          opts.tempExpiresPast ? new Date(Date.now() - 60 * 60 * 1000) : null,
+          opts.mustChange ? null : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
+          opts.mustChange ? null : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
         ]
       )).rows[0].id;
 
-    const userA = await user(companyA, branchA1, "W001", "alice");
-    const userB = await user(companyB, branchB1, "W001", "bob");
+    const userA = await user(companyA, branchA1, "W001", "alice", "Test Alice");
+    const userB = await user(companyB, branchB1, "W001", "bob", "Test Bob");
+    // The company's MD: configures providers, holds company-wide authority.
+    const userAMD = await user(companyA, null, "W002", "amy", "Test Amy");
+    const userAuditor = await user(companyA, null, "W009", "audrey", "Test Audrey");
+    const userFinance = await user(companyA, null, "W010", "fiona", "Test Fiona");
+    const userHr = await user(companyA, null, "W011", "harry", "Test Harry");
 
     const mdRoleA = (await db.query(
       `INSERT INTO roles (company_id, role_key, name, category, is_system)
@@ -495,14 +223,20 @@ async function insertWorld(db: pg.Client): Promise<TestWorld> {
     const coRoleA = await role(companyA, "collection_officer", "Collection Officer", "operations_field");
     const bmRoleA = await role(companyA, "branch_manager", "Branch Manager", "operations_field");
     const mdRoleB = await role(companyB, "md", "MD", "executive");
+    // RULE 6.5.1/6.5.5 - the Internal Auditor: unlimited read, never a write.
+    const auditorRoleA = await role(companyA, "internal_auditor", "Internal Auditor", "audit_compliance");
+    // RULE 6.6.1 - Finance owns the truth of money, not the control of money.
+    const financeRoleA = await role(companyA, "finance_manager", "Finance Manager", "finance");
+    // RULE 6.4 - HR manages people and never money.
+    const hrRoleA = await role(companyA, "hr_manager", "HR Manager", "hr_admin");
 
     const grant = async (roleId: uuid, verbs: string[]): Promise<void> => {
       for (const verb of verbs) {
         await db.query(`INSERT INTO role_permissions (role_id, verb) VALUES ($1,$2)`, [roleId, verb]);
       }
     };
-    await grant(coRoleA, ["view", "create", "export"]);
-    await grant(bmRoleA, ["view", "approve", "assign", "suspend", "edit"]);
+    await grant(coRoleA, ["view", "create", "edit", "export", "allocate", "register_customer"]);
+    await grant(bmRoleA, ["view", "approve", "assign", "suspend", "edit", "view_performance", "manage_workers"]);
     await db.query(
       `INSERT INTO role_permissions (role_id, verb) SELECT $1, verb FROM permission_verbs`,
       [mdRoleB]
@@ -540,9 +274,24 @@ async function insertWorld(db: pg.Client): Promise<TestWorld> {
       branchA1
     ]);
     await assignment(companyB, userB, mdRoleB, "company_wide");
+    await assignment(companyA, userAMD, mdRoleA, "company_wide");
+    // RULE 6.5.2 - the auditor is granted read and export only, never a verb
+    // that could mutate a record.
+    await grant(auditorRoleA, ["view", "export", "view_performance"]);
+    await assignment(companyA, userAuditor, auditorRoleA, "company_wide");
+    // RULE 6.6.1 - Finance reconciles and prepares corrections, but does not
+    // collect, allocate or disburse. RULE 8.4.1/12.8 - Finance may add or
+    // change a branch's provider, subject to the MD's authorisation.
+    await grant(financeRoleA, [
+      "view", "export", "edit", "create", "reverse", "view_performance", "configure_providers"
+    ]);
+    await assignment(companyA, userFinance, financeRoleA, "company_wide");
+    // RULE 6.4.3 - HR acts on people only; it never receives a money verb.
+    await grant(hrRoleA, ["view", "export", "assign", "suspend", "manage_workers"]);
+    await assignment(companyA, userHr, hrRoleA, "company_wide");
 
     // Expired temporary-password user for the login lifecycle test.
-    await user(companyA, branchA1, "W003", "tempuser", {
+    await user(companyA, branchA1, "W003", "tempuser", "Temp User", {
       mustChange: true,
       tempExpiresPast: true
     });
@@ -624,6 +373,6 @@ async function insertWorld(db: pg.Client): Promise<TestWorld> {
       [companyA, loanA1]
     );
 
-    return { companyA, companyB, branchA1, branchA2, branchB1, userA, userB, customerA1, customerA2, customerB1, vaA1, loanA1 };
+    return { companyA, companyB, branchA1, branchA2, branchB1, userA, userB, userAMD, userAuditor, userFinance, userHr, customerA1, customerA2, customerB1, vaA1, loanA1 };
 }
 

@@ -2,9 +2,10 @@
 // Exercises provider config CRUD, signed webhook ingestion, idempotency,
 // the 13-step pipeline progression, allocation engine, reconciliation,
 // exception handling, and tenant/branch isolation against live PostgreSQL.
-import { describe, expect, it, beforeAll } from "vitest";
+import { describe, expect, it, beforeAll, afterAll } from "vitest";
 import request from "supertest";
 import crypto from "node:crypto";
+import http from "node:http";
 import type { Express } from "express";
 import { seedWorld, withAdmin } from "./fixtures";
 import { staffLogin } from "./platform-helpers";
@@ -19,6 +20,7 @@ let providerA: string;
 let providerB: string;
 let secretA = SECRET_A;
 let secretB = SECRET_B;
+let providerApiServer: http.Server;
 
 // Per-run unique refs so reruns against the same DB do not trip idempotency.
 let runCounter = 0;
@@ -123,6 +125,18 @@ async function saveOutstanding(loanCode: string): Promise<string> {
 }
 
 // Remove test-created artifacts before the suite so reruns stay deterministic.
+async function getAlphaLoanId(): Promise<string> {
+  let id = "";
+  await withAdmin(async (db) => {
+    const r = await db.query<{ id: string }>(
+      `SELECT l.id FROM loans l JOIN companies c ON c.id=l.company_id
+        WHERE c.slug='alpha-test' AND l.principal_amount='30000' LIMIT 1`
+    );
+    id = r.rows[0]!.id;
+  });
+  return id;
+}
+
 async function cleanupPayments(): Promise<void> {
   await withAdmin(async (db) => {
     await db.query(`
@@ -222,7 +236,8 @@ async function configureProvider(
   username: string,
   branchId: string,
   provider: string,
-  secret: string
+  secret: string,
+  apiBaseUrl: string
 ): Promise<request.Response> {
   const { token } = await staffLogin(app, host, username);
   return request(app)
@@ -231,7 +246,7 @@ async function configureProvider(
     .send({
       branchId,
       provider,
-      apiBaseUrl: "https://payments.example.test/v1",
+      apiBaseUrl,
       apiKey: "api-key-00000000",
       signingSecret: secret
     });
@@ -243,16 +258,51 @@ beforeAll(async () => {
   await cleanupPayments();
   const bA1 = await getAlphaBranchA1();
   const bB1 = await getBetaBranchB1();
-  await configureProvider(app, ALPHA_HOST, "alice", bA1, "sandbox", secretA);
-  await configureProvider(app, BETA_HOST, "bob", bB1, "sandbox", secretB);
+
+  // Vision Part 8 — activation requires a real, successful connection test
+  // against the provider's API base URL. A local HTTP endpoint is used so the
+  // test exercises a genuine HTTP round trip.
+  providerApiServer = http.createServer((_req, res) => {
+    res.statusCode = 200;
+    res.end(JSON.stringify({ ok: true }));
+  });
+  await new Promise<void>((resolve) => providerApiServer.listen(0, "127.0.0.1", resolve));
+  const addr = providerApiServer.address();
+  const port = typeof addr === "object" && addr ? addr.port : 0;
+  const apiBaseUrl = `http://127.0.0.1:${port}/`;
+
+  // The MD configures the company provider (change authorised by definition).
+  const aCfg = await configureProvider(app, ALPHA_HOST, "amy", bA1, "sandbox", secretA, apiBaseUrl);
+  expect([200, 201]).toContain(aCfg.status);
+  const bCfg = await configureProvider(app, BETA_HOST, "bob", bB1, "sandbox", secretB, apiBaseUrl);
+  expect([200, 201]).toContain(bCfg.status);
+
+  // Run the connection test so both configs may activate.
+  for (const [host, user, cfg] of [
+    [ALPHA_HOST, "amy", aCfg],
+    [BETA_HOST, "bob", bCfg]
+  ] as const) {
+    const { token } = await staffLogin(app, host, user);
+    const tested = await request(app)
+      .post(`/api/v1/payment-providers/${cfg.body.id}/test`)
+      .set("Authorization", `Bearer ${token}`);
+    expect(tested.status).toBe(200);
+    expect(tested.body.ok).toBe(true);
+    expect(tested.body.activated).toBe(true);
+  }
+
   providerA = bA1;
   providerB = bB1;
+});
+
+afterAll(async () => {
+  await new Promise<void>((resolve) => providerApiServer.close(() => resolve()));
 });
 
 describe("stage 7D - provider configuration", () => {
   it("creates an active provider config and stores the signing secret", async () => {
     const app = (await import("../src/app")).createApp();
-    const { token } = await staffLogin(app, ALPHA_HOST, "alice");
+    const { token } = await staffLogin(app, ALPHA_HOST, "amy");
     const res = await request(app)
       .get("/api/v1/payment-providers")
       .set("Authorization", `Bearer ${token}`);
@@ -264,7 +314,7 @@ describe("stage 7D - provider configuration", () => {
 
   it("validates malformed provider config input", async () => {
     const app = (await import("../src/app")).createApp();
-    const { token } = await staffLogin(app, ALPHA_HOST, "alice");
+    const { token } = await staffLogin(app, ALPHA_HOST, "amy");
     const res = await request(app)
       .post("/api/v1/payment-providers")
       .set("Authorization", `Bearer ${token}`)
@@ -278,27 +328,26 @@ describe("stage 7D - provider configuration", () => {
     expect(res.status).toBe(422);
   });
 
-  it("rejects configuring a provider for another branch from a branch-scoped session", async () => {
+  it("only the MD (or IT through the technical credential flow) may configure providers", async () => {
     const app = (await import("../src/app")).createApp();
-    const branchA2 = await getAlphaBranchA2();
-    const { token } = await staffLogin(app, "alpha-test-abj.localhost", "alice");
+    const { token } = await staffLogin(app, ALPHA_HOST, "alice");
     const res = await request(app)
       .post("/api/v1/payment-providers")
       .set("Authorization", `Bearer ${token}`)
       .send({
-        branchId: branchA2,
+        branchId: providerA,
         provider: "sandbox",
         apiBaseUrl: "https://payments.example.test/v1",
         apiKey: "api-key-00000000",
         signingSecret: "secret-with-16-chars!"
       });
-    // Branch A1 session cannot configure provider on branch A2.
+    // A Collection Officer can never change a branch's provider.
     expect(res.status).toBe(403);
   });
 
   it("keeps each company's provider config isolated", async () => {
     const app = (await import("../src/app")).createApp();
-    const { token: aToken } = await staffLogin(app, ALPHA_HOST, "alice");
+    const { token: aToken } = await staffLogin(app, ALPHA_HOST, "amy");
     const { token: bToken } = await staffLogin(app, BETA_HOST, "bob");
     const a = await request(app)
       .get("/api/v1/payment-providers")
@@ -308,7 +357,7 @@ describe("stage 7D - provider configuration", () => {
       .set("Authorization", `Bearer ${bToken}`);
     expect(a.status).toBe(200);
     expect(b.status).toBe(200);
-    // Company A config should not surface company B's branch/provider the same way.
+    // Company A's provider config never surfaces company B's.
     expect(a.body.provider.branchId).toBe(providerA);
     expect(b.body.provider.branchId).toBe(providerB);
     expect(a.body.provider.branchId).not.toBe(b.body.provider.branchId);
@@ -371,7 +420,7 @@ describe("stage 7D - webhook authentication", () => {
 });
 
 describe("stage 7D - payment pipeline", () => {
-  it("completes the 13-step pipeline for a valid active-loan payment", async () => {
+  it("verifies the payment, queues it for the C.O., posts the exact allocation", async () => {
     const app = (await import("../src/app")).createApp();
     const ref = nextRef("PAY-T");
     const outstandingBefore = await saveOutstanding("PAY-T");
@@ -387,8 +436,8 @@ describe("stage 7D - payment pipeline", () => {
     });
     expect(res.status).toBe(200);
     expect(res.body.ok).toBe(true);
-    expect(res.body.outcome.kind).toBe("received");
-    expect(res.body.outcome.status).toBe("completed");
+    // VERSION 3.2 — automatic verification, manual allocation.
+    expect(res.body.outcome.kind).toBe("pending_allocation");
 
     const paymentId: string = res.body.outcome.paymentId;
 
@@ -401,9 +450,23 @@ describe("stage 7D - payment pipeline", () => {
       row = r.rows[0] ?? null;
     });
     expect(row).not.toBeNull();
-    expect(row!.status).toBe("completed");
+    expect(row!.status).toBe("pending_allocation");
     expect(row!.customer_id).not.toBeNull();
     expect(row!.branch_id).toBe(providerA);
+
+    // The C.O. manually allocates the exact verified amount.
+    const { token } = await staffLogin(app, ALPHA_HOST, "alice");
+    const alloc = await request(app)
+      .post(`/api/v1/payments/${paymentId}/allocate`)
+      .set("Authorization", `Bearer ${token}`)
+      .send({ loanId: await getAlphaLoanId(), repaymentAmount: "4000", savingsAmount: "1000", note: "pipeline" });
+    expect(alloc.status).toBe(200);
+
+    await withAdmin(async (db) => {
+      const r = await db.query<{ status: string }>(
+        `SELECT status FROM payments WHERE id=$1`, [paymentId]);
+      expect(r.rows[0]!.status).toBe("posted");
+    });
 
     // Outstanding principal reduced by 4000 (repayment of exactly one cycle).
     const outstandingAfter = await saveOutstanding("PAY-T");
@@ -433,17 +496,21 @@ describe("stage 7D - payment pipeline", () => {
     });
     expect(allocs).toBe(1);
 
-    // Receipt + notification recorded.
+        // Receipt + notification recorded.
     let receipt = 0;
     let notification = 0;
     await withAdmin(async (db) => {
       const r1 = await db.query<{ n: string }>(`SELECT count(*)::text n FROM receipts WHERE payment_id=$1`, [paymentId]);
-      const r2 = await db.query<{ n: string }>(`SELECT count(*)::text n FROM notifications WHERE payload->>'payment_id'=$1`, [paymentId]);
+      const r2 = await db.query<{ n: string }>(`SELECT count(*)::text n FROM notifications WHERE (payload->>'payment_id')::uuid=$1`, [paymentId]);
       receipt = parseInt(r1.rows[0]!.n, 10);
       notification = parseInt(r2.rows[0]!.n, 10);
     });
     expect(receipt).toBe(1);
-    expect(notification).toBe(1);
+    // VERSION 3.2 — the C.O. (alice), the branch manager (alice is also BM), and the
+    // MD/finance class (amy) are each notified when the payment enters the queue,
+    // and the customer + allocating C.O. are notified again after posting. At least
+    // 3 notifications carry this payment_id in their payload.
+    expect(notification).toBeGreaterThanOrEqual(3);
 
     // Pipeline jobs recorded (13 steps).
     let steps = 0;
@@ -608,6 +675,84 @@ describe("stage 7D - payment pipeline", () => {
     });
     expect(status).toBe("reversed");
   });
+
+  // RULE 5.6.3 / 11.4.3 — a financial correction is a controlled request and
+  // approval, never an edit. Finance prepares; only MD/GM/Auditor approves;
+  // the system posts a new linked reversal and the original stays intact.
+  it("runs the controlled correction request/approval workflow", async () => {
+    const app = (await import("../src/app")).createApp();
+    const ref = nextRef("COR-T");
+    const posted = await postWebhook(app, {
+      provider: "sandbox",
+      companySlug: "alpha-test",
+      body: { event: "payment.received", transaction: { reference: ref, account_number: "1000000001", amount: 5000 } },
+      secret: secretA
+    });
+    const paymentId = posted.body.outcome.paymentId as string;
+
+    // The C.O. is neither a requester nor an approver.
+    const { token: coToken } = await staffLogin(app, ALPHA_HOST, "alice");
+    const denied = await request(app)
+      .post("/api/v1/payments/corrections")
+      .set("Authorization", `Bearer ${coToken}`)
+      .send({ paymentId, reason: "customer reported a duplicate transfer" });
+    expect(denied.status).toBe(403);
+
+    // The MD prepares and approves; the system posts the linked reversal.
+    const { token: mdToken } = await staffLogin(app, ALPHA_HOST, "amy");
+    const requested = await request(app)
+      .post("/api/v1/payments/corrections")
+      .set("Authorization", `Bearer ${mdToken}`)
+      .send({ paymentId, reason: "customer reported a duplicate transfer" });
+    expect(requested.status).toBe(201);
+    expect(requested.body.status).toBe("requested");
+    const requestId = requested.body.id as string;
+
+    // A second open request for the same payment is refused.
+    const dupe = await request(app)
+      .post("/api/v1/payments/corrections")
+      .set("Authorization", `Bearer ${mdToken}`)
+      .send({ paymentId, reason: "another reason entirely" });
+    expect(dupe.status).toBe(409);
+
+    const approved = await request(app)
+      .post(`/api/v1/payments/corrections/${requestId}/decision`)
+      .set("Authorization", `Bearer ${mdToken}`)
+      .send({ decision: "approve", reason: "confirmed duplicate with the customer" });
+    expect(approved.status).toBe(200);
+    expect(approved.body.status).toBe("posted");
+    expect(approved.body.posted_reversal_id ?? approved.body.postedReversalId).toBeTruthy();
+
+    // The original payment is reversed by a NEW linked record, not edited.
+    let reversalCount = 0;
+    let status = "";
+    await withAdmin(async (db) => {
+      const rev = await db.query<{ n: string }>(
+        `SELECT count(*)::text n FROM payment_reversals WHERE original_payment_id=$1`,
+        [paymentId]
+      );
+      reversalCount = Number(rev.rows[0]!.n);
+      const p = await db.query<{ status: string }>(
+        `SELECT status FROM payments WHERE id=$1`, [paymentId]
+      );
+      status = p.rows[0]!.status;
+      const logs = await db.query<{ n: string }>(
+        `SELECT count(*)::text n FROM audit_logs
+          WHERE entity_type='correction_requests' AND entity_id=$1`,
+        [requestId]
+      );
+      expect(Number(logs.rows[0]!.n)).toBeGreaterThanOrEqual(2);
+    });
+    expect(reversalCount).toBe(1);
+    expect(status).toBe("reversed");
+
+    // Deciding twice is refused.
+    const again = await request(app)
+      .post(`/api/v1/payments/corrections/${requestId}/decision`)
+      .set("Authorization", `Bearer ${mdToken}`)
+      .send({ decision: "approve", reason: "trying to post it twice" });
+    expect(again.status).toBe(409);
+  });
 });
 
 describe("stage 7D - read APIs and isolation", () => {
@@ -654,7 +799,7 @@ describe("stage 7D - read APIs and isolation", () => {
     expect(bGet.status).toBe(404);
   });
 
-  it("returns payment detail with allocations and pipeline steps", async () => {
+  it("returns payment detail with allocations and pipeline steps after posting", async () => {
     const app = (await import("../src/app")).createApp();
     const ref = nextRef("PAY-T");
     const res = await postWebhook(app, {
@@ -666,11 +811,26 @@ describe("stage 7D - read APIs and isolation", () => {
     const paymentId: string = res.body.outcome.paymentId;
 
     const { token } = await staffLogin(app, ALPHA_HOST, "alice");
+    // Before allocation the payment waits in the queue with no allocations.
+    const before = await request(app)
+      .get(`/api/v1/payments/${paymentId}`)
+      .set("Authorization", `Bearer ${token}`);
+    expect(before.status).toBe(200);
+    expect(before.body.status).toBe("pending_allocation");
+    expect(before.body.allocations.length).toBe(0);
+
+    const alloc = await request(app)
+      .post(`/api/v1/payments/${paymentId}/allocate`)
+      .set("Authorization", `Bearer ${token}`)
+      .send({ loanId: await getAlphaLoanId(), repaymentAmount: "4000", savingsAmount: "1000", note: "detail" });
+    expect(alloc.status).toBe(200);
+
     const get = await request(app)
       .get(`/api/v1/payments/${paymentId}`)
       .set("Authorization", `Bearer ${token}`);
     expect(get.status).toBe(200);
-    expect(get.body.status).toBe("completed");
+    // VERSION 3.2 — posted after the C.O.'s manual allocation.
+    expect(get.body.status).toBe("posted");
     expect(get.body.allocations.length).toBeGreaterThan(0);
     expect(get.body.pipelineSteps.length).toBe(13);
   });
@@ -700,3 +860,4 @@ describe("stage 7D - read APIs and isolation", () => {
     expect(list.body.items.some((i: { provider_txn_ref: string }) => i.provider_txn_ref === ghostRef)).toBe(true);
   });
 });
+

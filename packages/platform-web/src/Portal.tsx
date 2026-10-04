@@ -227,9 +227,20 @@ export default function Portal() {
             <button className="underline" onClick={() => {
               const raw = window.prompt(`New JSON for ${String(s.key)}`, JSON.stringify(s.value));
               if (!raw) return;
+              let parsed: unknown;
               try {
-                void act(`/global-settings/${encodeURIComponent(String(s.key))}`, JSON.parse(raw), "PUT");
-              } catch { setError("Invalid JSON"); }
+                parsed = JSON.parse(raw);
+              } catch {
+                setError("Invalid JSON");
+                return;
+              }
+              // The route reads `body.value`, so the value is wrapped. Sending
+              // the bare value wrote `undefined` and the control was dead.
+              void act(
+                `/global-settings/${encodeURIComponent(String(s.key))}`,
+                { value: parsed },
+                "PUT"
+              );
             }}>Edit</button>
           </li>
         ))}</ul>

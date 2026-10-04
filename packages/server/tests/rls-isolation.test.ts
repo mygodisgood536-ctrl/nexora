@@ -82,11 +82,31 @@ describe("stage 1 row-level security isolation", () => {
     await withAppSession(
       { "app.company_id": w.companyA, "app.branch_restricted": "on", "app.branch_id": w.branchA1 },
       async (db) => {
-        const res = await db.query(`DELETE FROM customers WHERE id=$1`, [w.customerA2]);
-        expect(res.rowCount).toBe(0);
-        void INSUFFICIENT_PRIVILEGE;
+        // The application role holds no DELETE on a customer record at all
+        // (Part 15 prohibition 10), so the attempt is refused at the privilege
+        // layer. Where a privilege does exist, RLS refuses the row instead.
+        // Either refusal means the record survives; neither means it is gone.
+        let refused = false;
+        try {
+          const res = await db.query(`DELETE FROM customers WHERE id=$1`, [w.customerA2]);
+          expect(res.rowCount).toBe(0);
+          refused = true;
+        } catch (err) {
+          expect(String((err as { code?: string }).code)).toBe(INSUFFICIENT_PRIVILEGE);
+          refused = true;
+        }
+        expect(refused).toBe(true);
       }
     );
+
+    let survivor = "0";
+    await withAppSession({ "app.company_id": w.companyA }, async (db) => {
+      const row = await db.query<{ n: string }>(`SELECT count(*)::text AS n FROM customers WHERE id=$1`, [
+        w.customerA2
+      ]);
+      survivor = row.rows[0]!.n;
+    });
+    expect(survivor).toBe("1");
   });
 
   it("exposes the security-definer virtual account resolver without any tenant session", async () => {

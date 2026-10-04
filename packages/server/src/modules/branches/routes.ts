@@ -2,7 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import type { Request, Response, NextFunction } from "express";
 import { AppError } from "../../lib/errors";
-import { requireCompleteSession } from "../../middleware/auth";
+import {  requireCompleteSession  } from "../../middleware/auth";
 import { createBranch, listBranches, setBranchStatus } from "./service";
 
 /**
@@ -50,7 +50,7 @@ branchesRouter.get("/", requireCompleteSession, wrap(async (req, res) => {
 }));
 
 const statusSchema = z.object({
-  action: z.enum(["suspend", "reactivate", "close"]),
+  action: z.enum(["open", "suspend", "reactivate", "close"]),
   reason: z.string().max(500).optional()
 });
 

@@ -45,9 +45,6 @@ export const BUILT_IN_ROLES: ReadonlyArray<RoleDefinition> = [
   { key: "risk_officer", name: "Risk Officer", category: "audit_compliance" },
   { key: "credit_manager", name: "Credit Manager", category: "credit_loans" },
   { key: "credit_officer", name: "Credit Officer", category: "credit_loans" },
-  { key: "loan_officer", name: "Loan Officer", category: "credit_loans" },
-  { key: "account_officer", name: "Account Officer", category: "customer_accounts" },
-  { key: "field_account_officer", name: "Field Account Officer", category: "customer_accounts" },
   { key: "customer_service_officer", name: "Customer Service Officer", category: "customer_accounts" },
   { key: "customer_service_manager", name: "Customer Service Manager", category: "customer_accounts" },
   { key: "area_manager", name: "Area Manager", category: "operations_field" },
@@ -66,8 +63,6 @@ export const CUSTOM_ROLE_TEMPLATES: ReadonlyArray<RoleDefinition> = [
   { key: "template_administrative_officer", name: "Administrative Officer", category: "hr_admin" },
   { key: "template_loan_processing_officer", name: "Loan Processing Officer", category: "credit_loans" },
   { key: "template_credit_analyst", name: "Credit Analyst", category: "credit_loans" },
-  { key: "template_assistant_account_officer", name: "Assistant Account Officer", category: "customer_accounts" },
-  { key: "template_field_officer", name: "Field Officer", category: "operations_field" },
   { key: "template_operations_officer", name: "Operations Officer", category: "operations_field" },
   { key: "template_portfolio_manager", name: "Portfolio Manager", category: "other" },
   { key: "template_treasury_officer", name: "Treasury Officer", category: "other" },
@@ -78,4 +73,31 @@ const builtInKeys = new Set(BUILT_IN_ROLES.map((r) => r.key));
 
 export function isBuiltInRoleKey(key: string): boolean {
   return builtInKeys.has(key);
+}
+
+/**
+ * RULE 6.1.1 / 4.5.1 — company roles are organised into two worlds, and the
+ * difference is scope. Head Office roles inspect and govern the whole company;
+ * branch roles belong to a branch. The creation endpoint must ask which world
+ * the worker belongs to and then validate that the chosen role and the chosen
+ * scope agree, so a Head Office role can never be created inside a branch
+ * workplace and a branch role can never be created without a branch.
+ */
+export type RoleWorld = "head_office" | "branch";
+
+const BRANCH_WORLD_KEYS: ReadonlySet<string> = new Set([
+  "area_manager",
+  "branch_manager",
+  "deputy_branch_manager",
+  "collection_officer",
+  "senior_collection_officer",
+  "recovery_officer"
+]);
+
+export function roleWorldFor(roleKey: string): RoleWorld {
+  return BRANCH_WORLD_KEYS.has(roleKey) ? "branch" : "head_office";
+}
+
+export function isHeadOfficeRoleKey(roleKey: string): boolean {
+  return roleWorldFor(roleKey) === "head_office";
 }

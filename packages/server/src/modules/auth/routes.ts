@@ -2,7 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import type { Request, Response } from "express";
 import { AppError } from "../../lib/errors";
-import { requireAuth, requireCompleteSession } from "../../middleware/auth";
+import {  requireAuth, requireCompleteSession  } from "../../middleware/auth";
 import {
   changePassword,
   currentPrincipal,
@@ -10,6 +10,11 @@ import {
   login,
   logout,
   refresh,
+  ritualChangePassword,
+  ritualCompleteProfile,
+  ritualEnrollment,
+  ritualStatus,
+  ritualVerifyAuthenticator,
   setActiveRoleLens
 } from "./service";
 
@@ -46,6 +51,14 @@ const loginSchema = z.object({
   password: z.string().min(1).max(200)
 });
 
+function metaFrom(req: Request): { ip: string | undefined; userAgent: string | undefined; requestId: string | undefined } {
+  return {
+    ip: req.ip,
+    userAgent: req.headers["user-agent"],
+    requestId: (req.headers["x-request-id"] as string | undefined) ?? undefined
+  };
+}
+
 authRouter.post("/login", async (req, res, next) => {
   try {
     const parsed = loginSchema.safeParse(req.body);
@@ -54,12 +67,13 @@ authRouter.post("/login", async (req, res, next) => {
       req.headers.host,
       parsed.data.username,
       parsed.data.password,
-      { ip: req.ip, userAgent: req.headers["user-agent"] }
+      metaFrom(req)
     );
     setRefreshCookie(req, res, issued.refreshToken);
     res.status(200).json({
       accessToken: issued.accessToken,
       mustChangePassword: issued.mustChangePassword,
+      credentialState: issued.credentialState,
       principal: issued.principal
     });
   } catch (err) {
@@ -70,14 +84,12 @@ authRouter.post("/login", async (req, res, next) => {
 authRouter.post("/refresh", async (req, res, next) => {
   try {
     const token = readRefreshCookie(req) ?? (req.body?.refreshToken as string | undefined);
-    const issued = await refresh(token, {
-      ip: req.ip,
-      userAgent: req.headers["user-agent"]
-    });
+    const issued = await refresh(token, metaFrom(req));
     setRefreshCookie(req, res, issued.refreshToken);
     res.status(200).json({
       accessToken: issued.accessToken,
       mustChangePassword: issued.mustChangePassword,
+      credentialState: issued.credentialState,
       principal: issued.principal
     });
   } catch (err) {
@@ -106,7 +118,8 @@ authRouter.get("/me", requireAuth, async (req, res, next) => {
       roles: live.roles,
       permissions: live.permissions,
       activeRoleKey: live.activeRoleKey,
-      mustChangePassword: claims.mcp === true
+      mustChangePassword: claims.mcp === true,
+      credentialState: claims.cs ?? "secured"
     });
   } catch (err) {
     next(err);
@@ -141,7 +154,13 @@ authRouter.put("/active-role", requireAuth, async (req, res, next) => {
 
 const changeSchema = z.object({
   currentPassword: z.string().min(1).max(200),
-  newPassword: z.string().min(8).max(200)
+  newPassword: z.string().min(1).max(200),
+  // RULE 5.3.1.1 / 5.3.2 - confirmed twice, and authorised by a live code.
+  confirmPassword: z.string().min(1).max(200),
+  totpCode: z.string().min(6).max(6)
+}).refine((value) => value.newPassword === value.confirmPassword, {
+  message: "The new password and its confirmation do not match",
+  path: ["confirmPassword"]
 });
 
 authRouter.post("/change-password", requireAuth, async (req, res, next) => {
@@ -153,7 +172,9 @@ authRouter.post("/change-password", requireAuth, async (req, res, next) => {
       claims.sub,
       claims.companyId,
       parsed.data.currentPassword,
-      parsed.data.newPassword
+      parsed.data.newPassword,
+      parsed.data.totpCode,
+      metaFrom(req)
     );
     res.clearCookie(REFRESH_COOKIE, { path: "/api/v1/auth" });
     res.status(204).end();
@@ -162,10 +183,117 @@ authRouter.post("/change-password", requireAuth, async (req, res, next) => {
   }
 });
 
-// Guarded sample demonstrating the centralized session gate: full sessions
-// only (must-change-password holders are rejected until they rotate their
-// credential). Permission-verb enforcement is covered by requirePermission
-// on business routes and by the merge-engine unit tests.
+// ---------- Credential ritual (RULE 4.2.1 / 5.3.1) ----------
+// These endpoints are reachable while the credential ritual is incomplete
+// (requireAuth only); everything else is gated by requireCompleteSession.
+
+authRouter.get("/ritual/status", requireAuth, async (req, res, next) => {
+  try {
+    const claims = req.principal!;
+    res.status(200).json(await ritualStatus(claims.sub, claims.companyId));
+  } catch (err) {
+    next(err);
+  }
+});
+
+const enrollSchema = z.object({});
+
+authRouter.post("/ritual/enrollment", requireAuth, async (req, res, next) => {
+  try {
+    const parsed = enrollSchema.safeParse(req.body ?? {});
+    if (req.body && Object.keys(req.body).length > 0 && !parsed.success) {
+      throw AppError.unprocessable("Validation failed");
+    }
+    const claims = req.principal!;
+    const result = await ritualEnrollment(claims.sub, claims.companyId, metaFrom(req));
+    res.status(200).json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+const verifyTotpSchema = z.object({
+  code: z.string().min(6).max(6)
+});
+
+authRouter.post("/ritual/verify-authenticator", requireAuth, async (req, res, next) => {
+  try {
+    const parsed = verifyTotpSchema.safeParse(req.body);
+    if (!parsed.success) throw AppError.unprocessable("Validation failed");
+    const claims = req.principal!;
+    await ritualVerifyAuthenticator(claims.sub, claims.companyId, parsed.data.code, metaFrom(req));
+    res.status(204).end();
+  } catch (err) {
+    next(err);
+  }
+});
+
+const ritualChangeSchema = z.object({
+  currentPassword: z.string().min(1).max(200),
+  newPassword: z.string().min(1).max(200),
+  // RULE 5.3.1.1 - the new password is confirmed twice.
+  confirmPassword: z.string().min(1).max(200),
+  totpCode: z.string().min(6).max(6)
+}).refine((value) => value.newPassword === value.confirmPassword, {
+  message: "The new password and its confirmation do not match",
+  path: ["confirmPassword"]
+});
+
+authRouter.post("/ritual/change-password", requireAuth, async (req, res, next) => {
+  try {
+    const parsed = ritualChangeSchema.safeParse(req.body);
+    if (!parsed.success) throw AppError.unprocessable("Validation failed");
+    const claims = req.principal!;
+    await ritualChangePassword(
+      claims.sub,
+      claims.companyId,
+      parsed.data.currentPassword,
+      parsed.data.newPassword,
+      parsed.data.totpCode,
+      metaFrom(req)
+    );
+    res.clearCookie(REFRESH_COOKIE, { path: "/api/v1/auth" });
+    res.status(204).end();
+  } catch (err) {
+    next(err);
+  }
+});
+
+const completeProfileSchema = z.object({
+  passportPhotoUrl: z.string().max(500).nullable().optional(),
+  passportFileHash: z.string().max(128).nullable().optional(),
+  phone: z.string().max(40).nullable().optional(),
+  birthDay: z.number().int().min(1).max(31).nullable().optional(),
+  birthMonth: z.number().int().min(1).max(12).nullable().optional()
+});
+
+authRouter.post("/ritual/complete-profile", requireAuth, async (req, res, next) => {
+  try {
+    const parsed = completeProfileSchema.safeParse(req.body);
+    if (!parsed.success) throw AppError.unprocessable("Validation failed");
+    const claims = req.principal!;
+    const issued = await ritualCompleteProfile(
+      claims.sub,
+      claims.companyId,
+      parsed.data,
+      metaFrom(req)
+    );
+    setRefreshCookie(req, res, issued.refreshToken);
+    res.status(200).json({
+      accessToken: issued.accessToken,
+      mustChangePassword: false,
+      credentialState: issued.credentialState,
+      principal: issued.principal
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Guarded sample demonstrating the centralized session gate: full secured
+// sessions only — credential-issued / ritual-in-progress holders are rejected
+// until the mandatory ritual completes. Permission-verb enforcement is
+// covered by requirePermission on business routes and the merge-engine tests.
 authRouter.get("/session-check", requireAuth, requireCompleteSession, (_req, res) => {
   res.status(200).json({ ok: true });
 });

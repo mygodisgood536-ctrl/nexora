@@ -1,14 +1,21 @@
 import bcrypt from "bcryptjs";
-import crypto from "node:crypto";
 import type { PoolClient } from "pg";
 import {
   BUILT_IN_ROLES,
   CUSTOM_ROLE_TEMPLATES,
   type RoleDefinition,
-  isBuiltInRoleKey
+  isBuiltInRoleKey,
+  roleWorldFor
 } from "@nexora/shared";
 import { withBypass, withTenant } from "../../db/repo";
 import { AppError } from "../../lib/errors";
+import { insertNotificationsToMds, insertUserNotifications } from "../notifications/service";
+import { assertBranchAcceptsNewWork } from "../branches/service";
+import {
+  fullName,
+  initialPasswordFor,
+  type CredentialState
+} from "../../lib/credential";
 
 /**
  * Worker / role-assignment service (Stage 6 — Part 1 §12–17).
@@ -16,26 +23,28 @@ import { AppError } from "../../lib/errors";
  * Operates on the tables created by migration 0004_rbac:
  *   users, roles, role_permissions, role_assignments, role_assignment_branches
  *
- * Architectural rules enforced here:
+ * Architectural rules enforced here (Vision Part 5):
  *   - All reads/writes run inside `withTenant` so RLS is active and isolates
  *     cross-company reads.
- *   - Worker code is auto-generated as `{BRANCH_CODE}-{ROLE_PREFIX}-{SEQ}`
- *     (Part 1 §12) using an atomic counter so concurrent creations never
- *     collide, codes are never reused, and a closed branch's code never gets
- *     reassigned.
- *   - First-login password is a high-entropy random string, never derived
- *     from any PII, returned ONCE to the creating staff member.
+ *   - The username is the exact full name — the software's output, never
+ *     typed (RULE 5.1.1–5.1.4). A duplicate full name stops creation.
+ *   - The initial password is @FirstName (RULE 5.2.1), issued once through a
+ *     one-time credential panel and paved only as a hash (RULE 5.2.2).
+ *   - Worker ID: {BRANCH_CODE}-{ROLE_CODE}-{SEQ} for branch roles and
+ *     {COMPANY_PREFIX}-HO-{ROLE_CODE}-{SEQ} for Head Office roles; permanent
+ *     and never reused (RULE 5.7.3).
+ *   - New accounts start in the credential_issued lifecycle state with a
+ *     credential window; the mandatory Credential Ritual (Part 4 §4.2 /
+ *     Part 5 §5.3) moves them to secured.
  *   - Lifecycle transitions follow the state machine:
  *       invited → active → suspended → active (reactivate)
  *                                → terminated (terminal)
  *     and every transition is appended to audit_logs.
- *   - Temporary/acting role assignments are validated for an end-after-start
- *     window and only participate in the permission merge while the window
- *     is open (enforced by the shared `isAssignmentActive`).
  */
 
 const BCRYPT_ROUNDS = 10;
-const TEMP_PASSWORD_EXPIRY_HOURS = 72;
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export interface WorkerActor {
   sub: string;
@@ -53,7 +62,6 @@ export interface CreateWorkerInput {
   firstName: string;
   middleName?: string | null;
   lastName: string;
-  username: string;
   phone?: string | null;
   email?: string | null;
   birthDay?: number | null;
@@ -83,9 +91,11 @@ export interface CreatedWorker {
   username: string;
   branchId: string;
   status: string;
+  credentialState: CredentialState;
   mustChangePassword: true;
-  temporaryPassword: string;
-  temporaryPasswordExpiresAt: string;
+  /** One-time credential panel (RULE 5.2.2 / 5.7.3) — shown once. */
+  initialPassword: string;
+  initialPasswordExpiresAt: string;
   initialAssignmentId: string;
 }
 
@@ -126,15 +136,6 @@ async function loadRolePrefix(
   return r.rows[0]!.code_prefix;
 }
 
-function generateTemporaryPassword(): string {
-  const alphabet =
-    "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$%^&*";
-  const bytes = crypto.randomBytes(20);
-  let out = "";
-  for (let i = 0; i < 16; i++) out += alphabet[bytes[i]! % alphabet.length];
-  return out;
-}
-
 function validateScopeBranches(
   scopeType: CreateWorkerInput["scopeType"],
   branchIds: string[] | undefined,
@@ -172,7 +173,7 @@ async function auditWorker(
   branchId: string | null,
   actorUserId: string,
   action: string,
-  entityType: "workers" | "role_assignments" | "credentials" | "roles",
+  entityType: "workers" | "role_assignments" | "credentials" | "roles" | "customer_assignments",
   entityId: string,
   previousValue: unknown,
   newValue: unknown,
@@ -200,6 +201,36 @@ async function auditWorker(
   );
 }
 
+/**
+ * Copy the platform role's default permission bundle into the company's own
+ * `role_permissions` the first time that role is provisioned for the company.
+ *
+ * The platform catalogue (migration 0016) defines the default verb bundle for
+ * every built-in role, but a company has its own `roles` / `role_permissions`
+ * rows. Without this copy a freshly created role holds no verbs at all and
+ * every `requirePermission` gate refuses the role — including the MD. The copy
+ * is additive and idempotent, and an MD-authorised `setRolePermissions` can
+ * still narrow the bundle afterwards.
+ */
+export async function provisionDefaultRolePermissions(
+  db: PoolClient,
+  companyId: string,
+  roleId: string,
+  roleKey: string
+): Promise<void> {
+  await db.query(
+    `INSERT INTO role_permissions (role_id, verb)
+     SELECT $2::uuid, b.verb
+       FROM platform_role_permission_bundles b
+      WHERE b.role_key = $1
+        AND NOT EXISTS (
+          SELECT 1 FROM role_permissions rp WHERE rp.role_id = $2::uuid
+        )
+     ON CONFLICT DO NOTHING`,
+    [roleKey, roleId]
+  );
+}
+
 async function ensureRoleRow(
   db: PoolClient,
   companyId: string,
@@ -209,7 +240,11 @@ async function ensureRoleRow(
     `SELECT id, is_system FROM roles WHERE company_id=$1 AND role_key=$2`,
     [companyId, roleKey]
   );
-  if ((found.rowCount ?? 0) > 0) return found.rows[0]!.id;
+  if ((found.rowCount ?? 0) > 0) {
+    const roleId = found.rows[0]!.id;
+    await provisionDefaultRolePermissions(db, companyId, roleId, roleKey);
+    return roleId;
+  }
 
   const def = BUILT_IN_ROLES.find((r) => r.key === roleKey);
   if (!def) {
@@ -220,7 +255,9 @@ async function ensureRoleRow(
      VALUES ($1,$2,$3,$4,true,true) RETURNING id`,
     [companyId, def.key, def.name, def.category]
   );
-  return inserted.rows[0]!.id;
+  const roleId = inserted.rows[0]!.id;
+  await provisionDefaultRolePermissions(db, companyId, roleId, roleKey);
+  return roleId;
 }
 
 export async function createWorker(
@@ -254,6 +291,33 @@ export async function createWorker(
     throw AppError.unprocessable("Temporary assignments require endsAt");
   }
 
+  // RULE 4.5.1 / 6.1.1 — the role's world and the assignment's scope must
+  // agree. A Head Office role is never created inside a branch workplace, and
+  // a branch role is never created without exactly one branch.
+  const world = roleWorldFor(input.roleKey);
+  const wideScope = input.scopeType === "company_wide" || input.scopeType === "head_office";
+  if (world === "head_office" && !wideScope) {
+    throw AppError.unprocessable(
+      `${input.roleKey} is a Head Office role and must be assigned company-wide scope`
+    );
+  }
+  if (world === "branch" && wideScope) {
+    throw AppError.unprocessable(
+      `${input.roleKey} is a branch role and cannot be assigned company-wide scope`
+    );
+  }
+  // RULE 4.5.1 — a branch role cannot be created without a branch selected.
+  if (world === "branch" && !input.branchId) {
+    throw AppError.unprocessable("A branch role requires a branch");
+  }
+  // RULE 4.5.1 — a Head Office role cannot be created inside a branch workplace,
+  // so a branch-scoped actor may never create one.
+  if (world === "head_office" && actor.branchId !== null) {
+    throw AppError.forbidden(
+      "A branch-scoped session cannot create a Head Office worker; use the company portal"
+    );
+  }
+
   const company = await withBypass(async (db) => {
     const r = await db.query<CompanyCodeRow>(
       `SELECT code_prefix FROM companies WHERE id=$1`,
@@ -264,6 +328,8 @@ export async function createWorker(
   if (!company) throw AppError.notFound("Company not found");
 
   return withTenant(actor.companyId, input.branchId, async (db) => {
+    // RULE 7.9.3 — a closed or not-yet-open branch takes no new workers.
+    await assertBranchAcceptsNewWork(db, input.branchId, "workers");
     const branch = await db.query<BranchRow>(
       `SELECT id, code, company_id, name FROM branches WHERE id=$1`,
       [input.branchId]
@@ -272,28 +338,44 @@ export async function createWorker(
       throw AppError.notFound("Branch not found");
     }
 
+    // RULE 5.1.1–5.1.4 — the username is the software's output: the exact
+    // full name in normal spelling and spacing. Nobody types a username.
+    const username = fullName(input.firstName, input.middleName, input.lastName);
+    if (!username) {
+      throw AppError.unprocessable("Full name is required to derive the username");
+    }
     const exists = await db.query(
       `SELECT 1 FROM users WHERE company_id=$1 AND username=$2`,
-      [actor.companyId, input.username]
+      [actor.companyId, username]
     );
     if ((exists.rowCount ?? 0) > 0) {
       throw new AppError(
         409,
         "USERNAME_TAKEN",
-        "A worker with that username already exists in this company"
+        "A worker with that full name already exists in this company; correct the person's full name before creating the account"
       );
     }
 
-    const tempPassword = generateTemporaryPassword();
-    const passwordHash = await bcrypt.hash(tempPassword, BCRYPT_ROUNDS);
-    const expiresAt = new Date(
-      Date.now() + TEMP_PASSWORD_EXPIRY_HOURS * 60 * 60 * 1000
+    // RULE 5.2.1 — initial password is @FirstName (first letter capitalised).
+    const initialPassword = initialPasswordFor(input.firstName);
+    const passwordHash = await bcrypt.hash(initialPassword, BCRYPT_ROUNDS);
+
+    // RULE 5.2.3.5 — the initial credential expires within the company's
+    // configured window (default 7 days) unless consumed by the ritual.
+    const policy = await db.query<{ hours: number | null }>(
+      `SELECT credential_ritual_window_hours AS hours FROM company_settings WHERE company_id=$1`,
+      [actor.companyId]
     );
+    const windowHours = policy.rows[0]?.hours ?? 168;
+    const issuedAt = new Date(Date.now());
+    const expiresAt = new Date(Date.now() + windowHours * 60 * 60 * 1000);
 
     const workerCode = await allocateWorkerCode(
       db,
       branch.rows[0]!.code,
-      input.roleKey
+      company.code_prefix,
+      input.roleKey,
+      input.scopeType
     );
 
     const inserted = await db.query<{
@@ -305,19 +387,22 @@ export async function createWorker(
       username: string;
       branch_id: string;
       status: string;
+      credential_state: CredentialState;
     }>(
       `INSERT INTO users (company_id, branch_id, worker_code, username, password_hash,
                           must_change_password, temp_password_expires_at,
                           first_name, middle_name, last_name, phone,
-                          birth_day, birth_month, status, created_by)
-       VALUES ($1,$2,$3,$4,$5,true,$6,$7,$8,$9,$10,$11,$12,'invited',$13)
+                          birth_day, birth_month, status, created_by,
+                          credential_state, credential_issued_at, credential_expires_at)
+       VALUES ($1,$2,$3,$4,$5,true,$6,$7,$8,$9,$10,$11,$12,'invited',$13,
+               'credential_issued',$14,$15)
        RETURNING id, worker_code, first_name, middle_name, last_name, username,
-                 branch_id, status`,
+                 branch_id, status, credential_state`,
       [
         actor.companyId,
         input.branchId,
         workerCode,
-        input.username,
+        username,
         passwordHash,
         expiresAt,
         input.firstName,
@@ -326,7 +411,9 @@ export async function createWorker(
         input.phone ?? null,
         input.birthDay ?? 1,
         input.birthMonth ?? 1,
-        actor.sub
+        actor.sub,
+        issuedAt,
+        expiresAt
       ]
     );
     const worker = inserted.rows[0]!;
@@ -377,9 +464,27 @@ export async function createWorker(
       null,
       {
         worker_code: worker.worker_code,
-        username: input.username,
+        username: username,
         first_name: input.firstName,
         last_name: input.lastName
+      },
+      null,
+      meta
+    );
+    await auditWorker(
+      db,
+      actor.companyId,
+      input.branchId,
+      actor.sub,
+      "credential.issued",
+      "credentials",
+      worker.id,
+      null,
+      {
+        credential_state: "credential_issued",
+        username: username,
+        expires_at: expiresAt.toISOString(),
+        one_time: true
       },
       null,
       meta
@@ -413,9 +518,10 @@ export async function createWorker(
       username: worker.username,
       branchId: worker.branch_id,
       status: worker.status,
+      credentialState: worker.credential_state,
       mustChangePassword: true,
-      temporaryPassword: tempPassword,
-      temporaryPasswordExpiresAt: expiresAt.toISOString(),
+      initialPassword,
+      initialPasswordExpiresAt: expiresAt.toISOString(),
       initialAssignmentId: assignmentId
     };
   });
@@ -459,7 +565,7 @@ export async function listWorkers(
 
     const { rows } = await db.query(
       `SELECT id, worker_code, username, first_name, middle_name, last_name,
-              branch_id, phone, status, must_change_password,
+              branch_id, phone, status, credential_state, must_change_password,
               last_login_at, suspended_at, terminated_at, created_at
          FROM users
         WHERE ${conditions.join(" AND ")}
@@ -479,13 +585,124 @@ export async function getWorker(
     const { rows } = await db.query(
       `SELECT id, worker_code, username, first_name, middle_name, last_name,
               branch_id, phone, email, birth_day, birth_month, status,
-              must_change_password, last_login_at, suspended_at, terminated_at,
+              credential_state, must_change_password, last_login_at,
+              suspended_at, terminated_at,
               created_at, created_by
          FROM users WHERE id=$1`,
       [workerId]
     );
     if (rows.length === 0) throw AppError.notFound("Worker not found");
     return rows[0]!;
+  });
+}
+
+export interface EditWorkerInput {
+  firstName?: string;
+  middleName?: string | null;
+  lastName?: string;
+  phone?: string | null;
+  email?: string | null;
+  birthDay?: number | null;
+  birthMonth?: number | null;
+  passport_photo_url?: string | null;
+  reason: string;
+}
+
+/**
+ * RULE 5.9.1 — HR can edit a worker's name, phone number, passport and role
+ * information. The worker record itself is never deleted or replaced
+ * (`#32`); a new person taking a portfolio is a separate worker created by the
+ * transfer flow.
+ *
+ * RULE 5.1.1 — the username IS the full name, so a name change must move the
+ * username with it or the account would stop answering to its own identity.
+ * The uniqueness rule and the "name is never the password" ritual are
+ * preserved. Every edit is audit-logged with before/after (RULE 5.9.3,
+ * `worker.edited`).
+ */
+export async function editWorker(
+  actor: WorkerActor,
+  workerId: string,
+  input: EditWorkerInput,
+  meta: ActorMeta = {}
+): Promise<Record<string, unknown>> {
+  if (!input.reason || input.reason.trim().length < 5) {
+    throw AppError.unprocessable("A reason is required to edit a worker record");
+  }
+  return withTenant(actor.companyId, null, async (db) => {
+    const found = await db.query<{
+      id: string; username: string; first_name: string; middle_name: string | null;
+      last_name: string; phone: string | null; email: string | null;
+      birth_day: number | null; birth_month: number | null;
+      passport_photo_url: string | null; status: string; branch_id: string | null;
+    }>(
+      `SELECT id, username, first_name, middle_name, last_name, phone, email,
+              birth_day, birth_month, passport_photo_url, status, branch_id
+         FROM users WHERE id=$1 FOR UPDATE`,
+      [workerId]
+    );
+    if ((found.rowCount ?? 0) === 0) throw AppError.notFound("Worker not found");
+    const before = found.rows[0]!;
+    if (before.status === "terminated") {
+      throw AppError.conflict("A terminated worker record is permanently retained and cannot be edited");
+    }
+
+    const first = input.firstName?.trim() ?? before.first_name;
+    const middle = input.middleName === undefined ? before.middle_name : input.middleName;
+    const last = input.lastName?.trim() ?? before.last_name;
+    if (!first || !last) throw AppError.unprocessable("First and last name are required");
+
+    // RULE 5.1.1 — the username is the exact full name; a rename moves it.
+    const nextUsername = fullName(first, middle, last);
+    if (nextUsername !== before.username) {
+      const clash = await db.query<{ ok: number }>(
+        `SELECT 1 AS ok FROM users WHERE company_id=$1 AND username=$2 AND id<>$3 LIMIT 1`,
+        [actor.companyId, nextUsername, workerId]
+      );
+      if ((clash.rowCount ?? 0) > 0) {
+        throw AppError.conflict("Another worker in this company already has that full name");
+      }
+    }
+
+    const updated = await db.query(
+      `UPDATE users
+          SET username=$2, first_name=$3, middle_name=$4, last_name=$5,
+              phone=$6, email=$7, birth_day=$8, birth_month=$9,
+              passport_photo_url=COALESCE($10, passport_photo_url),
+              updated_at=now()
+        WHERE id=$1
+        RETURNING id, worker_code, username, first_name, middle_name, last_name,
+                  branch_id, phone, email, birth_day, birth_month,
+                  passport_photo_url, status, credential_state`,
+      [
+        workerId, nextUsername, first, middle ?? null, last,
+        input.phone === undefined ? before.phone : input.phone,
+        input.email === undefined ? before.email : input.email,
+        input.birthDay === undefined ? before.birth_day : input.birthDay,
+        input.birthMonth === undefined ? before.birth_month : input.birthMonth,
+        input.passport_photo_url ?? null
+      ]
+    );
+    const after = updated.rows[0]!;
+
+    await auditWorker(
+      db, actor.companyId, before.branch_id,
+      actor.sub, "worker.edited", "workers", workerId,
+      {
+        username: before.username, first_name: before.first_name,
+        middle_name: before.middle_name, last_name: before.last_name,
+        phone: before.phone, email: before.email,
+        birth_day: before.birth_day, birth_month: before.birth_month
+      },
+      {
+        username: after.username, first_name: after.first_name,
+        middle_name: after.middle_name, last_name: after.last_name,
+        phone: after.phone, email: after.email,
+        birth_day: after.birth_day, birth_month: after.birth_month
+      },
+      input.reason.trim(), meta
+    );
+    return after;
   });
 }
 
@@ -509,7 +726,7 @@ export async function setWorkerStatus(
   action: string,
   reason: string | undefined,
   meta: ActorMeta = {}
-): Promise<{ status: string }> {
+): Promise<{ status: string; credentialState: string }> {
   const t = WORKER_TRANSITIONS[action];
   if (!t) throw AppError.badRequest("Unknown status action");
   if (t.needsReason && (!reason || reason.trim().length === 0)) {
@@ -537,10 +754,44 @@ export async function setWorkerStatus(
         : action === "terminate"
         ? `, terminated_at = now()`
         : ``;
+    // The lifecycle syncs onto the credential-state spectrum (Vision 5.4).
+    const credentialState =
+      action === "suspend"
+        ? "suspended"
+        : action === "terminate"
+        ? "terminated"
+        : action === "activate"
+        ? null // activate (invited→active) keeps the existing state
+        : null; // reactivate restores the pre-suspension state below
     await db.query(`UPDATE users SET status=$2${sets} WHERE id=$1`, [
       workerId,
       t.to
     ]);
+    // RULE 14.4.3 / 5.8.2 — suspension and termination must kill every existing
+    // session at once, including access tokens that have not yet expired.
+    if (action === "suspend" || action === "terminate") {
+      await db.query(
+        `UPDATE users SET session_epoch = session_epoch + 1 WHERE id=$1`,
+        [workerId]
+      );
+      await db.query(
+        `UPDATE refresh_tokens SET revoked_at=now() WHERE user_id=$1 AND revoked_at IS NULL`,
+        [workerId]
+      );
+    }
+    if (action === "reactivate") {
+      await db.query(
+        `UPDATE users
+            SET credential_state = CASE WHEN password_changed_at IS NULL THEN 'ritual_in_progress' ELSE 'secured' END
+          WHERE id=$1`,
+        [workerId]
+      );
+    } else if (credentialState) {
+      await db.query(`UPDATE users SET credential_state=$2 WHERE id=$1`, [
+        workerId,
+        credentialState
+      ]);
+    }
 
     if (action === "terminate") {
       await db.query(
@@ -560,18 +811,304 @@ export async function setWorkerStatus(
       "workers",
       workerId,
       { status: before },
-      { status: t.to },
+      { status: t.to, credential_state: credentialState },
       reason ?? null,
       meta
     );
 
-    return { status: t.to };
+    return { status: t.to, credentialState: credentialState ?? "unchanged" };
   });
 }
 
 export interface ResetPasswordResult {
-  temporaryPassword: string;
+  /** One-time credential panel (RULE 5.2.2 / 5.7.3) — shown once. */
+  initialPassword: string;
   expiresAt: string;
+}
+
+/**
+ * Part 5.8 control — RULE 5.8.2 "Keep Portfolio On Hold".
+ *
+ * In order:
+ *   1. All login as that worker is blocked immediately: password stops
+ *      authenticating, the authenticator is frozen, all existing sessions
+ *      are invalidated (credential_state -> portfolio_on_hold, which sits in
+ *      LOGIN_BLOCKED_STATES, plus refresh tokens revoked).
+ *   2. Only Head Office users can work that book (Role Specs / Part 7).
+ *   3. Money can still be received: the provider webhook path never checks
+ *      credential_state, so payments keep arriving and being recorded.
+ *   4. Money received while the portfolio is on hold is not allocated as a
+ *      normal running book — it stays in the pending/allocation queue until
+ *      the hold is released or the portfolio transferred.
+ *   5. Nothing is deleted: no customer, group, loan or payment is touched.
+ */
+export async function holdWorkerPortfolio(
+  actor: WorkerActor,
+  workerId: string,
+  reason: string,
+  meta: ActorMeta = {}
+): Promise<{ workerId: string; credentialState: "portfolio_on_hold" }> {
+  if (!reason || reason.trim().length === 0) {
+    throw AppError.unprocessable("Reason is required to hold a portfolio");
+  }
+  return withTenant(actor.companyId, null, async (db) => {
+    const found = await db.query<{ id: string; status: string; branch_id: string | null }>(
+      `SELECT id, status, branch_id FROM users WHERE id=$1 FOR UPDATE`,
+      [workerId]
+    );
+    if (found.rowCount === 0) throw AppError.notFound("Worker not found");
+    if (found.rows[0]!.status === "terminated") {
+      throw new AppError(409, "WORKER_TERMINATED", "Cannot hold a terminated worker's portfolio");
+    }
+    await db.query(
+      `UPDATE users SET credential_state='portfolio_on_hold', updated_at=now() WHERE id=$1`,
+      [workerId]
+    );
+    // Invalidate every existing session (RULE 5.8.2.1).
+    await db.query(
+      `UPDATE refresh_tokens SET revoked_at=now() WHERE user_id=$1 AND revoked_at IS NULL`,
+      [workerId]
+    );
+    // RULE 14.4.3 — bumping the session epoch also kills every already-issued
+    // ACCESS token, so the hold takes effect on the very next request.
+    await db.query(
+      `UPDATE users SET session_epoch = session_epoch + 1 WHERE id=$1`,
+      [workerId]
+    );
+    await auditWorker(
+      db,
+      actor.companyId,
+      found.rows[0]!.branch_id,
+      actor.sub,
+      "portfolio.hold",
+      "workers",
+      workerId,
+      { status: found.rows[0]!.status },
+      { credential_state: "portfolio_on_hold" },
+      reason,
+      meta
+    );
+    // RULE 5.9.3 — the MD is notified of every hold.
+    await insertNotificationsToMds(db, actor.companyId, "worker.portfolio_on_hold", {
+      workerId,
+      reason
+    });
+    return { workerId, credentialState: "portfolio_on_hold" };
+  });
+}
+
+/**
+ * Part 5.8 control — release the RULE 5.8.2 hold.
+ * Restores the worker's login while keeping every financial record intact.
+ * The credential state returns to the secure spectrum (secured if the
+ * credential ritual was completed, ritual_in_progress otherwise) so the
+ * worker resumes exactly where the hold left the account.
+ */
+export async function releaseWorkerPortfolio(
+  actor: WorkerActor,
+  workerId: string,
+  reason: string,
+  meta: ActorMeta = {}
+): Promise<{ workerId: string; credentialState: string }> {
+  if (!reason || reason.trim().length === 0) {
+    throw AppError.unprocessable("Reason is required to release a portfolio hold");
+  }
+  return withTenant(actor.companyId, null, async (db) => {
+    const found = await db.query<{ id: string; status: string; branch_id: string | null }>(
+      `SELECT id, status, branch_id FROM users WHERE id=$1 FOR UPDATE`,
+      [workerId]
+    );
+    if (found.rowCount === 0) throw AppError.notFound("Worker not found");
+    await db.query(
+      `UPDATE users
+          SET credential_state = CASE WHEN password_changed_at IS NULL THEN 'ritual_in_progress' ELSE 'secured' END,
+              updated_at=now()
+        WHERE id=$1`,
+      [workerId]
+    );
+    await auditWorker(
+      db,
+      actor.companyId,
+      found.rows[0]!.branch_id,
+      actor.sub,
+      "portfolio.release",
+      "workers",
+      workerId,
+      { credential_state: "portfolio_on_hold" },
+      { credential_state: "released" },
+      reason,
+      meta
+    );
+    // RULE 5.9.3 — the MD is notified of every hold. Releases too.
+    await insertNotificationsToMds(db, actor.companyId, "worker.portfolio_released", {
+      workerId,
+      reason
+    });
+    return { workerId, credentialState: "released" };
+  });
+}
+
+export interface TransferPortfolioInput {
+  /** The account being stood down (RULE 5.8.3). */
+  fromWorkerId: string;
+  /** The replacement worker's creation details (RULE 5.8.3.3). */
+  newWorker: CreateWorkerInput;
+  reason: string;
+}
+
+export interface TransferPortfolioResult {
+  previousWorkerId: string;
+  previousWorkerState: "transferred";
+  newWorker: CreatedWorker;
+  reassignedCustomers: number;
+  reassignedGroups: number;
+}
+
+/**
+ * Part 5.8 control — RULE 5.8.3 "Change Worker On This Portfolio".
+ *
+ * In order:
+ *   1. Reason confirmed by HR or the MD.
+ *   2. Immediately, with no front-end delay: deactivates the password on the
+ *      old account, deactivates and unlinks the authenticator, invalidates
+ *      all sessions, marks credential_state 'transferred'.
+ *   3. Opens the same flow used to create a new worker and creates the
+ *      replacement (RULE 5.9.2 - no overwriting of the former identity).
+ *   4. The new worker's credential panel is generated and shown once.
+ *   5. The portfolio is REPOINTED to the new worker: every active
+ *      customer_assignments row moves to the replacement (RULE 5.8.4, the
+ *      portfolio belongs to the seat, not the person). Money already in the
+ *      queue stays in the queue for the new worker to allocate.
+ *   6. The previous worker's record is never deleted (RULE 5.8.5) - it
+ *      becomes historical and every role assignment is end-dated.
+ */
+export async function transferWorkerPortfolio(
+  actor: WorkerActor,
+  input: TransferPortfolioInput,
+  meta: ActorMeta = {}
+): Promise<TransferPortfolioResult> {
+  if (!input.reason || input.reason.trim().length === 0) {
+    throw AppError.unprocessable("A reason is required to transfer a portfolio");
+  }
+  if (!input.fromWorkerId || !UUID_RE.test(input.fromWorkerId)) {
+    throw AppError.unprocessable("A valid fromWorkerId is required");
+  }
+
+  // RULE 5.8.3.2 - stand the old account down first (atomic; no delay).
+  const stoodDown = await withTenant(actor.companyId, null, async (db) => {
+    const found = await db.query<
+      { id: string; status: string; branch_id: string | null }
+    >(
+      `SELECT id, status, branch_id FROM users WHERE id=$1 FOR UPDATE`,
+      [input.fromWorkerId]
+    );
+    if (found.rowCount === 0) throw AppError.notFound("Source worker not found");
+    // Deactivate the password + unlink and deactivate the authenticator.
+    await db.query(
+      `UPDATE users
+          SET credential_state='transferred', password_hash='!',
+              totp_secret_encrypted=NULL, totp_verified_at=NULL,
+              updated_at=now()
+        WHERE id=$1`,
+      [input.fromWorkerId]
+    );
+    // Invalidate all sessions.
+    await db.query(
+      `UPDATE refresh_tokens SET revoked_at=now() WHERE user_id=$1 AND revoked_at IS NULL`,
+      [input.fromWorkerId]
+    );
+    // RULE 14.4.3 — also kill every outstanding access token immediately.
+    await db.query(
+      `UPDATE users SET session_epoch = session_epoch + 1 WHERE id=$1`,
+      [input.fromWorkerId]
+    );
+    // Distinct branch of the old worker's book for repointing logs.
+    const books = await db.query<{ branch_id: string }>(
+      `SELECT DISTINCT branch_id FROM customer_assignments
+        WHERE staff_id=$1 AND status='active'`,
+      [input.fromWorkerId]
+    );
+    const branchId = found.rows[0]!.branch_id ?? books.rows[0]?.branch_id ?? null;
+    await auditWorker(
+      db,
+      actor.companyId,
+      branchId,
+      actor.sub,
+      "worker.transferred_out",
+      "workers",
+      input.fromWorkerId,
+      { status: found.rows[0]!.status },
+      { credential_state: "transferred" },
+      input.reason,
+      meta
+    );
+    return { branchId, workerBranchId: found.rows[0]!.branch_id };
+  });
+
+  // RULE 5.8.3.3-5.8.3.4 - create the replacement through the same creation
+  // flow; its credential panel is the flow's one-time output.
+  const newWorker = await createWorker(actor, input.newWorker, meta);
+
+  // RULE 5.8.3.5 / 5.8.4 - repoint the portfolio (the seat moves, history
+  // stays with the customers, groups, loans and records). End-date the old
+  // worker's role assignments (RULE 5.8.5).
+  const repoint = await withTenant(actor.companyId, null, async (db) => {
+    const [customers, groups] = await Promise.all([
+      db.query<{ id: string }>(
+        `SELECT id FROM customer_assignments WHERE staff_id=$1 AND status='active' AND customer_id IS NOT NULL`,
+        [input.fromWorkerId]
+      ),
+      db.query<{ id: string }>(
+        `SELECT id FROM customer_assignments WHERE staff_id=$1 AND status='active' AND group_id IS NOT NULL`,
+        [input.fromWorkerId]
+      )
+    ]);
+    const customerIds = customers.rows.map((r) => r.id);
+    const groupIds = groups.rows.map((r) => r.id);
+    if (customerIds.length > 0 || groupIds.length > 0) {
+      const ids = [...customerIds, ...groupIds];
+      await db.query(
+        `UPDATE customer_assignments SET staff_id=$1, updated_at=now() WHERE id = ANY($2)`,
+        [newWorker.id, ids]
+      );
+    }
+    // RULE 5.8.5 - the previous worker's role assignments are end-dated.
+    await db.query(
+      `UPDATE role_assignments
+          SET status='ended', ended_at=now(), ended_by=$2, end_reason=$3
+        WHERE user_id=$1 AND status='active'`,
+      [input.fromWorkerId, actor.sub, input.reason]
+    );
+    await auditWorker(
+      db,
+      actor.companyId,
+      stoodDown.branchId,
+      actor.sub,
+      "portfolio.transferred",
+      "customer_assignments",
+      newWorker.id,
+      { from_worker_id: input.fromWorkerId },
+      { to_worker_id: newWorker.id, customers: customerIds.length, groups: groupIds.length },
+      input.reason,
+      meta
+    );
+    // RULE 5.9.3 — the MD is notified of every transfer.
+    await insertNotificationsToMds(db, actor.companyId, "worker.portfolio_transferred", {
+      fromWorkerId: input.fromWorkerId,
+      toWorkerId: newWorker.id,
+      reassignedCustomers: customerIds.length,
+      reason: input.reason
+    });
+    return { reassignedCustomers: customerIds.length, reassignedGroups: groupIds.length };
+  });
+
+  return {
+    previousWorkerId: input.fromWorkerId,
+    previousWorkerState: "transferred",
+    newWorker,
+    reassignedCustomers: repoint.reassignedCustomers,
+    reassignedGroups: repoint.reassignedGroups
+  };
 }
 
 export async function resetWorkerPassword(
@@ -588,7 +1125,15 @@ export async function resetWorkerPassword(
       id: string;
       branch_id: string | null;
       status: string;
-    }>(`SELECT id, branch_id, status FROM users WHERE id=$1`, [workerId]);
+      credential_state: string;
+      first_name: string;
+      middle_name: string | null;
+      last_name: string;
+    }>(
+      `SELECT id, branch_id, status, credential_state, first_name, middle_name, last_name
+         FROM users WHERE id=$1`,
+      [workerId]
+    );
     if (found.rowCount === 0) throw AppError.notFound("Worker not found");
     if (found.rows[0]!.status === "terminated") {
       throw new AppError(
@@ -597,15 +1142,24 @@ export async function resetWorkerPassword(
         "Cannot reset password for a terminated worker"
       );
     }
-    const tempPassword = generateTemporaryPassword();
-    const passwordHash = await bcrypt.hash(tempPassword, BCRYPT_ROUNDS);
-    const expiresAt = new Date(
-      Date.now() + TEMP_PASSWORD_EXPIRY_HOURS * 60 * 60 * 1000
+    // RULE 5.2.4 / HR — a fresh initial credential is derived from the
+    // worker's first name, issued once and reusable only while unexpired.
+    const initialPassword = initialPasswordFor(found.rows[0]!.first_name);
+    const passwordHash = await bcrypt.hash(initialPassword, BCRYPT_ROUNDS);
+    const policy = await db.query<{ hours: number | null }>(
+      `SELECT credential_ritual_window_hours AS hours FROM company_settings WHERE company_id=$1`,
+      [actor.companyId]
     );
+    const windowHours = policy.rows[0]?.hours ?? 168;
+    const expiresAt = new Date(Date.now() + windowHours * 60 * 60 * 1000);
 
     await db.query(
       `UPDATE users
-          SET password_hash=$2, must_change_password=true, temp_password_expires_at=$3
+          SET password_hash=$2, must_change_password=true, temp_password_expires_at=$3,
+              credential_state='credential_issued', credential_issued_at=now(),
+              credential_expires_at=$3, totp_secret_encrypted=NULL,
+              totp_verified_at=NULL, locked_until=NULL, failed_login_attempts=0,
+              updated_at=now()
         WHERE id=$1`,
       [workerId, passwordHash, expiresAt]
     );
@@ -619,17 +1173,27 @@ export async function resetWorkerPassword(
       actor.companyId,
       found.rows[0]!.branch_id,
       actor.sub,
-      "credentials.reset",
+      "credential.reissued",
       "credentials",
       workerId,
-      null,
-      { expires_at: expiresAt.toISOString() },
+      // RULE 5.4.1 - a lifecycle transition records the state it moved from.
+      { credential_state: found.rows[0]!.credential_state },
+      {
+        username: fullName(
+          found.rows[0]!.first_name,
+          found.rows[0]!.middle_name,
+          found.rows[0]!.last_name
+        ),
+        credential_state: "credential_issued",
+        expires_at: expiresAt.toISOString(),
+        one_time: true
+      },
       reason,
       meta
     );
 
     return {
-      temporaryPassword: tempPassword,
+      initialPassword,
       expiresAt: expiresAt.toISOString()
     };
   });
@@ -1044,9 +1608,16 @@ export async function getRolePermissions(
 async function allocateWorkerCode(
   db: PoolClient,
   branchCode: string,
-  roleKey: string
+  companyCodePrefix: string,
+  roleKey: string,
+  scopeType: CreateWorkerInput["scopeType"]
 ): Promise<string> {
-  const counterKey = `worker_code:${roleKey}`;
+  // RULE 5.7.3 — Head Office roles use {COMPANY_PREFIX}-HO-{ROLE_CODE}-{SEQ};
+  // branch roles use {BRANCH_CODE}-{ROLE_CODE}-{SEQ}. The ID is permanent.
+  const isHeadOffice = scopeType === "company_wide" || scopeType === "head_office";
+  const counterKey = isHeadOffice ? `worker_code:HO:${roleKey}` : `worker_code:${roleKey}`;
+  const base = isHeadOffice ? `${companyCodePrefix}-HO` : branchCode;
+
   const allocated = await db.query<{ allocated: number }>(
     `INSERT INTO company_counters (company_id, counter_key, next_value)
      VALUES (
@@ -1060,7 +1631,7 @@ async function allocateWorkerCode(
   );
   const seq = allocated.rows[0]!.allocated;
   const prefix = await loadRolePrefix(db, roleKey);
-  return `${branchCode}-${prefix}-${String(seq).padStart(3, "0")}`;
+  return `${base}-${prefix}-${String(seq).padStart(3, "0")}`;
 }
 
 /**
@@ -1070,12 +1641,13 @@ async function allocateWorkerCode(
  * "On End Date, it deactivates automatically at end-of-day in the
  * company's configured timezone — no cron-dependent human step required."
  *
- * Returns the number of assignments expired.
+ * Returns the number of assignments expired plus the notifications emitted
+ * (Part 1 §17 requires a notification to the user and to whoever assigned it).
  */
 export async function expireTemporaryAssignments(
   companyId: string,
   meta: ActorMeta = {}
-): Promise<number> {
+): Promise<{ assignmentsEnded: number; notificationsCreated: number }> {
   return withTenant(companyId, null, async (db) => {
     // Find all active temporary assignments where ends_at < now()
     const expired = await db.query<{
@@ -1100,7 +1672,7 @@ export async function expireTemporaryAssignments(
       [companyId]
     );
 
-    let count = 0;
+    let notificationsCreated = 0;
     for (const assignment of expired.rows) {
       const endedBy = assignment.assigned_by; // System/automatic expiry
       const reason = `Automatic expiry: temporary assignment ended at ${assignment.ends_at.toISOString()}`;
@@ -1126,10 +1698,27 @@ export async function expireTemporaryAssignments(
         meta
       );
 
-      count++;
+      // Part 1 §17 — notify the holder and whoever assigned the role.
+      const recipients = new Set<string>([assignment.user_id]);
+      if (assignment.assigned_by) recipients.add(assignment.assigned_by);
+      await insertUserNotifications(
+        db,
+        companyId,
+        [...recipients],
+        "role_assignment.expired",
+        {
+          assignment_id: assignment.id,
+          role_key: assignment.role_key,
+          ended_at: assignment.ends_at.toISOString()
+        }
+      );
+      notificationsCreated += recipients.size;
     }
 
-    return count;
+    return {
+      assignmentsEnded: expired.rowCount ?? 0,
+      notificationsCreated
+    };
   });
 }
 

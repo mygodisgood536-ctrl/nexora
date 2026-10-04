@@ -1,0 +1,11 @@
+-- Stage 7D — §25 traceability: payment pipeline ⇄ schedule linkage.
+-- The allocation engine (applyToSchedule, payments/service.ts) backfills
+-- payment_allocations.schedule_row_id so the exact ledger row a payment
+-- credited can be identified later (reversals, reconciliation).
+--
+-- 0010_rls revokes table-level UPDATE on payment_allocations (append-only
+-- evidence trail); this grants column-level UPDATE for the single linkage
+-- field, mirroring the column-grant pattern used for the resolution
+-- columns on unmatched/unallocated_payments (0017_payment_pipeline).
+-- The row's company_id is still enforced by the tenant RLS policy.
+GRANT UPDATE (schedule_row_id) ON payment_allocations TO nexora;

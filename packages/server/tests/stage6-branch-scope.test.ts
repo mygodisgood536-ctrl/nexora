@@ -71,7 +71,6 @@ describe("stage 6 — branch-scoped session enforcement", () => {
       .send({
         firstName: "Cross",
         lastName: "Branch",
-        username: "cross.branch",
         branchId: branchA2,
         roleKey: "collection_officer",
         scopeType: "single_branch",
@@ -104,7 +103,6 @@ describe("stage 6 — branch-scoped session enforcement", () => {
       .send({
         firstName: "Same",
         lastName: "Branch",
-        username: "same.branch",
         branchId: branchA1,
         roleKey: "collection_officer",
         scopeType: "single_branch",

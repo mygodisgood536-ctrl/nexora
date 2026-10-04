@@ -37,6 +37,16 @@ export class AppError extends Error {
     return new AppError(422, "VALIDATION_ERROR", message, details);
   }
 
+  /** An upstream service the product depends on refused or failed the call. */
+  static badGateway(message = "Upstream service failed", details?: unknown) {
+    return new AppError(502, "UPSTREAM_FAILED", message, details);
+  }
+
+  /** An upstream service did not answer inside its deadline. */
+  static gatewayTimeout(message = "Upstream service timed out", details?: unknown) {
+    return new AppError(504, "UPSTREAM_TIMEOUT", message, details);
+  }
+
   static internal(message = "Internal server error") {
     return new AppError(500, "INTERNAL_ERROR", message);
   }

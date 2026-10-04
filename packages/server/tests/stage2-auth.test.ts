@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import request from "supertest";
 import type { Express } from "express";
 import { SEED_PASSWORD, seedWorld, withAdmin } from "./fixtures";
+import { totpNow } from "../src/lib/totp";
 
 const HOST = "alpha-test.localhost";
 
@@ -62,21 +63,27 @@ describe("stage 2 authentication & session lifecycle", () => {
     expect(bob.body.principal.permissions).toContain("configure");
   });
 
-  it("rejects logins for expired temporary passwords with a distinct code", async () => {
+  it("rejects logins for an expired initial credential with CREDENTIAL_EXPIRED", async () => {
     const app = (await import("../src/app")).createApp();
     await seedWorld();
     const res = await login(app, "tempuser", SEED_PASSWORD);
     expect(res.status).toBe(403);
-    expect(res.body.error.code).toBe("TEMP_PASSWORD_EXPIRED");
+    expect(res.body.error.code).toBe("CREDENTIAL_EXPIRED");
   });
 
-  it("gates the session behind first-password change, then releases it", async () => {
+  it("runs the full credential ritual and only then releases the session", async () => {
     const app = (await import("../src/app")).createApp();
     await seedWorld();
 
+    // tempuser is credential_issued with a *past* window; extend it so the
+    // ritual can be exercised (the expired path is covered above). The
+    // previous test flips the state to credential_expired, so restore it.
     await withAdmin(async (admin) => {
       await admin.query(
-        `UPDATE users SET temp_password_expires_at = now() + interval '1 hour'
+        `UPDATE users
+            SET credential_state='credential_issued',
+                temp_password_expires_at = now() + interval '1 hour',
+                credential_expires_at = now() + interval '1 day'
           WHERE username='tempuser'`
       );
     });
@@ -84,27 +91,116 @@ describe("stage 2 authentication & session lifecycle", () => {
     const first = await login(app, "tempuser", SEED_PASSWORD);
     expect(first.status).toBe(200);
     expect(first.body.mustChangePassword).toBe(true);
+    expect(first.body.credentialState).toBe("credential_issued");
+    const token = first.body.accessToken as string;
 
+    // The ritual token reaching a normal resource is refused and told why.
     const gated = await request(app)
       .get("/api/v1/auth/session-check")
-      .set("Authorization", `Bearer ${first.body.accessToken}`);
+      .set("Authorization", `Bearer ${token}`);
     expect(gated.status).toBe(403);
-    expect(gated.body.error.code).toBe("MUST_CHANGE_PASSWORD");
+    expect(gated.body.error.code).toBe("CREDENTIAL_RITUAL_REQUIRED");
+    expect(gated.body.error.message).toContain("change-password");
 
+    const status = await request(app)
+      .get("/api/v1/auth/ritual/status")
+      .set("Authorization", `Bearer ${token}`);
+    expect(status.status).toBe(200);
+    expect(status.body.credentialState).toBe("credential_issued");
+    expect(status.body.nextStep).toBe("change_password");
+
+    // Step 2 — enrol the authenticator (resumable secret).
+    const enrol = await request(app)
+      .post("/api/v1/auth/ritual/enrollment")
+      .set("Authorization", `Bearer ${token}`);
+    expect(enrol.status).toBe(200);
+    const secret = enrol.body.secret as string;
+    expect(secret).toMatch(/^[A-Z2-7]+$/);
+    const otpauth = enrol.body.otpauthUri as string;
+    expect(otpauth).toContain("otpauth://totp/Nexora:");
+
+    // Step 3 — verify with a live code.
+    const verify = await request(app)
+      .post("/api/v1/auth/ritual/verify-authenticator")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ code: totpNow(secret) });
+    expect(verify.status).toBe(204);
+
+    // Step 1 (completed last, per RULE 4.2.1 interleaving) — change the
+    // password; the change itself is verified with a live authenticator code.
     const change = await request(app)
-      .post("/api/v1/auth/change-password")
-      .set("Authorization", `Bearer ${first.body.accessToken}`)
-      .set("Host", HOST)
-      .send({ currentPassword: SEED_PASSWORD, newPassword: "NewPassword!456" });
+      .post("/api/v1/auth/ritual/change-password")
+      .set("Authorization", `Bearer ${token}`)
+      .send({
+        currentPassword: SEED_PASSWORD,
+        newPassword: "NewPassword!456",
+        // RULE 5.3.1.1 - the password is confirmed twice.
+        confirmPassword: "NewPassword!456",
+        totpCode: totpNow(secret)
+      });
     expect(change.status).toBe(204);
 
-    const again = await login(app, "tempuser", "NewPassword!456");
-    expect(again.status).toBe(200);
-    expect(again.body.mustChangePassword).toBe(false);
+    // A mismatched confirmation is refused rather than silently accepted.
+    const mismatched = await request(app)
+      .post("/api/v1/auth/change-password")
+      .set("Authorization", `Bearer ${token}`)
+      .send({
+        currentPassword: "NewPassword!456",
+        newPassword: "AnotherPassword!789",
+        confirmPassword: "DifferentPassword!789",
+        totpCode: totpNow(secret)
+      });
+    expect(mismatched.status).toBe(422);
+
+    // Step 4 — complete the profile; the account becomes secured right here.
+    const complete = await request(app)
+      .post("/api/v1/auth/ritual/complete-profile")
+      .set("Authorization", `Bearer ${token}`)
+      .send({
+        passportPhotoUrl: "https://cdn.nexora.app/passports/tempuser.jpg",
+        passportFileHash: "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      });
+    expect(complete.status).toBe(200);
+    expect(complete.body.credentialState).toBe("secured");
+    expect(complete.body.mustChangePassword).toBe(false);
+    const securedToken = complete.body.accessToken as string;
+
+    // Old credential is destroyed (RULE 5.2.3.3); new password signs in.
+    const oldLogin = await login(app, "tempuser", SEED_PASSWORD);
+    expect(oldLogin.status).toBe(401);
+    const newLogin = await login(app, "tempuser", "NewPassword!456");
+    expect(newLogin.status).toBe(200);
+    expect(newLogin.body.credentialState).toBe("secured");
+    expect(newLogin.body.mustChangePassword).toBe(false);
+
     const released = await request(app)
       .get("/api/v1/auth/session-check")
-      .set("Authorization", `Bearer ${again.body.accessToken}`);
+      .set("Authorization", `Bearer ${securedToken}`);
     expect(released.status).toBe(200);
+  });
+
+  it("locks the account after the failed-attempt threshold and answers 423", async () => {
+    const app = (await import("../src/app")).createApp();
+    await seedWorld();
+
+    // Five wrong attempts trip the threshold (default lockout_threshold=5).
+    for (let i = 0; i < 5; i++) {
+      const bad = await login(app, "alice", "wrong-password");
+      expect(bad.status).toBe(401);
+    }
+
+    const locked = await login(app, "alice", SEED_PASSWORD);
+    expect(locked.status).toBe(423);
+    expect(locked.body.error.code).toBe("ACCOUNT_LOCKED");
+
+    // Restore alice so later tests in this file share the cached world
+    // without carrying the lockout forward.
+    await withAdmin(async (admin) => {
+      await admin.query(
+        `UPDATE users SET failed_login_attempts=0, locked_until=NULL, updated_at=now()
+          WHERE username='alice'`
+      );
+    });
   });
 
   it("rotates refresh tokens and rejects replayed cookies", async () => {

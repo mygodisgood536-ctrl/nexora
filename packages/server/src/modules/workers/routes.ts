@@ -2,22 +2,26 @@ import { Router } from "express";
 import { z } from "zod";
 import type { Request, Response, NextFunction } from "express";
 import { AppError } from "../../lib/errors";
-import { requireCompleteSession, requirePermission } from "../../middleware/auth";
+import {  requireCompleteSession, requirePermission  } from "../../middleware/auth";
 import {
   assignRole,
   createCustomRole,
   createWorker,
   endAssignment,
+  editWorker,
   getRoleCatalogue,
   getRolePermissions,
   getWorker,
+  holdWorkerPortfolio,
   listAssignments,
   listEnabledRoles,
   listWorkers,
+  releaseWorkerPortfolio,
   resetWorkerPassword,
   setRoleEnabled,
   setRolePermissions,
-  setWorkerStatus
+  setWorkerStatus,
+  transferWorkerPortfolio
 } from "./service";
 
 /**
@@ -53,6 +57,22 @@ function wrap(
   };
 }
 
+/**
+ * RULE 5.8.1 - the Hold/Transfer portfolio controls are visible only to HR
+ * and the MD. Only those roles may invoke them.
+ */
+const PORTFOLIO_CONTROL_ROLES = new Set(["md", "deputy_md", "hr_manager", "hr_officer"]);
+
+function requirePortfolioControl(req: Request, _res: Response, next: NextFunction): void {
+  const p = req.principal!;
+  const allowed = p.roles.some((r) => PORTFOLIO_CONTROL_ROLES.has(r.roleKey));
+  if (!allowed) {
+    next(AppError.forbidden("Portfolio hold/transfer controls are visible only to HR and the MD"));
+    return;
+  }
+  next();
+}
+
 const scopeEnum = z.enum([
   "company_wide",
   "head_office",
@@ -65,7 +85,6 @@ const createWorkerSchema = z.object({
   firstName: z.string().min(1).max(100),
   middleName: z.string().max(100).nullable().optional(),
   lastName: z.string().min(1).max(100),
-  username: z.string().min(3).max(80).regex(/^[a-z0-9._-]+$/i),
   phone: z.string().max(40).nullable().optional(),
   email: z.string().email().max(200).nullable().optional(),
   birthDay: z.number().int().min(1).max(31).nullable().optional(),
@@ -109,7 +128,7 @@ workersRouter.get(
 workersRouter.post(
   "/",
   requireCompleteSession,
-  requirePermission("create"),
+  requirePermission("manage_workers"),
   wrap(async (req, res) => {
     const parsed = createWorkerSchema.safeParse(req.body ?? {});
     if (!parsed.success) {
@@ -125,6 +144,42 @@ workersRouter.post(
   })
 );
 
+const editWorkerSchema = z.object({
+  firstName: z.string().min(1).max(80).optional(),
+  middleName: z.string().max(80).nullable().optional(),
+  lastName: z.string().min(1).max(80).optional(),
+  phone: z.string().max(40).nullable().optional(),
+  email: z.string().email().max(200).nullable().optional(),
+  birthDay: z.number().int().min(1).max(31).nullable().optional(),
+  birthMonth: z.number().int().min(1).max(12).nullable().optional(),
+  passportPhotoUrl: z.string().max(500).nullable().optional(),
+  reason: z.string().min(5).max(500)
+});
+
+workersRouter.patch(
+  "/:id",
+  requireCompleteSession,
+  requirePermission("manage_workers"),
+  wrap(async (req, res) => {
+    const id = String(req.params.id);
+    if (!UUID_RE.test(id)) throw AppError.badRequest("Invalid worker id");
+    const parsed = editWorkerSchema.safeParse(req.body ?? {});
+    if (!parsed.success) {
+      throw new AppError(
+        422,
+        "VALIDATION_ERROR",
+        "Validation failed",
+        parsed.error.issues.map((i) => ({ path: i.path.join("."), message: i.message }))
+      );
+    }
+    const { passportPhotoUrl, ...rest } = parsed.data;
+    res.json(await editWorker(actor(req), id, {
+      ...rest,
+      passport_photo_url: passportPhotoUrl ?? null
+    }, metaFrom(req)));
+  })
+);
+
 const statusSchema = z.object({
   action: z.enum(["activate", "suspend", "reactivate", "terminate"]),
   reason: z.string().max(500).optional()
@@ -133,7 +188,7 @@ const statusSchema = z.object({
 workersRouter.post(
   "/:id/status",
   requireCompleteSession,
-  requirePermission("suspend"),
+  requirePermission("manage_workers"),
   wrap(async (req, res) => {
     const id = String(req.params.id);
     if (!UUID_RE.test(id)) throw AppError.badRequest("Invalid worker id");
@@ -170,6 +225,78 @@ workersRouter.post(
       metaFrom(req)
     );
     res.status(200).json(result);
+  })
+);
+
+const portfolioSchema = z.object({
+  reason: z.string().min(1).max(500)
+});
+
+workersRouter.post(
+  "/:id/portfolio/hold",
+  requireCompleteSession,
+  requirePermission("manage_workers"),
+  requirePortfolioControl,
+  wrap(async (req, res) => {
+    const id = String(req.params.id);
+    if (!UUID_RE.test(id)) throw AppError.badRequest("Invalid worker id");
+    const parsed = portfolioSchema.safeParse(req.body ?? {});
+    if (!parsed.success) throw AppError.unprocessable("Validation failed");
+    res.json(await holdWorkerPortfolio(actor(req), id, parsed.data.reason, metaFrom(req)));
+  })
+);
+
+workersRouter.post(
+  "/:id/portfolio/release",
+  requireCompleteSession,
+  requirePermission("manage_workers"),
+  requirePortfolioControl,
+  wrap(async (req, res) => {
+    const id = String(req.params.id);
+    if (!UUID_RE.test(id)) throw AppError.badRequest("Invalid worker id");
+    const parsed = portfolioSchema.safeParse(req.body ?? {});
+    if (!parsed.success) throw AppError.unprocessable("Validation failed");
+    res.json(await releaseWorkerPortfolio(actor(req), id, parsed.data.reason, metaFrom(req)));
+  })
+);
+
+const transferPortfolioSchema = z.object({
+  fromWorkerId: z.string(),
+  reason: z.string().min(1).max(500),
+  newWorker: z.object({
+    firstName: z.string().min(1),
+    middleName: z.string().nullish(),
+    lastName: z.string().min(1),
+    phone: z.string().nullish(),
+    email: z.string().nullish(),
+    birthDay: z.number().int().min(1).max(31).nullish(),
+    birthMonth: z.number().int().min(1).max(12).nullish(),
+    branchId: z.string(),
+    roleKey: z.string().min(1),
+    scopeType: scopeEnum,
+    branchIds: z.array(z.string()).optional(),
+    assignmentType: z.enum(["permanent", "temporary"]).optional(),
+    startsAt: z.string().optional(),
+    endsAt: z.string().optional()
+  })
+});
+
+workersRouter.post(
+  "/:id/portfolio/transfer",
+  requireCompleteSession,
+  requirePermission("manage_workers"),
+  requirePortfolioControl,
+  wrap(async (req, res) => {
+    const id = String(req.params.id);
+    if (!UUID_RE.test(id)) throw AppError.badRequest("Invalid worker id");
+    const parsed = transferPortfolioSchema.safeParse(req.body ?? {});
+    if (!parsed.success) throw AppError.unprocessable("Validation failed");
+    if (parsed.data.fromWorkerId !== id) {
+      throw AppError.unprocessable("fromWorkerId must match the worker id");
+    }
+    res.json(
+      await transferWorkerPortfolio(actor(req), parsed.data, metaFrom(req))
+    );
   })
 );
 

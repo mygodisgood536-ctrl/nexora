@@ -18,7 +18,31 @@ coverage/
 # TS incremental build info
 *.tsbuildinfo
 
+# RULE 20.4.1 - the backup key is a secret held apart from application
+# credentials. It is never committed, and never the same as an app key.
+packages/server/config/backup.key
+packages/server/config/*.key
+.backup-work/
+NexoraBackup/
+
 # OS junk
 .DS_Store
 Thumbs.db
 desktop.ini
+
+# --- PC-flash preservation snapshot (2026-10-04) ---
+# _probe_out is a scratch/evidence directory: raw run logs, status dumps and
+# vitest JSON artifacts. It is deliberately NOT version controlled because some
+# of those logs capture live HTTP traffic, including refresh-token cookies and
+# HMAC webhook signatures.
+#
+# The documents that are real project state (the Vision v3.9 authority extract,
+# the issue log, the independent verification record and the P3 matrix) were
+# copied into docs/verification/ and ARE tracked. Logs are reproducible by
+# re-running the suite.
+_probe_out/
+
+# Test-run artifacts produced at the repo root / server package.
+_probe_out_suite.json
+_probe_out_*.txt
+_probe_out_*.log

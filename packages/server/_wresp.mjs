@@ -1,0 +1,12 @@
+import fs from "node:fs";
+const out = [];
+const s = fs.readFileSync("src/modules/workers/service.ts", "utf8");
+const i = s.indexOf("interface CreatedWorker");
+out.push("CreatedWorker interface:");
+out.push(s.slice(i, i + 700).replace(/\s+/g, " "));
+const r = fs.readFileSync("src/modules/workers/routes.ts", "utf8");
+const j = r.indexOf('workersRouter.post(\n  "/"');
+out.push("");
+out.push("POST / route:");
+out.push(r.slice(j, j + 800).replace(/\s+/g, " "));
+fs.writeFileSync("../../_probe_out/workerresp.txt", out.join("\n"));

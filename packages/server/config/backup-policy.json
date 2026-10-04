@@ -1,0 +1,36 @@
+{
+  "$comment": "Vision RULE 20.4.2/20.4.4/20.4.5. Declared, configurable backup placement, retention and residency. No value here is hard-coded in the backup subsystem.",
+  "sites": [
+    {
+      "id": "primary-datacentre",
+      "root": "C:/NexoraBackup/primary",
+      "region": "NG-LAG",
+      "description": "Primary datacentre backup store, separate from the database's own data directory.",
+      "vault": false
+    },
+    {
+      "id": "protected-vault",
+      "root": "C:/NexoraBackup/vault",
+      "region": "NG-LAG",
+      "description": "Isolated protected copy (RULE 20.4.4). Append-only: artefacts are written once and never overwritten or pruned by retention.",
+      "vault": true
+    },
+    {
+      "id": "secondary-region",
+      "root": "C:/NexoraBackup/secondary",
+      "region": "EU-LOU",
+      "description": "Off-region replica for geographic placement and residency (RULE 20.4.5).",
+      "vault": false
+    }
+  ],
+  "allowedResidencyRegions": ["NG-LAG", "EU-LOU"],
+  "fullBackupRetentionDays": 30,
+  "minimumFullBackups": 2,
+  "walRetentionDays": 14,
+  "objectRetentionDays": 60,
+  "fullBackupIntervalHours": 24,
+  "primarySiteId": "primary-datacentre",
+  "vaultSiteId": "protected-vault",
+  "rpoMinutes": 60,
+  "rtoMinutes": 60
+}

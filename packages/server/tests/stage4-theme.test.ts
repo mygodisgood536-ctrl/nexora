@@ -113,6 +113,8 @@ describe("stage 4 — company branding & theme variables", () => {
       .send({
         name: `Brand Co ${Date.now()}`,
         codePrefix: randomPrefix(),
+        mdFullName: "Brand Managing",
+        mdPhone: "+2348000000004",
         branding: { primaryColor: "#00aa77", accentColor: "#ff8800" },
         enabledRoleKeys: ["md", "accountant"]
       });

@@ -7,6 +7,7 @@ import {
   companySummary,
   createAnnouncement,
   createCompany,
+  getCompanyDetail,
   getCompanyTheme,
   getGlobalSettings,
   listAnnouncements,
@@ -26,6 +27,16 @@ import {
   updateCompanyTheme,
   verifyPoToken
 } from "./service";
+import {
+  activateConfiguration,
+  createConfiguration,
+  listCompanyConfigurations,
+  listFreeModels as listAiFreeModels,
+  listProviderModels as listAiProviderModels,
+  listProviders as listAiProviders,
+  revokeConfiguration,
+  verifyConfiguration
+} from "../company-ai/config-service";
 
 export const platformRouter = Router();
 
@@ -138,13 +149,39 @@ const companySchema = z.object({
   codePrefix: z.string().regex(/^[A-Za-z]{3,6}$/),
   contactEmail: z.string().email().optional(),
   planTier: z.string().max(40).optional(),
+  // RULE 3.3.1 — the create-company form requires the MD's full name (it
+  // becomes the MD's username) and the MD's phone number. The MD's email is
+  // optional and is never a login credential.
+  mdFullName: z.string().min(3).max(120),
+  mdPhone: z.string().min(4).max(40),
+  mdEmail: z.string().email().max(200).optional(),
+  // RULE 5.7.4 — only the day and month of birth are ever collected or stored.
+  mdBirthDay: z.number().int().min(1).max(31).optional(),
+  mdBirthMonth: z.number().int().min(1).max(12).optional(),
   branding: brandingSchema.optional(),
   enabledRoleKeys: z.array(z.string()).optional()
 });
 
-platformRouter.get("/companies", authed(async (_po, _req, res) => {
-  void _po; void _req;
-  res.json(await listCompanies());
+// RULE 3.6.6 - search, filter, sort and paginate the Companies workspace.
+platformRouter.get("/companies", authed(async (_po, req, res) => {
+  void _po;
+  const q = req.query as Record<string, string | undefined>;
+  res.json(
+    await listCompanies({
+      search: q.search ?? null,
+      status: q.status ?? null,
+      sort: q.sort ?? null,
+      order: q.order === "asc" ? "asc" : q.order === "desc" ? "desc" : null,
+      limit: q.limit ? Number(q.limit) : null,
+      offset: q.offset ? Number(q.offset) : null
+    })
+  );
+}));
+
+// RULE 3.6.4 - the Company Detail workspace for exactly the selected company.
+platformRouter.get("/companies/:id/detail", authed(async (_po, req, res) => {
+  void _po;
+  res.json(await getCompanyDetail(uuidParam(req)));
 }));
 
 platformRouter.post("/companies", authed(async (po, req, res) => {
@@ -288,4 +325,58 @@ platformRouter.put("/companies/:id/enabled-roles", authed(async (po, req, res) =
   if (!parsed.success) throw AppError.unprocessable("Validation failed");
   const result = await setEnabledRoles(po.email, uuidParam(req), parsed.data.enabledRoleKeys);
   res.json(result);
+}));
+
+// ---------------------------------------------------------------------------
+// RULE 21.1.9 - the Platform Owner selects a company's AI provider and model.
+// Every list below is what OpenCode reports right now; none is stored here.
+// ---------------------------------------------------------------------------
+
+platformRouter.get("/ai/free-models", authed(async (_po, _req, res) => {
+  void _po;
+  res.json(await listAiFreeModels());
+}));
+
+platformRouter.get("/ai/providers", authed(async (_po, _req, res) => {
+  void _po;
+  res.json(await listAiProviders());
+}));
+
+platformRouter.get("/ai/providers/:providerId/models", authed(async (_po, req, res) => {
+  void _po;
+  res.json(await listAiProviderModels(String(req.params.providerId)));
+}));
+
+const aiConfigurationSchema = z.object({
+  provider: z.string().min(1).max(120),
+  model: z.string().min(1).max(200),
+  apiKey: z.string().max(400).nullable().optional()
+});
+
+platformRouter.get("/companies/:id/ai-configuration", authed(async (po, req, res) => {
+  res.json(await listCompanyConfigurations(po.email, uuidParam(req)));
+}));
+
+platformRouter.post("/companies/:id/ai-configuration", authed(async (po, req, res) => {
+  const parsed = aiConfigurationSchema.safeParse(req.body ?? {});
+  if (!parsed.success) throw AppError.unprocessable("Validation failed");
+  res.status(201).json(
+    await createConfiguration(po.email, uuidParam(req), parsed.data)
+  );
+}));
+
+platformRouter.post("/ai-configuration/:id/verify", authed(async (po, req, res) => {
+  res.json(await verifyConfiguration(po.email, String(req.params.id)));
+}));
+
+platformRouter.post("/ai-configuration/:id/activate", authed(async (po, req, res) => {
+  res.json(await activateConfiguration(po.email, String(req.params.id)));
+}));
+
+const revokeSchema = z.object({ reason: z.string().min(3).max(500) });
+
+platformRouter.post("/companies/:id/ai-configuration/:configurationId/revoke", authed(async (po, req, res) => {
+  const parsed = revokeSchema.safeParse(req.body ?? {});
+  if (!parsed.success) throw AppError.unprocessable("Validation failed");
+  res.json(await revokeConfiguration(po.email, uuidParam(req), String(req.params.configurationId), parsed.data.reason));
 }));

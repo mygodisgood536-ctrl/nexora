@@ -193,38 +193,9 @@ VALUES
   ('credit_officer', 'assign'),
   ('credit_officer', 'export');
 
--- Loan Officer: Full loan workflow
-INSERT INTO platform_role_permission_bundles (role_key, verb)
-VALUES
-  ('loan_officer', 'view'),
-  ('loan_officer', 'create'),
-  ('loan_officer', 'edit'),
-  ('loan_officer', 'approve'),
-  ('loan_officer', 'reject'),
-  ('loan_officer', 'assign'),
-  ('loan_officer', 'disburse'),
-  ('loan_officer', 'export');
-
 -- ============================================================
--- CUSTOMER/ACCOUNTS CATEGORY (4 roles)
+-- CUSTOMER/ACCOUNTS CATEGORY (2 roles)
 -- ============================================================
-
--- Account Officer: Relationship focus (Loan Officer variant)
-INSERT INTO platform_role_permission_bundles (role_key, verb)
-VALUES
-  ('account_officer', 'view'),
-  ('account_officer', 'create'),
-  ('account_officer', 'edit'),
-  ('account_officer', 'assign'),
-  ('account_officer', 'export');
-
--- Field Account Officer: Savings/account focus (CO variant)
-INSERT INTO platform_role_permission_bundles (role_key, verb)
-VALUES
-  ('field_account_officer', 'view'),
-  ('field_account_officer', 'create'),
-  ('field_account_officer', 'edit'),
-  ('field_account_officer', 'export');
 
 -- Customer Service Officer: Full customer service
 INSERT INTO platform_role_permission_bundles (role_key, verb)

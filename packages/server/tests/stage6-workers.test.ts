@@ -11,7 +11,8 @@ interface CreatedWorker {
   workerCode: string;
   username: string;
   initialAssignmentId: string;
-  temporaryPassword: string;
+  credentialState: string;
+  initialPassword: string;
 }
 
 async function createWorkerViaApi(
@@ -80,7 +81,6 @@ describe("stage 6 — workers and role assignments", () => {
     const res = await createWorkerViaApi(app, token, {
       firstName: "Test",
       lastName: "Worker",
-      username: "test.worker1",
       branchId: branchA1,
       roleKey: "collection_officer",
       scopeType: "single_branch",
@@ -89,8 +89,11 @@ describe("stage 6 — workers and role assignments", () => {
     expect(res.status).toBe(201);
     const body = res.body as CreatedWorker;
     expect(body.workerCode).toMatch(/^ALP-001-CI-\d{3,}$/);
-    expect(body.username).toBe("test.worker1");
-    expect(body.temporaryPassword).toMatch(/^[A-Za-z0-9!@#$%^&*]{16}$/);
+    // RULE 5.1.1–5.1.4 — the username is the exact full name.
+    expect(body.username).toBe("Test Worker");
+    // RULE 5.2.1 — the initial password is @FirstName, shown once.
+    expect(body.initialPassword).toBe("@Test");
+    expect(body.credentialState).toBe("credential_issued");
     expect(body.initialAssignmentId).toMatch(
       /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
     );
@@ -100,14 +103,18 @@ describe("stage 6 — workers and role assignments", () => {
         worker_code: string;
         status: string;
         must_change_password: boolean;
+        credential_state: string;
+        credential_expires_at: string | null;
       }>(
-        `SELECT worker_code, status, must_change_password
+        `SELECT worker_code, status, must_change_password, credential_state, credential_expires_at
            FROM users WHERE id=$1`,
         [body.id]
       );
       expect(u.rows[0]!.worker_code).toBe(body.workerCode);
       expect(u.rows[0]!.status).toBe("invited");
       expect(u.rows[0]!.must_change_password).toBe(true);
+      expect(u.rows[0]!.credential_state).toBe("credential_issued");
+      expect(u.rows[0]!.credential_expires_at).not.toBeNull();
 
       const a = await db.query<{
         role_key: string;
@@ -124,15 +131,14 @@ describe("stage 6 — workers and role assignments", () => {
       expect(a.rows[0]!.status).toBe("active");
     });
   });
-  it("rejects duplicate username within the same company with USERNAME_TAKEN", async () => {
+  it("rejects a duplicate full name within the same company with USERNAME_TAKEN", async () => {
     const app = (await import("../src/app")).createApp();
     await seedWorld();
     const { token } = await staffLogin(app, ALPHA_HOST, "alice");
     const branchA1 = await getAlphaBranchA1();
     const first = await createWorkerViaApi(app, token, {
-      firstName: "Dup",
-      lastName: "One",
-      username: "dup.user",
+      firstName: "Duplicated",
+      lastName: "Person",
       branchId: branchA1,
       roleKey: "collection_officer",
       scopeType: "single_branch",
@@ -140,9 +146,8 @@ describe("stage 6 — workers and role assignments", () => {
     });
     expect(first.status).toBe(201);
     const second = await createWorkerViaApi(app, token, {
-      firstName: "Dup",
-      lastName: "Two",
-      username: "dup.user",
+      firstName: "Duplicated",
+      lastName: "Person",
       branchId: branchA1,
       roleKey: "collection_officer",
       scopeType: "single_branch",
@@ -160,7 +165,6 @@ describe("stage 6 — workers and role assignments", () => {
     const res = await createWorkerViaApi(app, token, {
       firstName: "Temp",
       lastName: "Noend",
-      username: "temp.noend",
       branchId: branchA1,
       roleKey: "collection_officer",
       scopeType: "single_branch",
@@ -178,7 +182,6 @@ describe("stage 6 — workers and role assignments", () => {
     const res = await createWorkerViaApi(app, token, {
       firstName: "Temp",
       lastName: "Window",
-      username: "temp.window",
       branchId: branchA1,
       roleKey: "collection_officer",
       scopeType: "single_branch",
@@ -198,7 +201,6 @@ describe("stage 6 — workers and role assignments", () => {
     const res = await createWorkerViaApi(app, aToken, {
       firstName: "Cross",
       lastName: "Company",
-      username: "cross.company",
       branchId: branchB1,
       roleKey: "collection_officer",
       scopeType: "single_branch",
@@ -324,9 +326,9 @@ describe("stage 6 — workers and role assignments", () => {
     expect(res.body).toHaveProperty("builtIn");
     expect(res.body).toHaveProperty("templates");
     expect(Array.isArray(res.body.builtIn)).toBe(true);
-    expect(res.body.builtIn.length).toBe(32);
+    expect(res.body.builtIn.length).toBe(29);
     expect(Array.isArray(res.body.templates)).toBe(true);
-    expect(res.body.templates.length).toBe(11);
+    expect(res.body.templates.length).toBe(9);
   });
 });
 

@@ -1,0 +1,82 @@
+/** Proves the security contexts using the APPLICATION's own helpers. */
+async function proveContexts(): Promise<void> {
+  // (a) raw access with no security context -> RLS must hide tenant data.
+  stamp("proveContexts: raw access (no context)");
+  const raw = new pg.Client({ connectionString: APP_URL });
+  await raw.connect();
+  const rows = await raw.query<{ n: number }>("SELECT count(*)::int n FROM companies");
+  check(
+    "no security context: tenant data is not exposed (RLS)",
+    rows.rows[0].n === 0,
+    `raw SELECT companies -> ${rows.rows[0].n} rows`
+  );
+  let denied = false;
+  let denyMsg = "";
+  try {
+    await raw.query(
+      "INSERT INTO companies (name, code_prefix, slug, status) VALUES ('ctx','CTX','ctx','active')"
+    );
+  } catch (e) {
+    denied = true;
+    denyMsg = (e as Error).message.slice(0, 80);
+  }
+  check("no security context: unauthorized write is refused (fails closed)", denied, denyMsg);
+  await raw.end();
+
+  // (b)(c) use the REAL application helpers, not raw SQL.
+  // The pool reads env.DATABASE_URL at import time, so it must be set first.
+  stamp("proveContexts: importing application helpers (pool -> scratch DB)");
+  process.env.DATABASE_URL = APP_URL;
+  const repo = await import("../src/db/repo");
+  const { closePool } = await import("../src/db/pool");
+
+  // (b) platform/pre-auth bypass: the Vision permits company creation here.
+  stamp("proveContexts: withBypass -> create company A and B");
+  const [a, b] = await repo.withBypass(async (c) => {
+    const one = await c.query(
+      "INSERT INTO companies (name, code_prefix, slug, status) VALUES ('Bypass A','BPA','bypass-a','active') RETURNING id"
+    );
+    const two = await c.query(
+      "INSERT INTO companies (name, code_prefix, slug, status) VALUES ('Bypass B','BPB','bypass-b','active') RETURNING id"
+    );
+    return [one.rows[0].id as string, two.rows[0].id as string];
+  });
+  check("withBypass: platform path CAN create companies", !!a && !!b, `A=${a?.slice(0, 8)} B=${b?.slice(0, 8)}`);
+
+  // (c) tenant context: must see ONLY its own company.
+  stamp("proveContexts: withTenant(companyA) -> isolation check");
+  const seenByA = await repo.withTenant(a, null, async (c) => {
+    const r = await c.query<{ id: string }>("SELECT id FROM companies");
+    return r.rows.map((x) => x.id);
+  });
+  check(
+    "withTenant(A): sees its own company",
+    seenByA.includes(a),
+    `${seenByA.length} row(s) visible`
+  );
+  check(
+    "withTenant(A): CANNOT see company B (company isolation)",
+    !seenByA.includes(b),
+    "B is not visible to A"
+  );
+
+  // (c2) tenant context cannot write into another company.
+  stamp("proveContexts: withTenant(A) -> cross-tenant write attempt");
+  let crossBlocked = true;
+  let crossMsg = "write silently affected 0 other-company rows";
+  try {
+    await repo.withTenant(a, null, async (c) => {
+      const upd = await c.query("UPDATE companies SET name='hijacked' WHERE id=$1", [b]);
+      if ((upd.rowCount ?? 0) > 0) {
+        crossBlocked = false;
+        crossMsg = `UPDATED ${upd.rowCount} row(s) belonging to another company`;
+      }
+    });
+  } catch (e) {
+    crossBlocked = true;
+    crossMsg = `refused: ${(e as Error).message.slice(0, 70)}`;
+  }
+  check("withTenant(A): cannot MUTATE another company", crossBlocked, crossMsg);
+
+  await closePool().catch(() => {});
+}

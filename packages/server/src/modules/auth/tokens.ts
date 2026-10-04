@@ -1,10 +1,13 @@
 import jwt from "jsonwebtoken";
 import { env } from "../../config/env";
 import type { PrincipalPayload } from "../../middleware/auth";
+import type { CredentialState } from "../../lib/credential";
 
 export interface AccessTokenClaims extends PrincipalPayload {
   /** must-change-password: limits the session until first credential change. */
   mcp?: boolean;
+  /** Credential lifecycle state (Vision Part 5 §5.4). */
+  cs?: CredentialState;
   /** Active role lens for UI (Part 1 §16 role switcher). */
   activeRoleKey?: string | null;
 }

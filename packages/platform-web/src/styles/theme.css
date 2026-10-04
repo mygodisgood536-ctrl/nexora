@@ -4,15 +4,25 @@
 @import "@fontsource/poppins/600.css";
 @import "@fontsource/poppins/700.css";
 
+/*
+ * RULE 13.4.2 — the Platform Owner's own portal uses GREEN, the approved
+ * platform colour, in exactly the token pattern a company colour follows. It
+ * is never switched to a company's colour. RULE 13.1.2 — the neutral base
+ * (background, surfaces, text) never changes; only the accent tokens below
+ * carry the platform colour.
+ */
 :root {
-  --nxp-color-primary: #2547e0;
-  --nxp-color-primary-strong: #1d38b8;
+  --nxp-color-primary: #16a34a;
+  --nxp-color-primary-strong: #15803d;
+  --nxp-color-accent: #16a34a;
+  /* RULE 13.5.1 — the label colour on the accent is computed from the accent's
+     luminance: white on this dark-enough green. */
+  --nxp-color-on-primary: #ffffff;
   --nxp-color-bg: #0a1233;
   --nxp-color-surface: #111c47;
   --nxp-color-surface-raised: #182559;
   --nxp-color-text: #f2f5ff;
   --nxp-color-text-muted: #93a0c8;
-  --nxp-color-accent: #f59e0b;
   --nxp-color-danger: #ef4444;
   --nxp-color-success: #22c55e;
   --nxp-radius-card: 14px;

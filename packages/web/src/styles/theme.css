@@ -4,12 +4,22 @@
 @import "@fontsource/poppins/600.css";
 @import "@fontsource/poppins/700.css";
 
+/*
+ * RULE 13.4.1 — with no company chosen, the product's accent is BLACK (a
+ * near-black charcoal). Creating a company with a colour replaces these
+ * accent tokens with that company's colour.
+ * RULE 13.1.2 — the neutral base (background, surfaces, text) is fixed and
+ * never changes with the company colour; only the accent tokens below move.
+ * RULE 13.5.1 — --nx-color-on-primary is the COMPUTED label colour for text
+ * sitting on the accent; the theme loader sets it per company.
+ */
 :root {
-  --nx-color-primary: #2547e0;
-  --nx-color-primary-strong: #1d38b8;
+  --nx-color-primary: #111111;
+  --nx-color-primary-strong: #000000;
   --nx-color-secondary: #ffffff;
   --nx-color-navy: #0b1f4b;
-  --nx-color-accent: #f59e0b;
+  --nx-color-accent: #111111;
+  --nx-color-on-primary: #ffffff;
   --nx-color-bg: #f5f7fb;
   --nx-color-surface: #ffffff;
   --nx-color-text: #12224a;
