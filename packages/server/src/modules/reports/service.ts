@@ -72,7 +72,7 @@ function resolveScope(
 export async function generateReport(
   actor: ReportActor,
   filters: ReportFilters,
-  meta: ReportMeta = {}
+  _meta: ReportMeta = {}
 ): Promise<{ data: PerformanceSet; format: "json" | "csv" }> {
   const { from, to } = filters;
   const scope = resolveScope(actor, { branchId: filters.branchId, staffId: filters.staffId });
@@ -97,7 +97,7 @@ export async function generateReport(
 export async function branchPerformanceTable(
   actor: ReportActor,
   filters: ReportFilters,
-  meta: ReportMeta = {}
+  _meta: ReportMeta = {}
 ): Promise<{ rows: (PerformanceSet & { branchId: string; branchCode: string; collectionOfficers: number })[]; total: PerformanceSet; format: "json" | "csv" }> {
   const { from, to } = filters;
   const grace = await withTenant(actor.companyId, null, async (db) => {
@@ -144,7 +144,7 @@ export async function branchPerformanceTable(
 export async function staffPerformanceTable(
   actor: ReportActor,
   filters: ReportFilters,
-  meta: ReportMeta = {}
+  _meta: ReportMeta = {}
 ): Promise<{ rows: (PerformanceSet & { staffId: string; workerCode: string; roleKey: string })[]; total: PerformanceSet; format: "json" | "csv" }> {
   const { from, to } = filters;
   const grace = await withTenant(actor.companyId, null, async (db) => {

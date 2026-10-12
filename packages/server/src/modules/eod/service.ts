@@ -22,12 +22,12 @@
 // loan is never touched, and the whole run is one tenant transaction
 // (assignment expiry uses the shared Workers service's own tenant session).
 import type pg from "pg";
-import { withTenant, withBypass } from "../../db/repo";
+import { withTenant } from "../../db/repo";
 import { AppError } from "../../lib/errors";
 import { expireTemporaryAssignments, type ActorMeta } from "../workers/service";
 import { insertUserNotifications, insertNotificationsToMds } from "../notifications/service";
 import { retryPendingVirtualAccounts } from "../customers/service";
-import { reconcileProviderTransactions, getActiveProviderConfig } from "../payments/service";
+import { getActiveProviderConfig } from "../payments/service";
 
 export interface EodActor {
   sub: string;
@@ -186,7 +186,7 @@ export async function runEndOfDay(
     //    reconciliation job periodically pulls the provider's transaction
     //    list per virtual account and diffs it against Nexora's recorded
     //    payments").
-    let reconciliationItemsAdded = 0;
+    const reconciliationItemsAdded = 0;
     const providerConfig = await getActiveProviderConfig({ sub: actor.sub, companyId: actor.companyId, branchId: actor.branchId ?? null });
     if (providerConfig) {
       // In a full implementation, this would call the provider's

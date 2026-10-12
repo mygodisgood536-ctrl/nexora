@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 // ISS-006 / Phase 1 privilege diagnosis (superuser view).
 // Confirms: (a) tenant data intact, (b) whether the `nexora` application role has
 // the table privileges it needs, (c) whether resetDatabase()'s schema-only GRANT

@@ -115,7 +115,7 @@ describe("stage 5 — branch system", () => {
   // workers' logins; a closed branch takes no new customers, loans or workers.
   it("enforces the branch lifecycle: suspend blocks logins, close blocks new work", async () => {
     const app = (await import("../src/app")).createApp();
-    const world = await seedWorld();
+    await seedWorld();
     const { token } = await staffLogin(app, ALPHA_HOST, "amy");
 
     const created = await request(app)
@@ -180,7 +180,7 @@ describe("stage 5 — branch system", () => {
   it("scopes every branch read/write to the caller's own company (isolation)", async () => {
     const app = (await import("../src/app")).createApp();
     await seedWorld();
-    const alpha = await staffLogin(app, ALPHA_HOST, "alice");
+    const alpha = await staffLogin(app, ALPHA_HOST, "amy"); // RULE 7.2.1 — MD-class reader
     const beta = await staffLogin(app, BETA_HOST, "bob");
 
     const betaList = await request(app)

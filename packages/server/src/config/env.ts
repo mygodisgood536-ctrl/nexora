@@ -8,8 +8,52 @@ const envSchema = z.object({
   DATABASE_URL: z
     .string()
     .default("postgres://nexora:nexora@localhost:5432/nexora_dev"),
+  /**
+   * Serverless connection budget. On Vercel each concurrent invocation can own
+   * its own pool, so this multiplies by concurrency. Keep it small and put a
+   * pooler (Neon pooler / PgBouncer / Supabase pooler) in front of Postgres.
+   */
+  DATABASE_POOL_MAX: z.coerce.number().int().min(1).max(50).default(10),
+  DATABASE_IDLE_TIMEOUT_MS: z.coerce.number().int().min(0).default(30_000),
+  /** Bounded so an unreachable database fails fast instead of hanging. */
+  DATABASE_CONNECT_TIMEOUT_MS: z.coerce.number().int().min(500).default(10_000),
+  /**
+   * TLS handling for Postgres.
+   *  - `url`        (default) no override; node-postgres honours `sslmode=` and
+   *                  `sslrootcert=` in DATABASE_URL, which is how managed
+   *                  providers (Neon, RDS, Supabase) document connection.
+   *  - `verify-full` enforce TLS AND certificate verification.
+   *  - `disable`    plain TCP. Only for a local socket or a proxy that already
+   *                  terminates TLS in front of the database.
+   * There is deliberately no "encrypt without verifying" option, because that
+   * is the setting people reach for by accident and it defeats the purpose.
+   */
+  DATABASE_SSL: z.enum(["url", "verify-full", "disable"]).default("url"),
   JWT_SECRET: z.string().min(16).default("nexora-dev-secret-change-me"),
   CORS_ORIGIN: z.string().default("http://localhost:5173,http://localhost:5174"),
+
+  // ---- Platform address configuration (Vision Part 1 §2.3) ------------------
+  /**
+   * The apex a generated company URL is built from. RULE 2.3.1 fixes the SLUG
+   * (stable, unique platform-wide, derived from the company name); the apex is
+   * a deployment fact, not an identity fact.
+   */
+  PLATFORM_APEX: z.string().default("nexora.app"),
+  /**
+   * The origin the platform is actually served from, e.g. https://nexora.vercel.app.
+   * Used to build the path-form company address when the apex is not a wildcard
+   * domain this deployment controls.
+   */
+  PLATFORM_BASE_URL: z.string().default("http://localhost:5173"),
+  /**
+   * Which address form to advertise when a company is created.
+   *  - `subdomain` — advertise {slug}.{PLATFORM_APEX} (the Vision default; needs a
+   *    wildcard domain pointed at this deployment)
+   *  - `path`      — advertise {PLATFORM_BASE_URL}/{slug} (works on any host)
+   * Both forms RESOLVE at runtime regardless of this setting; it only decides
+   * which one the one-time credential panel shows.
+   */
+  COMPANY_URL_MODE: z.enum(["subdomain", "path"]).default("path"),
   LOG_LEVEL: z.enum(["fatal", "error", "warn", "info", "debug", "trace"]).default("info"),
   EVIDENCE_STORAGE_ROOT: z.string().default(join(tmpdir(), "nexora-evidence")),
   EVIDENCE_ENCRYPTION_KEY: z.string().min(32).default("nexora-dev-evidence-key-change-me"),

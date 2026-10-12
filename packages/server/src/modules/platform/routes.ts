@@ -17,10 +17,15 @@ import {
   listPlatformAudit,
   listSupportSessions,
   openSupportSession,
+  poAuthenticatorStatus,
+  poBeginAuthenticatorSetup,
   poLogin,
   poLogout,
   poRefresh,
+  poVerifyAuthenticator,
   putGlobalSetting,
+  saveCompanyDraft,
+  discardCompanyDraft,
   setAnnouncementStatus,
   setCompanyStatus,
   setEnabledRoles,
@@ -119,9 +124,47 @@ platformRouter.post("/auth/refresh", wrap(async (req, res) => {
 }));
 
 platformRouter.post("/auth/logout", wrap(async (req, res) => {
-  await poLogout(readCookie(req, PO_COOKIE));
+  await poLogout(readCookie(req, PO_COOKIE) ?? req.body?.refreshToken);
   res.clearCookie(PO_COOKIE, { path: "/platform/v1" });
   res.status(204).end();
+}));
+
+// RULE 14.1.1 / 14.2.1 - the owner's authenticator enrolment path.
+// These two endpoints close Vision finding F-01: before them there was no way
+// for the Platform Owner to hold an authenticator at all, while the vision
+// states the owner "is not exempt from security". Login refuses to issue a
+// session until enrolment completes, so this is the only way forward.
+const poPasswordSchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(1)
+});
+
+platformRouter.post("/auth/authenticator/setup", wrap(async (req, res) => {
+  const parsed = poPasswordSchema.safeParse(req.body);
+  if (!parsed.success) throw AppError.unprocessable("Validation failed");
+  const result = await poBeginAuthenticatorSetup(parsed.data.email, parsed.data.password, {
+    ip: req.ip,
+    userAgent: req.headers["user-agent"]
+  });
+  // The seed is returned exactly once, to the person enrolling. RULE 14.5.1:
+  // it is never logged, never emailed and never retrievable again.
+  res.status(201).json(result);
+}));
+
+platformRouter.post("/auth/authenticator/verify", wrap(async (req, res) => {
+  const parsed = poPasswordSchema.extend({ code: z.string().min(6).max(6) }).safeParse(req.body);
+  if (!parsed.success) throw AppError.unprocessable("Validation failed");
+  await poVerifyAuthenticator(parsed.data.email, parsed.data.password, parsed.data.code, {
+    ip: req.ip,
+    userAgent: req.headers["user-agent"]
+  });
+  res.status(200).json({ enrolled: true });
+}));
+
+platformRouter.get("/auth/authenticator/status", wrap(async (req, res) => {
+  const email = typeof req.query.email === "string" ? req.query.email : "";
+  if (!email) throw AppError.badRequest("email is required");
+  res.json(await poAuthenticatorStatus(email));
 }));
 
 platformRouter.get("/me", authed(async (po, _req, res) => {
@@ -159,7 +202,19 @@ const companySchema = z.object({
   mdBirthDay: z.number().int().min(1).max(31).optional(),
   mdBirthMonth: z.number().int().min(1).max(12).optional(),
   branding: brandingSchema.optional(),
-  enabledRoleKeys: z.array(z.string()).optional()
+  enabledRoleKeys: z.array(z.string()).optional(),
+  // RULE 3.3.3 — completing a previously saved draft.
+  draftId: z.string().uuid().optional()
+});
+
+// RULE 3.3.3 — a draft holds whatever the wizard has collected so far, so
+// every field (beyond nothing at all) is optional here.
+const draftSchema = z.object({
+  name: z.string().min(2).max(100).optional(),
+  codePrefix: z.string().regex(/^[A-Za-z]{3,6}$/).optional(),
+  contactEmail: z.string().email().optional(),
+  planTier: z.string().max(40).optional(),
+  branding: brandingSchema.optional()
 });
 
 // RULE 3.6.6 - search, filter, sort and paginate the Companies workspace.
@@ -184,13 +239,56 @@ platformRouter.get("/companies/:id/detail", authed(async (_po, req, res) => {
   res.json(await getCompanyDetail(uuidParam(req)));
 }));
 
+// RULE 3.3.3 — draft lifecycle: save, resume, discard. A draft company sits in
+// "In setup" status and cannot be logged into; the login path already refuses
+// any company whose status is not `active`.
+platformRouter.post("/companies/draft", authed(async (po, req, res) => {
+  const parsed = draftSchema.safeParse(req.body ?? {});
+  if (!parsed.success) {
+    throw new AppError(422, "VALIDATION_ERROR", "Validation failed",
+      parsed.error.issues.map((i) => ({ path: i.path.join("."), message: i.message })));
+  }
+  res.status(201).json(await saveCompanyDraft(po.email, parsed.data));
+}));
+
+platformRouter.get("/companies/drafts", authed(async (_po, _req, res) => {
+  res.json(await listCompanies({ status: "in_setup", limit: 100, offset: 0 }));
+}));
+
+platformRouter.put("/companies/drafts/:id", authed(async (po, req, res) => {
+  const parsed = draftSchema.safeParse(req.body ?? {});
+  if (!parsed.success) {
+    throw new AppError(422, "VALIDATION_ERROR", "Validation failed",
+      parsed.error.issues.map((i) => ({ path: i.path.join("."), message: i.message })));
+  }
+  res.json(await saveCompanyDraft(po.email, parsed.data, uuidParam(req)));
+}));
+
+platformRouter.delete("/companies/drafts/:id", authed(async (po, req, res) => {
+  await discardCompanyDraft(po.email, uuidParam(req));
+  res.status(204).end();
+}));
+
 platformRouter.post("/companies", authed(async (po, req, res) => {
+  // RULE 3.3.3 — `?draft=true` saves a draft. It must never silently create a
+  // live company, which is exactly what it used to do (ISS-004).
+  if (String((req.query as Record<string, unknown>).draft) === "true") {
+    const parsed = draftSchema.safeParse(req.body ?? {});
+    if (!parsed.success) {
+      throw new AppError(422, "VALIDATION_ERROR", "Validation failed",
+        parsed.error.issues.map((i) => ({ path: i.path.join("."), message: i.message })));
+    }
+    res.status(201).json(await saveCompanyDraft(po.email, parsed.data));
+    return;
+  }
   const parsed = companySchema.safeParse(req.body);
   if (!parsed.success) {
     throw new AppError(422, "VALIDATION_ERROR", "Validation failed",
       parsed.error.issues.map((i) => ({ path: i.path.join("."), message: i.message })));
   }
-  res.status(201).json(await createCompany(po.email, parsed.data));
+  res.status(201).json(
+    await createCompany(po.email, parsed.data, { draftId: parsed.data.draftId })
+  );
 }));
 
 const statusSchema = z.object({
@@ -199,9 +297,12 @@ const statusSchema = z.object({
 });
 
 platformRouter.post("/companies/:id/status", authed(async (po, req, res) => {
+  // ISS-005 — a malformed id is the caller's mistake (400), never a Postgres
+  // 22P02 escaping as a 500.
+  const id = uuidParam(req);
   const parsed = statusSchema.safeParse(req.body);
   if (!parsed.success) throw AppError.unprocessable("Validation failed");
-  res.json(await setCompanyStatus(po.email, String(req.params.id), parsed.data.action, parsed.data.reason));
+  res.json(await setCompanyStatus(po.email, id, parsed.data.action, parsed.data.reason));
 }));
 
 platformRouter.get("/global-settings", authed(async (_po, _req, res) => {

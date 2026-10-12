@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import request from "supertest";
 import type { Express } from "express";
-import { seedWorld, withAdmin, withAdminValue, type TestWorld } from "./fixtures";
+import { seedWorld, withAdminValue, type TestWorld } from "./fixtures";
 import { staffLogin, completeProfile } from "./platform-helpers";
 
 const ALPHA_HOST = "alpha-test.localhost";
@@ -70,7 +70,7 @@ describe("isolation attack", () => {
     if (foreign.assignment) paths.push([`/api/v1/assignments/${foreign.assignment}`, "GET"]);
     paths.push([`/api/v1/traceability/chain?type=customer&id=${foreign.customer ?? w.customerA1}`, "GET"]);
 
-    for (const [path, method] of paths) {
+    for (const [path] of paths) {
       const res = await request(app)
         .get(path)
         .set("Authorization", `Bearer ${alphaMd}`);

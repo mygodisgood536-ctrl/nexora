@@ -201,7 +201,7 @@ describe("stage 7D - notification center", () => {
     expect(openKinds).toContain("test.reminder");
     expect(openKinds).toContain("test.alert");
     expect(open.body.items.every((n: { read_at: string | null }) => n.read_at === null)).toBe(true);
-    expect(open.body.items.every((n: { recipient_user_id?: unknown }) => true)).toBe(true);
+    expect(open.body.items.every((_n: { recipient_user_id?: unknown }) => true)).toBe(true);
     expect(open.body.items.some((n: { kind: string }) => n.kind === "test.beta_only")).toBe(false);
     expect(open.body.items.some((n: { kind: string }) => n.kind === "test.read_done")).toBe(false);
 
@@ -281,7 +281,7 @@ describe("stage 7D - notification center", () => {
   it("cannot mark another user's notification as read (404, tenant-scoped)", async () => {
     const app = (await import("../src/app")).createApp();
     await seedWorld();
-    const [{ betaUser }] = await Promise.all([seedNotifications()]);
+    await seedNotifications();
     const { token } = await staffLogin(app, ALPHA_HOST, "alice");
     const { token: bToken } = await staffLogin(app, BETA_HOST, "bob");
 
@@ -363,7 +363,7 @@ describe("stage 7D - notification center", () => {
   it("raises a payment.received notification through the live pipeline", async () => {
     const app = (await import("../src/app")).createApp();
     await seedWorld();
-    const { token } = await staffLogin(app, ALPHA_HOST, "amy");
+    await staffLogin(app, ALPHA_HOST, "amy");
     const branchA1 = await alphaBranchA1();
 
     await activateProvider(app, {

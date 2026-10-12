@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 // Removes the structurally broken harness so it can be rewritten cleanly.
 import fs from "node:fs";
 try {

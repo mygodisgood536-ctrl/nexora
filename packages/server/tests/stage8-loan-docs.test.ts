@@ -3,8 +3,6 @@
 import { describe, it, expect, beforeAll } from "vitest";
 import { withAdmin } from "./fixtures";
 import { randomPrefix, attachVerifiedFaceEvidence } from "./platform-helpers";
-import { pool } from "../src/db/pool";
-import type pg from "pg";
 import {
   uploadDocument,
   listDocuments,
@@ -14,22 +12,16 @@ import {
   type LoanActor,
 } from "../src/modules/loans/documents";
 import {
-  createApplication,
   decideApplication,
   type LoanActor as ServiceLoanActor,
 } from "../src/modules/loans/service";
 
 const PREFIX = randomPrefix();
 
-async function q<T extends pg.QueryResultRow = pg.QueryResultRow>(sql: string, params: unknown[] = []) {
-  return pool.query<T>(sql, params);
-}
-
 describe("stage 7C - loan documents + credit assessments + on_rejection", () => {
   let alphaCompanyId: string;
   let betaCompanyId: string;
   let aliceId: string;
-  let bobId: string;
   let aliceBranchId: string;
   let productId: string;
   let chainId: string;
@@ -59,11 +51,10 @@ describe("stage 7C - loan documents + credit assessments + on_rejection", () => 
       aliceId = aliceUser.rows[0]!.id;
       aliceBranchId = aliceUser.rows[0]!.branch_id;
 
-      const bobUser = await db.query<{ id: string; branch_id: string }>(
+      await db.query<{ id: string; branch_id: string }>(
         `SELECT id, branch_id FROM users WHERE company_id=$1 AND username='bob'`,
         [betaCompanyId]
       );
-      bobId = bobUser.rows[0]!.id;
 
       // Create a loan product
       const prod = await db.query<{ id: string }>(

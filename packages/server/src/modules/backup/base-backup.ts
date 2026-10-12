@@ -98,7 +98,7 @@ export async function takeBaseBackup(options: BaseBackupOptions): Promise<{
       ? { dataDirectory, archiveMode: "off", lsn: null }
       : await inspectServer(adminUrl, dataDirectory);
   let endLsn: string | null = server.lsn;
-  let archiveMode = server.archiveMode;
+  const archiveMode = server.archiveMode;
   let downtimeSeconds = 0;
 
   await rm(staging, { recursive: true, force: true });

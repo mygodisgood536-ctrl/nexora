@@ -11,6 +11,7 @@ import {
   runPaymentReconciliation,
   runReferentialIntegrityCheck
 } from "./service";
+import { listSessions } from "./sessions";
 
 export const recoveryRouter = Router();
 
@@ -115,5 +116,31 @@ recoveryRouter.post(
     const parsed = restoreSchema.safeParse(req.body ?? {});
     if (!parsed.success) throw AppError.unprocessable("Validation failed");
     res.json(await runRestoreVerification(actor(req), parsed.data));
+  })
+);
+
+/**
+ * Part 12 §12.31 Technical hub — "Sessions". Read-only and company-scoped.
+ * Requires the technical role to be present: RLS alone bounds the rows to this
+ * company, and the `configure` verb is what the IT / System Administrator role
+ * carries for technical surfaces.
+ */
+recoveryRouter.get(
+  "/sessions",
+  requireCompleteSession,
+  requirePermission("view"),
+  wrap(async (req, res) => {
+    const p = req.principal!;
+    const roles = p.roles.map((r) => r.roleKey);
+    if (!roles.includes("it_system_administrator") && !roles.includes("head_office_administrator")) {
+      throw AppError.forbidden("The sessions surface is restricted to technical administration");
+    }
+    const limit = req.query.limit ? Number(req.query.limit) : undefined;
+    const includeExpired = req.query.includeExpired === "true";
+    const sessions = await listSessions(
+      { userId: p.sub, companyId: p.companyId, branchId: p.branchId ?? null },
+      { limit, includeExpired }
+    );
+    res.json({ sessions });
   })
 );

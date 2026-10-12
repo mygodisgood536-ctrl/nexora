@@ -5,6 +5,7 @@ import pinoHttp from "pino-http";
 import { env } from "./config/env";
 import { logger } from "./lib/logger";
 import { requestContext } from "./middleware/request-context";
+import { tenantPrefix } from "./middleware/tenant-prefix";
 import { attachPrincipal } from "./middleware/auth";
 import { errorHandler } from "./middleware/error-handler";
 import { notFoundHandler } from "./middleware/not-found";
@@ -52,6 +53,53 @@ import { healthRouter } from "./routes/health";
 export function createApp(): express.Express {
   const app = express();
 
+  // HOST-INDEPENDENT ROUTING.
+  //
+  // The same Express app is mounted two ways:
+  //   - locally: `node src/index.ts`, where req.url is already the real path;
+  //   - as a serverless function behind a rewrite, where the handler may be
+  //     invoked on the function's own path ("/api/nexora-api") while the
+  //     caller's original path survives only in a header or `originalUrl`.
+  //
+  // Rather than assume which of those the host does, the app picks the first
+  // path it can see that actually looks like one of its own API prefixes. The
+  // mounts further down are therefore identical in every environment, and
+  // `/api/v1/...` can never fall through to the SPA catch-all or the 404.
+  const API_PREFIXES = ["/api/v1", "/platform/v1", "/api"];
+
+  app.use((req, _res, next) => {
+    const current = req.url ?? "";
+    const alreadyMounted = API_PREFIXES.some((p) => current === p || current.startsWith(`${p}/`));
+    if (alreadyMounted) return next();
+
+    const candidates = [
+      req.headers["x-invoke-path"],
+      req.headers["x-vercel-original-path"],
+      req.originalUrl
+    ];
+    for (const candidate of candidates) {
+      if (typeof candidate !== "string" || candidate.length === 0) continue;
+      const found = API_PREFIXES.some((p) => candidate === p || candidate.startsWith(`${p}/`));
+      if (found) {
+        req.url = candidate;
+        return next();
+      }
+    }
+    return next();
+  });
+
+  // TENANT ADDRESS PREFIX.
+  //
+  // The Vision requires that the URL supplies the scope, with no company picker
+  // in the flow. This accepts BOTH address forms for the same tenant:
+  //   acme.nexora.app/...            (hostname — the Vision default)
+  //   example.vercel.app/acme/...    (path — same application, shared apex)
+  // The path form is what lets the platform run on a host that does not issue
+  // wildcard subdomains without changing a single rule. The prefix is only ever
+  // a lookup key for a real company slug; every request is still authorised
+  // inside that company's tenant session under row-level security.
+  app.use(tenantPrefix);
+
   app.disable("x-powered-by");
   app.use(helmet());
   app.use(
@@ -60,6 +108,18 @@ export function createApp(): express.Express {
       credentials: true
     })
   );
+  // WEBHOOK RAW BODY — MUST PRECEDE express.json().
+  //
+  // The payment webhook verifies an HMAC computed over the EXACT bytes the
+  // provider sent. `express.json()` consumes the request stream, so if it ran
+  // first, `req.body` would already be a parsed object and the handler would
+  // have to re-serialise it (JSON.stringify) to rebuild the signed payload.
+  // Re-serialisation is not byte-identical — key order, spacing and number
+  // formatting can all differ — so the signature would never match and every
+  // inbound payment would be rejected as invalid (VISION acceptance test 13/20,
+  // RULE 8.5.2). Capturing the raw bytes here, scoped to the webhook ingress
+  // path only, keeps signature verification honest in every environment.
+  app.use("/api/v1/webhooks", express.raw({ type: "*/*", limit: "1mb" }));
   app.use(express.json({ limit: "8mb" }));
   app.use(requestContext);
   app.use(

@@ -12,7 +12,6 @@ import {
   calculatePerformanceSet,
   listAssignedStaff,
   listPermittedBranches,
-  type PerfScope,
   type PerformanceSet,
   type BranchPerformanceRow,
   type StaffPerformanceRow

@@ -33,12 +33,6 @@ async function hmacSig(secret: string, ts: string, bodyString: string): Promise<
   return crypto.createHmac("sha256", secret).update(`${ts}.${bodyString}`).digest("hex");
 }
 
-function signBody(body: object, secret: string, ts: string): { ts: string; body: string; sig: string } {
-  const bodyString = JSON.stringify(body);
-  const sig = crypto.createHmac("sha256", secret).update(`${ts}.${bodyString}`).digest("hex");
-  return { ts, body: bodyString, sig };
-}
-
 async function postWebhook(
   app: Express,
   opts: {
@@ -79,17 +73,6 @@ async function getAlphaBranchA1(): Promise<string> {
   return id;
 }
 
-async function getAlphaBranchA2(): Promise<string> {
-  let id = "";
-  await withAdmin(async (db) => {
-    const r = await db.query<{ id: string }>(
-      `SELECT id FROM branches WHERE company_id=(SELECT id FROM companies WHERE slug='alpha-test') AND code='ALP-002'`
-    );
-    id = r.rows[0]!.id;
-  });
-  return id;
-}
-
 async function getBetaBranchB1(): Promise<string> {
   let id = "";
   await withAdmin(async (db) => {
@@ -110,7 +93,7 @@ async function getCompanyId(slug: string): Promise<string> {
   return id;
 }
 
-async function saveOutstanding(loanCode: string): Promise<string> {
+async function saveOutstanding(_loanCode: string): Promise<string> {
   let op = "";
   await withAdmin(async (db) => {
     const r = await db.query<{ outstanding_principal: string }>(

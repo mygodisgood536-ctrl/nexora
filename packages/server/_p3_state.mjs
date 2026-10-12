@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 // Decisive check for a Phase 3 anomaly: `roles` / `role_permissions` read empty
 // from nexora_test, yet role logins succeeded minutes earlier and those logins
 // resolve permissions from role_permissions. Establish the real state.

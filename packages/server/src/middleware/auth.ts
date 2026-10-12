@@ -186,3 +186,25 @@ export function requirePermission(verb: string | string[]): (req: Request, _res:
     next();
   };
 }
+
+/**
+ * Requires the session to hold at least one of the named role keys.
+ *
+ * Used only where the Vision names a set of ROLES rather than an authority
+ * (RULE 7.4.1 branch-creation rights, the RULE 5.6.1 money-adjacent surfaces),
+ * never as a substitute for a permission verb where one exists.
+ */
+export function requireAnyRole(roleKeys: string[]): (req: Request, _res: Response, next: NextFunction) => void {
+  return (req, _res, next) => {
+    if (!req.principal) {
+      next(AppError.unauthorized());
+      return;
+    }
+    const granted = req.principal.roles.some((role) => roleKeys.includes(role.roleKey));
+    if (!granted) {
+      next(AppError.forbidden("Your role cannot perform this action"));
+      return;
+    }
+    next();
+  };
+}

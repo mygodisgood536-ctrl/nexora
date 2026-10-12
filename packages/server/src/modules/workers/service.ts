@@ -1732,7 +1732,7 @@ export async function expireTemporaryAssignments(
  */
 export async function activateTemporaryAssignments(
   companyId: string,
-  meta: ActorMeta = {}
+  _meta: ActorMeta = {}
 ): Promise<number> {
   return withTenant(companyId, null, async (db) => {
     // Find all inactive temporary assignments where starts_at <= now() and not yet active

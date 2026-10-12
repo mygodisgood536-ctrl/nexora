@@ -1,51 +1,98 @@
-import { useEffect, useState } from "react";
-import { BUILT_IN_ROLES } from "@nexora/shared";
-
-interface HealthResponse {
-  status: string;
-  service: string;
-  db: string;
-}
+import { Navigate, Route, Routes } from "react-router-dom";
+import { LoadingRow } from "@nexora/ui";
+import { LoginPage } from "./auth/LoginPage";
+import { RitualFlow } from "./auth/RitualFlow";
+import { useSession } from "./auth/SessionProvider";
+import { companyName, companyTheme } from "./lib/theme";
+import { Shell } from "./shell/Shell";
+import { ApprovalsPage } from "./pages/ApprovalsPage";
+import { AuditPage } from "./pages/AuditPage";
+import { BranchesPage } from "./pages/BranchesPage";
+import { CapabilityPage } from "./pages/CapabilityPage";
+import { ControlPage } from "./pages/ControlPage";
+import { CreditDetailPage } from "./pages/CreditDetailPage";
+import { CreditPage } from "./pages/CreditPage";
+import { CustomerDetailPage } from "./pages/CustomerDetailPage";
+import { CustomersPage } from "./pages/CustomersPage";
+import { DashboardPage } from "./pages/DashboardPage";
+import { EodPage } from "./pages/EodPage";
+import { FieldPage } from "./pages/FieldPage";
+import { FindingsPage } from "./pages/FindingsPage";
+import { GroupDetailPage } from "./pages/GroupDetailPage";
+import { GroupsPage } from "./pages/GroupsPage";
+import { MoneyPage } from "./pages/MoneyPage";
+import { NotificationsPage } from "./pages/NotificationsPage";
+import { PeoplePage } from "./pages/PeoplePage";
+import { PerformancePage } from "./pages/PerformancePage";
+import { ProfilePage } from "./pages/ProfilePage";
+import { ProvidersPage } from "./pages/ProvidersPage";
+import { ReconciliationPage } from "./pages/ReconciliationPage";
+import { RecoveryPage } from "./pages/RecoveryPage";
+import { ReportsPage } from "./pages/ReportsPage";
+import { ServicePage } from "./pages/ServicePage";
+import { TechnicalPage } from "./pages/TechnicalPage";
+import { TracePage } from "./pages/TracePage";
+import { WorkerDetailPage } from "./pages/WorkerDetailPage";
+import { WorkplacePage } from "./pages/WorkplacePage";
 
 export default function App() {
-  const [health, setHealth] = useState<HealthResponse | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const { state } = useSession();
 
-  useEffect(() => {
-    fetch("/api/v1/healthz")
-      .then((res) => (res.ok ? res.json() : Promise.reject(new Error(`status ${res.status}`))))
-      .then(setHealth)
-      .catch((err: Error) => setError(err.message));
-  }, []);
+  if (state.state === "booting") {
+    return (
+      <main className="nx-boot">
+        <LoadingRow text="Checking your session…" />
+      </main>
+    );
+  }
+
+  if (state.state === "anon") return <LoginPage theme={companyTheme()} />;
+  if (state.state === "ritual") return <RitualFlow ritual={state.ritual} company={companyName()} />;
 
   return (
-    <main className="min-h-screen flex items-center justify-center p-6">
-      <section className="w-full max-w-md rounded-[var(--nx-radius-card)] bg-[var(--nx-color-surface)] p-8 shadow-[var(--nx-shadow-card)]">
-        <h1 className="text-2xl font-semibold text-[var(--nx-color-navy)]">Nexora</h1>
-        <p className="mt-2 text-sm text-[var(--nx-color-text-muted)]">
-          Multi-tenant microfinance operating system. Stage 0 foundation.
-        </p>
-        <dl className="mt-6 space-y-3 text-sm">
-          <div className="flex justify-between">
-            <dt className="text-[var(--nx-color-text-muted)]">API</dt>
-            <dd data-testid="api-status">
-              {error ? (
-                <span className="text-[var(--nx-color-danger)]">{error}</span>
-              ) : health ? (
-                <span className={health.db === "up" ? "text-[var(--nx-color-success)]" : "text-[var(--nx-color-danger)]"}>
-                  {health.service} · db {health.db}
-                </span>
-              ) : (
-                <span>Loading…</span>
-              )}
-            </dd>
-          </div>
-          <div className="flex justify-between">
-            <dt className="text-[var(--nx-color-text-muted)]">Built-in roles</dt>
-            <dd>{BUILT_IN_ROLES.length}</dd>
-          </div>
-        </dl>
-      </section>
-    </main>
+    <Shell company={companyName()}>
+      <Routes>
+        <Route path="/" element={<DashboardPage />} />
+
+        <Route path="/money" element={<MoneyPage />} />
+        <Route path="/reconciliation" element={<ReconciliationPage />} />
+        <Route path="/providers" element={<ProvidersPage />} />
+        <Route path="/eod" element={<EodPage />} />
+
+        <Route path="/branches" element={<BranchesPage />} />
+        <Route path="/workplace" element={<WorkplacePage />} />
+
+        <Route path="/people" element={<PeoplePage />} />
+        <Route path="/people/:id" element={<WorkerDetailPage />} />
+
+        <Route path="/customers" element={<CustomersPage />} />
+        <Route path="/customers/:id" element={<CustomerDetailPage />} />
+
+        <Route path="/groups" element={<GroupsPage />} />
+        <Route path="/groups/:id" element={<GroupDetailPage />} />
+
+        <Route path="/credit" element={<CreditPage />} />
+        <Route path="/credit/:id" element={<CreditDetailPage />} />
+        <Route path="/approvals" element={<ApprovalsPage />} />
+
+        <Route path="/audit" element={<AuditPage />} />
+        <Route path="/findings" element={<FindingsPage />} />
+        <Route path="/trace" element={<TracePage />} />
+        <Route path="/control" element={<ControlPage />} />
+        <Route path="/capability/:key" element={<CapabilityPage />} />
+
+        <Route path="/reports" element={<ReportsPage />} />
+        <Route path="/performance" element={<PerformancePage />} />
+
+        <Route path="/field" element={<FieldPage />} />
+        <Route path="/recovery" element={<RecoveryPage />} />
+        <Route path="/service" element={<ServicePage />} />
+        <Route path="/technical" element={<TechnicalPage />} />
+        <Route path="/notifications" element={<NotificationsPage />} />
+        <Route path="/profile" element={<ProfilePage />} />
+
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </Shell>
   );
 }

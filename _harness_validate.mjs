@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 // Evidence validator for _verify.cmd.
 //
 // The contract: exit 0 if and only if the job genuinely executed during THIS

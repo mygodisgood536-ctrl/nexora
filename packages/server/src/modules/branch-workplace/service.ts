@@ -1,7 +1,7 @@
 import type pg from "pg";
-import { withTenant, withBypass } from "../../db/repo";
+import { withTenant } from "../../db/repo";
 import { AppError } from "../../lib/errors";
-import { calculatePerformanceSet, listPermittedBranches, type PerformanceSet } from "../performance/engine";
+import { calculatePerformanceSet, type PerformanceSet } from "../performance/engine";
 
 export interface BranchWorkplaceActor {
   sub: string;
@@ -53,31 +53,13 @@ export interface ActorMeta {
   requestId?: string | null;
 }
 
-interface PerfQuery {
-  from: string;
-  to: string;
-}
-
-async function graceDays(db: pg.PoolClient, companyId: string): Promise<number> {
-  const r = await db.query<{ overdue_grace_days: number }>(
-    `SELECT overdue_grace_days FROM company_settings WHERE company_id=$1`,
-    [companyId]
-  );
-  return r.rows[0]?.overdue_grace_days ?? 0;
-}
-
-interface PerfQuery {
-  from: string;
-  to: string;
-}
-
 async function getBranchOverview(
   db: pg.PoolClient,
   companyId: string,
   branchId: string,
-  from: string,
-  to: string,
-  graceDaysVal: number
+  _from: string,
+  _to: string,
+  _graceDaysVal: number
 ) {
   const r = await db.query<{
     branch_id: string;
@@ -134,9 +116,9 @@ async function getBranchSavings(
   db: pg.PoolClient,
   companyId: string,
   branchId: string,
-  from: string,
-  to: string,
-  graceDaysVal: number
+  _from: string,
+  _to: string,
+  _graceDaysVal: number
 ) {
   const r = await db.query<{
     total_savings: string;
@@ -157,9 +139,9 @@ async function getBranchLoans(
   db: pg.PoolClient,
   companyId: string,
   branchId: string,
-  from: string,
-  to: string,
-  graceDaysVal: number
+  _from: string,
+  _to: string,
+  _graceDaysVal: number
 ) {
   const r = await db.query<{
     id: string;
@@ -249,7 +231,7 @@ async function getBranchWorkers(
     branchId: string | null;
     assignedCustomers: number;
     assignedGroups: number;
-    performance: any;
+    performance: PerformanceSet;
   }> = [];
 
   for (const row of r.rows) {
@@ -335,7 +317,7 @@ async function getBranchRepaymentSchedule(
   branchId: string,
   from: string,
   to: string,
-  graceDaysVal: number
+  _graceDaysVal: number
 ) {
   const r = await db.query<{
     id: string;

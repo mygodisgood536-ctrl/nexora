@@ -232,7 +232,8 @@ async function main(): Promise<void> {
 function readKeyFile(): string {
   const file = process.env.BACKUP_KEY_FILE;
   if (!file) throw new Error("BACKUP_ENCRYPTION_KEY or BACKUP_KEY_FILE is required");
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
+   
+  // eslint-disable-next-line @typescript-eslint/no-require-imports -- sync read of the key file
   return require("node:fs").readFileSync(file, "utf8").trim();
 }
 

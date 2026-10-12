@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import request from "supertest";
 import type { Express } from "express";
 import { seedWorld, withAdmin, withAdminValue, withAppSession, type TestWorld } from "./fixtures";
-import { staffLogin, completeProfile, attachVerifiedFaceEvidence, attachVerifiedBankDetails, attachApplicationTerms } from "./platform-helpers";
+import { staffLogin, completeProfile, attachVerifiedFaceEvidence } from "./platform-helpers";
 
 async function usernameOf(userId: string): Promise<string> {
   return withAdminValue(async (db) =>

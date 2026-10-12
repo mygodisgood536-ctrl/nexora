@@ -1,5 +1,10 @@
 import { withBypass, withTenant } from "../../db/repo";
 import { AppError } from "../../lib/errors";
+import {
+  subdomainBranchUrl,
+  advertisedBranchUrl,
+  pathBranchUrl
+} from "../../lib/portal-url";
 import type pg from "pg";
 import { insertNotificationsToMds } from "../notifications/service";
 
@@ -147,7 +152,10 @@ export async function createBranch(
       slug = `${slugify(input.name)}-${++n}`;
     }
 
-    const portalUrl = `${company.slug}-${slug}.nexora.app`;
+    // RULE 2.3.2 — branch slug is cosmetic; the stored portal_url is the
+    // Vision-specified {company}-{branch}.{PLATFORM_APEX} form. The reachable
+    // address for the current deployment is computed, not stored.
+    const portalUrl = subdomainBranchUrl(company.slug, slug);
     const { rows } = await db.query(
       `INSERT INTO branches (company_id, code, slug, name, address, phone, email, status,
                              portal_url, created_by)
@@ -167,7 +175,13 @@ export async function createBranch(
       undefined,
       meta
     );
-    return branch;
+    return {
+      ...branch,
+      // The reachable address for this deployment. `portal_url` above stays the
+      // Vision-specified {company}-{branch}.{apex} form (RULE 2.3.1/2.3.2).
+      portal_url_advertised: advertisedBranchUrl(company.slug, slug),
+      portal_url_path: pathBranchUrl(company.slug, slug)
+    };
   });
 }
 

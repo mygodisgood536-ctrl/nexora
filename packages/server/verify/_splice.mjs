@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 // Splices the hardened proof together: keep the header/helpers (everything
 // before the old proveContexts marker), then the new tail, then main().
 import { readFileSync, writeFileSync } from "node:fs";

@@ -1,4 +1,4 @@
-import pg from "pg";
+import type pg from "pg";
 import { AppError } from "../../lib/errors";
 import { withTenant } from "../../db/repo";
 

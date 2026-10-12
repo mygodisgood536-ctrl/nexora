@@ -3127,7 +3127,6 @@ async function runDisbursement(
     }
 
     const accountNumber = await allocateVaAccountNumber(db, actor.companyId);
-    const bankName = `Nexora ${provider.charAt(0).toUpperCase()}${provider.slice(1)} Bank`;
 
     // RULE 9.5.3 / 9.1.3 — the branch's provider creates the account. The
     // provider is called before anything is written, so a provider outage

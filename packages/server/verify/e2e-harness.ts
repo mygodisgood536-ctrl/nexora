@@ -81,7 +81,7 @@ export { log, record, check, admin, totp, results };
 
 /** Minimal real HTTP client against the real app instance. */
 export function client(app: unknown) {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  // eslint-disable-next-line @typescript-eslint/no-require-imports -- supertest loaded lazily here
   return require("supertest")(app);
 }
 

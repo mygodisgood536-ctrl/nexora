@@ -1,5 +1,13 @@
 import { ScopeType } from "./scopes";
 
+/**
+ * The complete authority vocabulary (Part 1 §6 / migration 0077). Every verb
+ * that exists in `permission_verbs` is listed here so the typed contract and
+ * the database can never drift: the named authorities (`allocate`,
+ * `register_customer`, `manage_workers`, `configure_providers`,
+ * `view_performance`, `view_branches`, `create_branch`) exist precisely because
+ * the generic CRUD verbs are too coarse to express a Vision boundary.
+ */
 export const PERMISSION_VERBS = [
   "view",
   "create",
@@ -12,7 +20,14 @@ export const PERMISSION_VERBS = [
   "export",
   "delete",
   "reverse",
-  "configure"
+  "configure",
+  "allocate",
+  "register_customer",
+  "manage_workers",
+  "configure_providers",
+  "view_performance",
+  "view_branches",
+  "create_branch"
 ] as const;
 
 export type PermissionVerb = (typeof PERMISSION_VERBS)[number];

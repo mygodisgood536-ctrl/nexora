@@ -5,9 +5,15 @@ import { env } from "../../config/env";
 import { withTenantSession } from "../../db/pool";
 import { withBypass } from "../../db/repo";
 import { AppError } from "../../lib/errors";
-import { verifyTotp } from "../../lib/totp";
+import { verifyTotp, generateTotpSecret, otpauthUri } from "../../lib/totp";
+import { isLegacySecret, unwrapSecret, wrapSecret } from "../../lib/secret-vault";
 import { BUILT_IN_ROLES } from "@nexora/shared";
 import { fullName, initialPasswordFor } from "../../lib/credential";
+import {
+  advertisedCompanyUrl,
+  subdomainCompanyUrl,
+  companyAddressSet
+} from "../../lib/portal-url";
 
 const PO_JWT_SECRET = env.JWT_SECRET + "|po";
 
@@ -37,11 +43,7 @@ export function verifyPoToken(token: string): PoClaims {
 
 const sha256 = (v: string): string => crypto.createHash("sha256").update(v).digest("hex");
 
-function unwrapSecret(email: string, encrypted: string): string {
-  const [b64] = encrypted.split(".");
-  void email;
-  return Buffer.from(b64!, "base64").toString("utf8");
-}
+
 
 async function lockoutThreshold(db: PoolClientLike): Promise<number> {
   const r = await db.query(`SELECT value FROM global_settings WHERE key='security_policy'`);
@@ -93,8 +95,17 @@ export async function poLogin(
       throw AppError.unauthorized("Incorrect email or password");
     }
 
+    // RULE 14.5.1 - the owner's authenticator seed is encrypted at rest.
+    // A legacy (pre-encryption) row yields no usable seed, which forces the
+    // owner through a fresh enrolment instead of trusting a plaintext value.
     let secretPlain: string | null = null;
-    if (po.totp_secret_encrypted) secretPlain = unwrapSecret(po.email, po.totp_secret_encrypted);
+    if (po.totp_secret_encrypted && !isLegacySecret(po.totp_secret_encrypted)) {
+      try {
+        secretPlain = unwrapSecret(po.totp_secret_encrypted, po.id);
+      } catch {
+        secretPlain = null;
+      }
+    }
 
     if (secretPlain && !totpCode) {
       throw new AppError(401, "TOTP_REQUIRED", "Second factor required");
@@ -118,6 +129,26 @@ export async function poLogin(
       [po.id]
     );
 
+    // RULE 14.1.1 - the owner is not exempt from security. With no enrolled
+    // authenticator we issue NO session: an incomplete ritual must not be
+    // signable-around, which was Vision finding F-01.
+    if (!secretPlain) {
+      await db.query(
+        `INSERT INTO platform_owner_authenticator_audit
+           (platform_owner_id, action, previous_state, new_state, created_ip, user_agent)
+         VALUES ($1, 'authenticator.required', $2, $3, $4, $5)`,
+        [
+          po.id,
+          JSON.stringify({ totp_enrolled: false }),
+          JSON.stringify({ session_issued: false, reason: "authenticator_not_enrolled" }),
+          meta.ip ?? null,
+          meta.userAgent ?? null
+        ]
+      );
+      await audit(db, po.email, "platform.login.blocked_no_authenticator", "platform_owners", po.id);
+      throw new AppError(403, "AUTHENTICATOR_ENROLMENT_REQUIRED", "Enrol your authenticator to continue");
+    }
+
     const claims: PoClaims = { sub: po.id, typ: "po", email: po.email };
     const accessToken = signPoAccessToken(claims);
     const refreshToken = crypto.randomBytes(32).toString("base64url");
@@ -129,6 +160,173 @@ export async function poLogin(
     await audit(db, po.email, "platform.login", "platform_owners", po.id);
     return { accessToken, refreshToken, owner: { id: po.id, email: po.email } };
   });
+}
+
+/**
+ * RULE 14.2.1 - "An authenticator is bound to an account only after a
+ * successful live verification. Setup alone never counts."
+ *
+ * Setup mints a candidate secret and parks it in `totp_pending_secret`. It is
+ * not the account's seed yet: `poLogin` continues to refuse until verify runs,
+ * so there is no window in which an unverified secret is trusted.
+ */
+export async function poBeginAuthenticatorSetup(
+  email: string,
+  password: string,
+  meta: { ip?: string; userAgent?: string }
+): Promise<{ email: string; secret: string; otpauthUri: string }> {
+  return withBypass(async (db) => {
+    const found = await db.query<{
+      id: string;
+      email: string;
+      password_hash: string;
+      locked_until: Date | null;
+      totp_enrolled_at: Date | null;
+    }>(
+      `SELECT id, email, password_hash, locked_until, totp_enrolled_at
+         FROM platform_owners WHERE email=$1`,
+      [email]
+    );
+    if (found.rowCount === 0) {
+      // Do not reveal whether the account exists.
+      throw AppError.unauthorized("Incorrect email or password");
+    }
+    const po = found.rows[0]!;
+    if (po.locked_until && po.locked_until.getTime() > Date.now()) {
+      throw new AppError(423, "ACCOUNT_LOCKED", "Account temporarily locked");
+    }
+    const okPw = await bcrypt.compare(password, po.password_hash);
+    if (!okPw) {
+      // Count the attempt exactly as a login would, so enumeration of the
+      // enrolment path does not create a weaker brute-force budget.
+      await registerFailedAttempt(db, po);
+      throw AppError.unauthorized("Incorrect email or password");
+    }
+    if (po.totp_enrolled_at) {
+      throw AppError.conflict("An authenticator is already enrolled on this account");
+    }
+
+    const secret = generateTotpSecret();
+    await db.query(`UPDATE platform_owners SET totp_pending_secret=$2 WHERE id=$1`, [
+      po.id,
+      wrapSecret(secret, po.id, "totp-pending"),
+    ]);
+    await db.query(
+      `INSERT INTO platform_owner_authenticator_audit
+         (platform_owner_id, action, previous_state, new_state, created_ip, user_agent)
+       VALUES ($1, 'authenticator.setup_started', $2, $3, $4, $5)`,
+      [
+        po.id,
+        JSON.stringify({ totp_enrolled: false }),
+        JSON.stringify({ method: "totp", state: "pending_verification" }),
+        meta.ip ?? null,
+        meta.userAgent ?? null
+      ]
+    );
+    await audit(db, po.email, "platform.authenticator.setup_started", "platform_owners", po.id);
+    return { email: po.email, secret, otpauthUri: otpauthUri(po.email, secret) };
+  });
+}
+
+/**
+ * RULE 14.2.1 - the binding step. Only a correct live code promotes the
+ * pending secret to the account's seed and records the enrolment.
+ */
+export async function poVerifyAuthenticator(
+  email: string,
+  password: string,
+  code: string,
+  meta: { ip?: string; userAgent?: string }
+): Promise<{ enrolled: true }> {
+  return withBypass(async (db) => {
+    const found = await db.query<{
+      id: string;
+      email: string;
+      password_hash: string;
+      locked_until: Date | null;
+      totp_pending_secret: string | null;
+      totp_enrolled_at: Date | null;
+    }>(
+      `SELECT id, email, password_hash, locked_until, totp_pending_secret, totp_enrolled_at
+         FROM platform_owners WHERE email=$1`,
+      [email]
+    );
+    if (found.rowCount === 0) throw AppError.unauthorized("Incorrect email or password");
+    const po = found.rows[0]!;
+    if (po.locked_until && po.locked_until.getTime() > Date.now()) {
+      throw new AppError(423, "ACCOUNT_LOCKED", "Account temporarily locked");
+    }
+    const okPw = await bcrypt.compare(password, po.password_hash);
+    if (!okPw) {
+      await registerFailedAttempt(db, po);
+      throw AppError.unauthorized("Incorrect email or password");
+    }
+    if (po.totp_enrolled_at) throw AppError.conflict("An authenticator is already enrolled on this account");
+    if (!po.totp_pending_secret) {
+      throw AppError.conflict("Start authenticator setup before verifying");
+    }
+
+    let pending: string | null = null;
+    try {
+      pending = unwrapSecret(po.totp_pending_secret, po.id, "totp-pending");
+    } catch {
+      pending = null;
+    }
+    if (!pending || !verifyTotp(pending, code)) {
+      await registerFailedAttempt(db, po);
+      throw AppError.unauthorized("Authenticator code is invalid or expired");
+    }
+
+    await db.query(
+      `UPDATE platform_owners
+          SET totp_secret_encrypted=$2, totp_enabled=true, totp_enrolled_at=now(), totp_pending_secret=NULL
+        WHERE id=$1`,
+      [po.id, wrapSecret(pending, po.id)]
+    );
+    await db.query(
+      `INSERT INTO platform_owner_authenticator_audit
+         (platform_owner_id, action, previous_state, new_state, created_ip, user_agent)
+       VALUES ($1, 'authenticator.verified', $2, $3, $4, $5)`,
+      [
+        po.id,
+        JSON.stringify({ totp_enrolled: false }),
+        JSON.stringify({ method: "totp", state: "enrolled" }),
+        meta.ip ?? null,
+        meta.userAgent ?? null
+      ]
+    );
+    await audit(db, po.email, "platform.authenticator.verified", "platform_owners", po.id);
+    return { enrolled: true as const };
+  });
+}
+
+/** Whether the owner still owes an enrolment, so the UI can route them to it. */
+export async function poAuthenticatorStatus(email: string): Promise<{ enrolled: boolean }> {
+  return withBypass(async (db) => {
+    const found = await db.query<{ totp_enrolled_at: Date | null; totp_secret_encrypted: string | null }>(
+      `SELECT totp_enrolled_at, totp_secret_encrypted FROM platform_owners WHERE email=$1`,
+      [email]
+    );
+    if (found.rowCount === 0) throw AppError.notFound("Account not found");
+    const po = found.rows[0]!;
+    return { enrolled: po.totp_enrolled_at !== null && !isLegacySecret(po.totp_secret_encrypted) };
+  });
+}
+
+async function registerFailedAttempt(
+  db: PoolClientLike & { query: (sql: string, params?: unknown[]) => Promise<{ rows: Record<string, unknown>[]; rowCount: number | null }> },
+  po: { id: string; failed_attempts?: number }
+): Promise<void> {
+  const attempts = (po.failed_attempts ?? 0) + 1;
+  const threshold = await lockoutThreshold(db);
+  if (attempts >= threshold) {
+    await db.query(
+      `UPDATE platform_owners SET failed_attempts=$2, locked_until = now() + interval '15 minutes' WHERE id=$1`,
+      [po.id, attempts]
+    );
+    throw new AppError(423, "ACCOUNT_LOCKED", "Too many attempts — account locked for 15 minutes");
+  }
+  await db.query(`UPDATE platform_owners SET failed_attempts=$2 WHERE id=$1`, [po.id, attempts]);
 }
 
 export async function audit(
@@ -263,6 +461,16 @@ export async function createCompany(
     mdEmail?: string;
     mdBirthDay?: number;
     mdBirthMonth?: number;
+  },
+  opts?: {
+    /**
+     * RULE 3.3.3 — completes a draft saved earlier. The draft already holds
+     * the reserved slug and code prefix and sits in `in_setup`; this call runs
+     * the full provisioning and only then flips it to live, exactly as the
+     * Vision requires: "Once the Platform Owner completes Create Company
+     * successfully, the company is provisioned and becomes live immediately".
+     */
+    draftId?: string;
   }
 ): Promise<{
   id: string;
@@ -279,43 +487,74 @@ export async function createCompany(
 }> {
   return withBypass(async (db) => {
     const prefix = input.codePrefix.toUpperCase();
-    const dup = await db.query(`SELECT 1 FROM companies WHERE code_prefix=$1`, [prefix]);
-    if ((dup.rowCount ?? 0) > 0) throw new AppError(409, "PREFIX_TAKEN", "Company code prefix already in use");
+    const draftId = opts?.draftId ?? null;
+    let slug: string;
+    let companyId: string;
 
-    let slug = slugify(input.name);
-    let n = 1;
-    while (((await db.query(`SELECT 1 FROM companies WHERE slug=$1`, [slug])).rowCount ?? 0) > 0) {
-      slug = `${slugify(input.name)}-${++n}`;
-    }
+    if (draftId) {
+      const found = await db.query<{ id: string; slug: string; status: string }>(
+        `SELECT id, slug, status FROM companies WHERE id=$1`,
+        [draftId]
+      );
+      if ((found.rowCount ?? 0) === 0) throw AppError.notFound("Draft not found");
+      const row = found.rows[0]!;
+      if (row.status !== "in_setup") {
+        throw new AppError(409, "NOT_A_DRAFT", "Only a company still in setup can be completed");
+      }
+      const dup = await db.query(
+        `SELECT 1 FROM companies WHERE code_prefix=$1 AND id<>$2`,
+        [prefix, draftId]
+      );
+      if ((dup.rowCount ?? 0) > 0) {
+        throw new AppError(409, "PREFIX_TAKEN", "Company code prefix already in use");
+      }
+      slug = row.slug;
+      companyId = row.id;
+      await db.query(
+        `UPDATE companies SET name=$2, code_prefix=$3, contact_email=$4, plan_tier=$5
+          WHERE id=$1`,
+        [companyId, input.name, prefix, input.contactEmail ?? null, input.planTier ?? null]
+      );
+    } else {
+      const dup = await db.query(`SELECT 1 FROM companies WHERE code_prefix=$1`, [prefix]);
+      if ((dup.rowCount ?? 0) > 0) throw new AppError(409, "PREFIX_TAKEN", "Company code prefix already in use");
 
-    const { rows } = await db.query<{ id: string }>(
+      slug = slugify(input.name);
+      let n = 1;
+      while (((await db.query(`SELECT 1 FROM companies WHERE slug=$1`, [slug])).rowCount ?? 0) > 0) {
+        slug = `${slugify(input.name)}-${++n}`;
+      }
+
+      const { rows } = await db.query<{ id: string }>(
 // RULE 3.3.3 - "Once the Platform Owner completes Create Company
-      // successfully, the company is provisioned and becomes live immediately...
-      // A completed company must never remain unnecessarily in 'in setup'."
-      //
-      // This endpoint IS the completed Create Company action (the one-time
-      // credential panel it returns is the owner's hand-over), so the company is
-      // born live and the MD can perform the mandatory first-login ritual
-      // (Part 2.2 / 4.2.1). A draft company, if ever saved separately, is a
-      // different flow and still starts in 'in_setup'; the activate / suspend /
-      // reactivate transitions remain available for the rest of the lifecycle.
-      `INSERT INTO companies (name, code_prefix, slug, contact_email, plan_tier, status,
+        // successfully, the company is provisioned and becomes live immediately...
+        // A completed company must never remain unnecessarily in 'in setup'."
+        //
+        // This endpoint IS the completed Create Company action (the one-time
+        // credential panel it returns is the owner's hand-over), so the company is
+        // born live and the MD can perform the mandatory first-login ritual
+        // (Part 2.2 / 4.2.1). A draft company is saved separately and still
+        // starts in 'in_setup' (saveCompanyDraft); completing it through this
+        // same endpoint is what makes it live. The activate / suspend /
+        // reactivate transitions remain available for the rest of the lifecycle.
+        `INSERT INTO companies (name, code_prefix, slug, contact_email, plan_tier, status,
                                  portal_url, activated_at, created_by_platform_owner)
-          VALUES ($1,$2,$3,$4,$5,'active',$6, now(),
-                  (SELECT id FROM platform_owners WHERE email=$7))
-          RETURNING id`,
+            VALUES ($1,$2,$3,$4,$5,'active',$6, now(),
+                    (SELECT id FROM platform_owners WHERE email=$7))
+            RETURNING id`,
          [
            input.name,
            prefix,
            slug,
            input.contactEmail ?? null,
            input.planTier ?? null,
-           `${slug}.nexora.app`,
-           poEmail
+            subdomainCompanyUrl(slug),
+            poEmail
          ]
        );
 
-    const companyId = rows[0]!.id;
+      companyId = rows[0]!.id;
+    }
 
     // The tenant RLS policies key off app_current_company(), not the bypass
     // flag. The company now exists, so this transaction establishes that tenant
@@ -326,26 +565,43 @@ export async function createCompany(
     await db.query(`SELECT set_config('app.branch_id', '', true)`);
     await db.query(`SELECT set_config('app.branch_restricted', 'off', true)`);
 
-    await db.query(`INSERT INTO themes (company_id) VALUES ($1)`, [companyId]);
+    // Skeleton rows are written with ON CONFLICT guards so the same path
+    // serves both a fresh company and one completing a saved draft (the draft
+    // already carries its themes row).
+    await db.query(
+      `INSERT INTO themes (company_id) VALUES ($1) ON CONFLICT (company_id) DO NOTHING`,
+      [companyId]
+    );
     await applyThemeUpdate(db, companyId, input.branding ?? {});
-    await db.query(`INSERT INTO company_settings (company_id) VALUES ($1)`, [companyId]);
+    await db.query(
+      `INSERT INTO company_settings (company_id) VALUES ($1) ON CONFLICT (company_id) DO NOTHING`,
+      [companyId]
+    );
     await db.query(
       `INSERT INTO company_group_options (company_id, option_kind, option_value, sort_order)
-       VALUES ($1,'group_role','Leader',1),($1,'group_role','Secretary',2),
-              ($1,'group_role','Treasurer',3),($1,'group_role','Chief Whip',4),
-              ($1,'group_role','Member',5),
-              ($1,'marital_status','Single',1),($1,'marital_status','Married',2),
-              ($1,'marital_status','Divorced',3),($1,'marital_status','Widowed',4)`,
+       SELECT $1, option_kind, option_value, sort_order
+         FROM (VALUES ('group_role','Leader',1),('group_role','Secretary',2),
+                      ('group_role','Treasurer',3),('group_role','Chief Whip',4),
+                      ('group_role','Member',5),
+                      ('marital_status','Single',1),('marital_status','Married',2),
+                      ('marital_status','Divorced',3),('marital_status','Widowed',4))
+              AS v(option_kind, option_value, sort_order)
+        WHERE NOT EXISTS (
+                SELECT 1 FROM company_group_options e
+                 WHERE e.company_id=$1 AND e.option_kind=v.option_kind)
+       ON CONFLICT DO NOTHING`,
       [companyId]
     );
     await db.query(
       `INSERT INTO company_counters (company_id, counter_key, next_value)
-       VALUES ($1,'branch_seq',1),($1,'customer_seq',1)`,
+       VALUES ($1,'branch_seq',1),($1,'customer_seq',1)
+       ON CONFLICT (company_id, counter_key) DO NOTHING`,
       [companyId]
     );
     await db.query(
       `INSERT INTO company_enabled_roles (company_id, role_key, enabled)
-       SELECT $1, role_key, true FROM platform_role_catalogue`,
+        SELECT $1, role_key, true FROM platform_role_catalogue
+         ON CONFLICT (company_id, role_key) DO NOTHING`,
       [companyId]
     );
     if (input.enabledRoleKeys !== undefined) {
@@ -401,8 +657,11 @@ export async function createCompany(
       const initialPassword = initialPasswordFor(firstName);
       const passwordHash = await bcrypt.hash(initialPassword, 10);
 
-      // RULE 2.3.3 / URL law Part 1 §23 — company URL
-      const companyUrl = `${slug}.nexora.app`;
+      // RULE 2.3.3 / URL law Part 1 §23 — company URL. The stored portal_url is
+      // always the Vision-specified {slug}.{PLATFORM_APEX} form, because RULE
+      // 2.3.1 makes the SLUG the identity and the address presentation; the
+      // reachable address for the current deployment is advertised separately.
+      const companyUrl = subdomainCompanyUrl(slug);
 
       // RULE 5.7.3 — Head Office worker ID: {COMPANY_PREFIX}-HO-MD-001
       const workerCode = `${prefix}-HO-MD-001`;
@@ -540,11 +799,37 @@ export async function createCompany(
       mdPanel.expires_at = new Date(Date.now() + 168 * 60 * 60 * 1000).toISOString();
     }
 
+    // RULE 3.3.3 — completing a draft flips it to live as the LAST step, once
+    // every provisioning row and the MD credential exist, so a half-built
+    // company is never reachable at its portal URL.
+    if (draftId) {
+      await db.query(
+        `UPDATE companies SET status='active', activated_at=COALESCE(activated_at, now())
+          WHERE id=$1`,
+        [companyId]
+      );
+      await audit(
+        db,
+        poEmail,
+        "activate",
+        "companies",
+        companyId,
+        { status: "in_setup" },
+        { status: "active" },
+        "Draft completed through Create Company",
+        companyId
+      );
+    }
+
     return {
       id: companyId,
       slug,
       code_prefix: prefix,
-      company_url: `${slug}.nexora.app`,
+      // The address the Platform Owner actually hands to the MD. `address`
+      // carries both forms so the subdomain stays recorded and available the
+      // moment an apex with wildcard DNS is pointed at this deployment.
+      company_url: advertisedCompanyUrl(slug),
+      address: companyAddressSet(slug),
       md: mdPanel.username ? mdPanel : undefined
     };
   }).then(async (result) => {
@@ -562,6 +847,201 @@ export async function createCompany(
       );
     }
     return result;
+  });
+}
+
+// ------------------------------------------------------------------
+// RULE 3.3.3 — draft companies ("The wizard may be saved as a draft before
+// creation is completed; a draft company sits in 'In setup' status and cannot
+// be logged into").
+//
+// A draft is a real `companies` row in `in_setup` carrying only what the
+// wizard has collected so far: name, reserved code prefix and slug, contact
+// details, plan tier and branding. Nothing is provisioned (no MD, no roles,
+// no settings) until the owner completes Create Company, and the login path
+// already refuses any company whose status is not `active`.
+// ------------------------------------------------------------------
+
+export interface CompanyDraftInput {
+  name?: string;
+  codePrefix?: string;
+  contactEmail?: string;
+  planTier?: string;
+  branding?: {
+    primaryColor?: string;
+    secondaryColor?: string;
+    accentColor?: string;
+    navyColor?: string;
+    logoUrl?: string | null;
+    loginBackgroundUrl?: string | null;
+    fontFamily?: string;
+  };
+}
+
+export interface CompanyDraftResult {
+  id: string;
+  name: string;
+  slug: string;
+  code_prefix: string;
+  status: string;
+}
+
+export async function saveCompanyDraft(
+  poEmail: string,
+  input: CompanyDraftInput,
+  draftId?: string
+): Promise<CompanyDraftResult> {
+  return withBypass(async (db) => {
+    if (draftId) {
+      const found = await db.query<{
+        id: string;
+        name: string;
+        slug: string;
+        code_prefix: string;
+        status: string;
+      }>(`SELECT id, name, slug, code_prefix, status FROM companies WHERE id=$1`, [draftId]);
+      if ((found.rowCount ?? 0) === 0) throw AppError.notFound("Draft not found");
+      const row = found.rows[0]!;
+      if (row.status !== "in_setup") {
+        throw new AppError(409, "NOT_A_DRAFT", "Only a company in setup can be edited as a draft");
+      }
+
+      const name = input.name ?? row.name;
+      const prefix = (input.codePrefix ?? row.code_prefix).toUpperCase();
+      if (input.codePrefix !== undefined && !/^[A-Za-z]{3,6}$/.test(input.codePrefix)) {
+        throw AppError.unprocessable("codePrefix must be 3-6 letters");
+      }
+      const dup = await db.query(
+        `SELECT 1 FROM companies WHERE code_prefix=$1 AND id<>$2`,
+        [prefix, draftId]
+      );
+      if ((dup.rowCount ?? 0) > 0) {
+        throw new AppError(409, "PREFIX_TAKEN", "Company code prefix already in use");
+      }
+
+      let slug = row.slug;
+      if (input.name !== undefined && slugify(name) !== slugify(row.name)) {
+        slug = slugify(name);
+        let n = 1;
+        while (
+          ((await db.query(`SELECT 1 FROM companies WHERE slug=$1 AND id<>$2`, [slug, draftId]))
+            .rowCount ?? 0) > 0
+        ) {
+          slug = `${slugify(name)}-${++n}`;
+        }
+      }
+
+      await db.query(
+        `UPDATE companies
+            SET name=$2, code_prefix=$3, slug=$4, contact_email=$5, plan_tier=$6,
+                portal_url=$7
+          WHERE id=$1`,
+        [
+          draftId,
+          name,
+          prefix,
+          slug,
+          input.contactEmail ?? null,
+          input.planTier ?? null,
+          subdomainCompanyUrl(slug)
+        ]
+      );
+      if (input.branding) await applyThemeUpdate(db, draftId, input.branding);
+
+      await audit(
+        db, poEmail, "draft_saved", "companies", draftId,
+        undefined,
+        { name, code_prefix: prefix, slug, status: "in_setup" },
+        undefined,
+        draftId
+      );
+      return { id: draftId, name, slug, code_prefix: prefix, status: "in_setup" };
+    }
+
+    // ---- first save: reserve the identity, provision nothing ----
+    if (!input.name || input.name.trim().length < 2 || input.name.trim().length > 100) {
+      throw AppError.unprocessable("A draft needs a company name of 2-100 characters");
+    }
+    if (!input.codePrefix || !/^[A-Za-z]{3,6}$/.test(input.codePrefix)) {
+      throw AppError.unprocessable("A draft needs a codePrefix of 3-6 letters");
+    }
+    const prefix = input.codePrefix.toUpperCase();
+    const dup = await db.query(`SELECT 1 FROM companies WHERE code_prefix=$1`, [prefix]);
+    if ((dup.rowCount ?? 0) > 0) {
+      throw new AppError(409, "PREFIX_TAKEN", "Company code prefix already in use");
+    }
+
+    let slug = slugify(input.name);
+    let n = 1;
+    while (((await db.query(`SELECT 1 FROM companies WHERE slug=$1`, [slug])).rowCount ?? 0) > 0) {
+      slug = `${slugify(input.name)}-${++n}`;
+    }
+
+    const { rows } = await db.query<{ id: string }>(
+      `INSERT INTO companies (name, code_prefix, slug, contact_email, plan_tier, status,
+                              portal_url, activated_at, created_by_platform_owner)
+       VALUES ($1,$2,$3,$4,$5,'in_setup',$6,NULL,
+               (SELECT id FROM platform_owners WHERE email=$7))
+       RETURNING id`,
+      [
+        input.name.trim(),
+        prefix,
+        slug,
+        input.contactEmail ?? null,
+        input.planTier ?? null,
+        subdomainCompanyUrl(slug),
+        poEmail
+      ]
+    );
+    const companyId = rows[0]!.id;
+
+    await db.query(
+      `INSERT INTO themes (company_id) VALUES ($1) ON CONFLICT (company_id) DO NOTHING`,
+      [companyId]
+    );
+    if (input.branding) await applyThemeUpdate(db, companyId, input.branding);
+
+    await audit(
+      db, poEmail, "draft_saved", "companies", companyId,
+      undefined,
+      { name: input.name.trim(), code_prefix: prefix, slug, status: "in_setup" },
+      undefined,
+      companyId
+    );
+
+    return {
+      id: companyId,
+      name: input.name.trim(),
+      slug,
+      code_prefix: prefix,
+      status: "in_setup"
+    };
+  });
+}
+
+/**
+ * RULE 3.3.3 — a draft may be discarded; a company that has ever been live is
+ * never deleted (RULE 20.3.1 — history is not destructively removed).
+ */
+export async function discardCompanyDraft(poEmail: string, companyId: string): Promise<void> {
+  return withBypass(async (db) => {
+    const found = await db.query<{ id: string; status: string; name: string }>(
+      `SELECT id, status, name FROM companies WHERE id=$1`,
+      [companyId]
+    );
+    if ((found.rowCount ?? 0) === 0) throw AppError.notFound("Draft not found");
+    const row = found.rows[0]!;
+    if (row.status !== "in_setup") {
+      throw new AppError(409, "NOT_A_DRAFT", "Only an unsaved draft in setup can be discarded");
+    }
+    await db.query(`DELETE FROM companies WHERE id=$1`, [companyId]);
+    await audit(
+      db, poEmail, "draft_discarded", "companies", companyId,
+      { name: row.name, status: "in_setup" },
+      undefined,
+      undefined,
+      companyId
+    );
   });
 }
 
@@ -859,6 +1339,11 @@ export async function listCompanies(
         slug: row.slug,
         codePrefix: row.code_prefix,
         portalUrl: row.portal_url,
+        // Both address forms for the same company (RULE 2.3.1: the slug is the
+        // identity, the address is presentation). `portalUrl` stays the Vision's
+        // specified {slug}.{apex} form; `address.pathUrl` is what resolves when
+        // this deployment is served from a single apex host.
+        address: companyAddressSet(row.slug),
         status: row.status,
         planTier: row.plan_tier,
         createdAt: row.created_at.toISOString(),
@@ -980,6 +1465,7 @@ export async function getCompanyDetail(companyId: string): Promise<{
         slug: c.slug,
         codePrefix: c.code_prefix,
         portalUrl: c.portal_url,
+        address: companyAddressSet(c.slug),
         contactEmail: c.contact_email,
         status: c.status,
         planTier: c.plan_tier,

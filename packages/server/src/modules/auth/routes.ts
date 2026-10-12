@@ -67,7 +67,8 @@ authRouter.post("/login", async (req, res, next) => {
       req.headers.host,
       parsed.data.username,
       parsed.data.password,
-      metaFrom(req)
+      metaFrom(req),
+      req.tenantPath
     );
     setRefreshCookie(req, res, issued.refreshToken);
     res.status(200).json({

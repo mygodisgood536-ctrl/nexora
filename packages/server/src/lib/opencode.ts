@@ -282,7 +282,7 @@ export async function assertOpenCodeInstalled(): Promise<{ version: string | nul
   let result: SpawnResult;
   try {
     result = await spawnOpenCode(["--version"], { timeoutMs: 30_000 });
-  } catch (err) {
+  } catch {
     throw new OpenCodeUnavailableError(
       "OpenCode is not available to this installation, so the AI capability cannot run"
     );
@@ -558,7 +558,7 @@ export async function verifyThroughOpenCode(input: {
         latencyMs: Date.now() - startedAt
       };
     }
-    const run = await executeThroughOpenCode({
+    await executeThroughOpenCode({
       provider,
       model: ref.split("/").slice(1).join("/"),
       apiKey,

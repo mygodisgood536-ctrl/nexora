@@ -21,6 +21,7 @@
 import type pg from "pg";
 import { withTenant, withBypass } from "../../db/repo";
 import { AppError } from "../../lib/errors";
+import { decryptSecret, encryptSecret, secretFingerprint } from "../../lib/ai-secret-vault";
 import { postPaymentJournal, postReversalJournal } from "./accounting";
 import {
   activeFinanceUserIds,
@@ -104,27 +105,26 @@ export interface BranchPaymentAccountRow {
   isActive: boolean;
 }
 
-const PROVIDER_ADMIN_ROLES = ["it_system_administrator"];
-
 // Part 14.5 / prohibition #22 — a provider secret is never echoed back to any
-// session. Read surfaces return a masked form; only the internal webhook
-// verifier and EOD reconciliation ever hold the raw values.
-function maskSecret(secret: string | undefined | null): string | null {
-  if (!secret) return null;
-  if (secret.length <= 8) return "••••••••";
-  return `${secret.slice(0, 3)}••••${secret.slice(-3)}`;
-}
+// session. The read surface now returns only a non-reversible fingerprint
+// (see toProviderConfigRow), and the raw value is reached solely by
+// loadProviderApiKey / loadSigningSecret, which exist for the webhook verifier,
+// the connection test and end-of-day reconciliation.
 
 function toProviderConfigRow(
   row: unknown
 ): ProviderConfigRow {
+  const stored = (row as { api_key: string | null }).api_key;
   return {
     id: (row as { id: string }).id,
     companyId: (row as { company_id: string }).company_id,
     branchId: (row as { branch_id: string | null }).branch_id,
     provider: (row as { provider: string }).provider,
     apiBaseUrl: (row as { api_base_url: string }).api_base_url,
-    apiKey: maskSecret((row as { api_key: string | null }).api_key) ?? "",
+    // RULE 14.5.1 - the stored value is ciphertext. A screen may show only a
+    // fingerprint, so a database read or an API response can never disclose the
+    // credential itself (prohibition 22).
+    apiKey: stored ? `stored (${(row as { api_key_fingerprint?: string | null }).api_key_fingerprint ?? "••••"})` : "",
     isActive: (row as { is_active: boolean }).is_active,
     mdApproved: (row as { md_approved_at: Date | null }).md_approved_at !== null,
     createdAt: (row as { created_at: Date }).created_at.toISOString(),
@@ -229,6 +229,14 @@ export async function createProviderConfig(
     // change made by anyone else waits in the MD's authorisation queue.
     const actorIsMd = await actorHoldsRole(db, actor, ["md"]);
 
+    // RULE 14.5.1 - the provider credential and the webhook signing secret are
+    // encrypted at rest and bound to this company as authenticated data, so a
+    // database read yields ciphertext that cannot be replayed for another
+    // tenant. The screen only ever receives a fingerprint (see toProviderConfigRow).
+    const encryptedApiKey = encryptSecret(actor.companyId, input.apiKey, "payment-provider");
+    const apiKeyFingerprint = secretFingerprint(input.apiKey);
+    const encryptedSigningSecret = encryptSecret(actor.companyId, input.signingSecret, "webhook-secret");
+
     const inserted = await db.query<{
       id: string;
       company_id: string;
@@ -240,13 +248,14 @@ export async function createProviderConfig(
       created_at: Date;
     }>(
       `INSERT INTO payment_provider_configs
-         (company_id, provider, api_base_url, api_key, is_active,
+         (company_id, provider, api_base_url, api_key, api_key_fingerprint, is_active,
           md_approved_at, md_approved_by, connection_tested_at,
           connection_test_ok)
-       VALUES ($1,$2,$3,$4,false,$5,$6,NULL,NULL)
+       VALUES ($1,$2,$3,$4,$5,false,$6,$7,NULL,NULL)
        ON CONFLICT (company_id, provider)
        DO UPDATE SET api_base_url = EXCLUDED.api_base_url,
                      api_key = EXCLUDED.api_key,
+                     api_key_fingerprint = EXCLUDED.api_key_fingerprint,
                      is_active = false,
                      md_approved_at = EXCLUDED.md_approved_at,
                      md_approved_by = EXCLUDED.md_approved_by,
@@ -255,7 +264,7 @@ export async function createProviderConfig(
        RETURNING id, company_id, provider, api_base_url, api_key,
                  is_active, md_approved_at, created_at`,
       [actor.companyId, input.provider.trim(),
-       input.apiBaseUrl.trim(), input.apiKey,
+       input.apiBaseUrl.trim(), encryptedApiKey, apiKeyFingerprint,
        actorIsMd ? new Date() : null,
        actorIsMd ? actor.sub : null]
     );
@@ -280,7 +289,7 @@ export async function createProviderConfig(
     await db.query(
       `INSERT INTO webhook_signing_secrets (company_id, provider, secret)
        VALUES ($1,$2,$3)`,
-      [actor.companyId, input.provider.trim(), input.signingSecret]
+      [actor.companyId, input.provider.trim(), encryptedSigningSecret]
     );
 
     await db.query(
@@ -343,9 +352,10 @@ export async function testProviderConnection(
       );
     }
     const cfg = await db.query<{
-      id: string; api_base_url: string; md_approved_at: Date | null;
+      id: string; api_base_url: string; md_approved_at: Date | null; provider: string;
     }>(
-      `SELECT id, api_base_url, md_approved_at FROM payment_provider_configs WHERE id=$1`,
+      `SELECT id, api_base_url, md_approved_at, provider
+         FROM payment_provider_configs WHERE id=$1`,
       [providerConfigId]
     );
     if ((cfg.rowCount ?? 0) === 0) throw AppError.notFound("Provider config not found");
@@ -357,16 +367,26 @@ export async function testProviderConnection(
     try {
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), 5000);
+      // RULE 14.5.1 - the key is decrypted here and only here, for the single
+      // call that must present it. It is never logged or returned.
+      // Prohibitions #19/#21 require a REAL successful connection before
+      // activation, so the request must actually carry the credential:
+      // without it, an endpoint that merely answers 200 would let a WRONG key
+      // activate, which acceptance test 11 forbids.
+      const apiKey = await loadProviderApiKey(actor.companyId, config.provider);
+      const headers: Record<string, string> = {};
+      if (apiKey) {
+        headers.authorization = `Bearer ${apiKey}`;
+        headers["x-api-key"] = apiKey;
+      }
       const res = await fetch(config.api_base_url, {
         method: "GET",
         signal: controller.signal,
-        redirect: "manual"
+        redirect: "manual",
+        headers
       });
       clearTimeout(timer);
       status = res.status;
-      // Prohibitions #19/#21 — activation must follow a REAL successful
-      // connection. A 401/403/404 proves the endpoint is reachable but that
-      // the configuration is wrong, so it must NOT count as a pass.
       ok = res.status >= 200 && res.status < 300;
       detail = ok
         ? `HTTP ${res.status}`
@@ -499,11 +519,11 @@ export async function listProviderConfigs(
   return withTenant(actor.companyId, null, async (db) => {
     const r = await db.query<{
       id: string; provider: string;
-      api_base_url: string; api_key: string;
+      api_base_url: string; api_key: string; api_key_fingerprint: string | null;
       is_active: boolean; md_approved_at: Date | null; created_at: Date;
       branch_id: string | null;
     }>(
-      `SELECT ppc.id, ppc.provider, ppc.api_base_url, ppc.api_key,
+      `SELECT ppc.id, ppc.provider, ppc.api_base_url, ppc.api_key, ppc.api_key_fingerprint,
               ppc.is_active, ppc.md_approved_at, ppc.created_at,
               (SELECT bpa.branch_id FROM branch_payment_accounts bpa
                 WHERE bpa.provider_config_id = ppc.id
@@ -523,11 +543,11 @@ export async function getActiveProviderConfig(
   return withTenant(actor.companyId, null, async (db) => {
     const r = await db.query<{
       id: string; provider: string;
-      api_base_url: string; api_key: string;
+      api_base_url: string; api_key: string; api_key_fingerprint: string | null;
       is_active: boolean; md_approved_at: Date | null; created_at: Date;
       branch_id: string | null;
     }>(
-      `SELECT ppc.id, ppc.provider, ppc.api_base_url, ppc.api_key,
+      `SELECT ppc.id, ppc.provider, ppc.api_base_url, ppc.api_key, ppc.api_key_fingerprint,
               ppc.is_active, ppc.md_approved_at, ppc.created_at,
               bpa.branch_id
          FROM payment_provider_configs ppc
@@ -706,7 +726,29 @@ export async function loadSigningSecret(
         LIMIT 1`,
       [companyId, provider]
     );
-    return (r.rowCount ?? 0) > 0 ? r.rows[0]!.secret : null;
+    return (r.rowCount ?? 0) > 0 ? decryptSecret(companyId, r.rows[0]!.secret, "webhook-secret") : null;
+  });
+}
+
+/**
+ * RULE 14.5.1 - the provider API key is stored as ciphertext. This is the only
+ * path that returns it in plaintext, and it exists solely so a connection test
+ * can present the credential to the provider. It is never logged, never
+ * returned by an API and never written to an audit value.
+ */
+export async function loadProviderApiKey(
+  companyId: string,
+  provider: string
+): Promise<string | null> {
+  return withTenant(companyId, null, async (db) => {
+    const r = await db.query<{ api_key: string }>(
+      `SELECT api_key FROM payment_provider_configs
+        WHERE company_id=$1 AND provider=$2
+        LIMIT 1`,
+      [companyId, provider]
+    );
+    if ((r.rowCount ?? 0) === 0) return null;
+    return decryptSecret(companyId, r.rows[0]!.api_key, "payment-provider");
   });
 }
 
@@ -1318,10 +1360,6 @@ async function runForwardPipeline(
   return { kind: "pending_allocation", paymentId };
 }
 
-interface VaRow {
-  id: string; customer_id: string; branch_id: string; status: string;
-}
-
 /**
  * VERSION 3.2 — notifies the responsible Collection Officer (via the
  * customer's active assignment), the branch's branch managers, and the
@@ -1862,7 +1900,7 @@ async function actOnReconciliationItem(
   itemId: string,
   outcome: "resolved" | "dismissed",
   note: string | null,
-  meta: ActorMeta
+  _meta: ActorMeta
 ): Promise<unknown> {
   return withTenant(actor.companyId, null, async (db) => {
     if (!(await actorHoldsRole(db, actor, RECONCILIATION_ROLES))) {
@@ -1969,7 +2007,7 @@ export async function allocateVerifiedPayment(
     savingsAmount: string;
     note: string;
   },
-  meta: ActorMeta = {}
+  _meta: ActorMeta = {}
 ): Promise<{ ok: true; paymentId: string; loanId: string }> {
   if (!input.loanId) throw AppError.unprocessable("loanId is required");
   if (!input.paymentId) throw AppError.unprocessable("paymentId is required");

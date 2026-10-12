@@ -9,7 +9,7 @@ import {
 import { withTenantSession } from "../../db/pool";
 import { withBypass } from "../../db/repo";
 import { AppError } from "../../lib/errors";
-import { parsePortalHost } from "../../lib/host";
+import { parsePortalAddress } from "../../lib/host";
 import { signAccessToken } from "./tokens";
 import {
   fullName,
@@ -20,6 +20,7 @@ import {
   type CredentialState
 } from "../../lib/credential";
 import { generateTotpSecret, otpauthUri, verifyTotp } from "../../lib/totp";
+import { isLegacySecret, unwrapSecret, wrapSecret } from "../../lib/secret-vault";
 
 const REFRESH_TTL_DAYS = 7;
 const BCRYPT_ROUNDS = 10;
@@ -31,44 +32,91 @@ export interface ResolvedHostContext {
 }
 
 export async function resolveHostContext(
-  hostHeader: string | undefined
+  hostHeader: string | undefined,
+  pathname?: string | null
 ): Promise<ResolvedHostContext | null> {
-  const candidates = parsePortalHost(hostHeader);
-  if (candidates.length === 0) return Promise.resolve(null);
+  /**
+   * Resolves the tenant from the request address (Vision Part 1 §2.3).
+   *
+   * `parsePortalAddress` collapses all three permitted forms into one lookup
+   * plan, in this order:
+   *
+   *   1. a tenant prefix on the path   — /acme, /acme-mukono
+   *   2. the platform hostname         — acme.nexora.app
+   *   3. a verified company domain     — portal.acme.com
+   *
+   * Nothing here grants access. Every branch of this function identifies WHICH
+   * company to look in; the credential is then checked inside that company's
+   * tenant session under row-level security, exactly as before. An address that
+   * matches no row resolves to null and the caller rejects it with a neutral
+   * error (RULE 2.4.3 — the response never reveals whether a company exists).
+   */
+  const address = parsePortalAddress(hostHeader, pathname);
 
-  // Step 1: resolve the company registry row through the audited bypass path
-  // (companies policy accepts app.bypass_rls).
-  for (const candidate of candidates) {
-    const companyId: string | null = await withBypass(async (db) => {
-      const company = await db.query<{ id: string }>(
-        `SELECT id FROM companies WHERE slug = $1`,
+  // Step 1 — company lookup. The registry is reachable pre-authentication only
+  // through the audited app.bypass_rls path (companies accepts it by policy).
+  let companyId: string | null = null;
+  let resolvedSlug: string | null = null;
+  let pendingBranchSlug: string | null = null;
+
+  for (const candidate of address.candidates) {
+    const found = await withBypass(async (db) => {
+      const company = await db.query<{ id: string; slug: string }>(
+        `SELECT id, slug FROM companies WHERE slug = $1`,
         [candidate.companySlug]
       );
-      return company.rowCount === 0 ? null : company.rows[0]!.id;
+      return company.rowCount === 0 ? null : company.rows[0]!;
     });
-    if (!companyId) continue;
-
-    // Step 2: branch resolution happens INSIDE that company's tenant session,
-    // where the branch rows are visible by normal tenant scoping.
-    let branchId: string | null = null;
-    if (candidate.branchSlug !== null) {
-      const branch = await withTenantSession(companyId, null, async (db) => {
-        const found = await db.query<{ id: string }>(
-          `SELECT id FROM branches WHERE company_id = $1 AND slug = $2`,
-          [companyId, candidate.branchSlug]
-        );
-        return found.rowCount === 0 ? null : found.rows[0]!.id;
-      });
-      if (!branch) continue;
-      branchId = branch;
+    if (found) {
+      companyId = found.id;
+      resolvedSlug = found.slug;
+      // The winning candidate carries the branch, if one was named.
+      if (candidate.branchSlug) pendingBranchSlug = candidate.branchSlug;
+      break;
     }
-    return {
-      companyId,
-      companySlug: candidate.companySlug,
-      branchId
-    };
   }
-  return null;
+
+  // Step 2 — a company-owned domain, only once DNS ownership has been proven.
+  if (!companyId && address.customDomain) {
+    const found = await withBypass(async (db) => {
+      const row = await db.query<{ id: string; slug: string }>(
+        `SELECT c.id, c.slug
+           FROM company_domains d
+           JOIN companies c ON c.id = d.company_id
+          WHERE lower(d.domain) = lower($1)
+            AND d.verified_at IS NOT NULL`,
+        [address.customDomain]
+      );
+      return row.rowCount === 0 ? null : row.rows[0]!;
+    });
+    if (found) {
+      companyId = found.id;
+      resolvedSlug = found.slug;
+    }
+  }
+
+  if (!companyId || !resolvedSlug) return null;
+
+  // Step 3 — branch resolution happens INSIDE that company's tenant session,
+  // where branch rows are visible by normal tenant scoping (RULE 2.3.2: routing
+  // and permissions always use the immutable branch id, never the slug).
+  let branchId: string | null = null;
+  if (pendingBranchSlug) {
+    const wanted = pendingBranchSlug;
+    const branch = await withTenantSession(companyId, null, async (db) => {
+      const found = await db.query<{ id: string }>(
+        `SELECT id FROM branches WHERE company_id=$1 AND slug=$2`,
+        [companyId, wanted]
+      );
+      return found.rowCount === 0 ? null : found.rows[0]!.id;
+    });
+    // An unknown branch must not silently fall back to Head Office: that would
+    // turn a mistyped branch address into a wider scope than asked for.
+    if (!branch) return null;
+    branchId = branch;
+  }
+
+  return { companyId, companySlug: resolvedSlug, branchId };
 }
 
 interface UserRow {
@@ -300,9 +348,10 @@ export async function login(
   hostHeader: string | undefined,
   username: string,
   password: string,
-  meta: RequestMeta
+  meta: RequestMeta,
+  pathname?: string | null
 ): Promise<IssuedSession> {
-  const ctx = await resolveHostContext(hostHeader);
+  const ctx = await resolveHostContext(hostHeader, pathname);
   if (!ctx) throw AppError.unauthorized("Unknown portal address");
 
   const outcome = await withTenantSession(ctx.companyId, ctx.branchId, async (db) => {
@@ -587,13 +636,23 @@ function validateNewPassword(newPassword: string, user: UserRow, policy: Securit
   }
 }
 
-function decryptTotpSecret(encoded: string | null): string | null {
+/**
+ * RULE 14.5.1 - opens the stored authenticator seed with the shared vault.
+ * The account id is the key-binding reference, so one row's ciphertext cannot
+ * be decrypted using another account's context.
+ *
+ * A legacy (pre-encryption) value returns null rather than throwing: it is
+ * treated as "no usable seed", which forces the account through a fresh,
+ * documented enrolment instead of trusting a plaintext value.
+ */
+function decryptTotpSecret(encoded: string | null, accountRef: string): string | null {
   if (!encoded) return null;
-  return Buffer.from(encoded.split(".")[0]!, "base64").toString("utf8");
+  if (isLegacySecret(encoded)) return null;
+  return unwrapSecret(encoded, accountRef);
 }
 
 function requireLiveTotp(user: UserRow, code: string | undefined): void {
-  const secret = decryptTotpSecret(user.totp_secret_encrypted);
+  const secret = decryptTotpSecret(user.totp_secret_encrypted, user.id);
   if (!secret) {
     throw AppError.unprocessable("Authenticator is not enrolled on this account");
   }
@@ -704,7 +763,7 @@ export async function ritualEnrollment(
     if (user.credential_state === "secured") {
       throw AppError.conflict("Account is already secured");
     }
-    const existing = decryptTotpSecret(user.totp_secret_encrypted);
+    const existing = decryptTotpSecret(user.totp_secret_encrypted, user.id);
     if (existing && user.totp_verified_at) {
       throw AppError.conflict("Authenticator is already verified on this account");
     }
@@ -712,11 +771,12 @@ export async function ritualEnrollment(
       return { secret: existing, otpauthUri: otpauthUri(user.username, existing) };
     }
     const secret = generateTotpSecret();
+    // RULE 14.5.1 - the seed is encrypted at rest, bound to this account.
     await db.query(
       `UPDATE users
           SET totp_secret_encrypted=$2, credential_state='ritual_in_progress', updated_at=now()
         WHERE id=$1`,
-      [userId, Buffer.from(secret).toString("base64") + ".v1"]
+      [userId, wrapSecret(secret, user.id)]
     );
     await securityAudit(
       db,

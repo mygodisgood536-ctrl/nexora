@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 // Phase 3 PREPARE: dump the LIVE permission matrix from PostgreSQL.
 // This is the "actual database evidence" half of the permission reference; the
 // Vision's Can/Cannot text is the other half. Comparing them is Phase 3's job.

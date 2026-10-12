@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 // Narrow, reliable search for destructive database operations in the server
 // package only. The codebase-wide search is polluted by unrelated projects.
 import { readdirSync, readFileSync, statSync } from "node:fs";

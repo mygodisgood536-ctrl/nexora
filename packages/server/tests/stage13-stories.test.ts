@@ -3,7 +3,7 @@ import request from "supertest";
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 import type { Express } from "express";
-import { seedWorld, withAdmin, withAdminValue, type TestWorld } from "./fixtures";
+import { seedWorld, withAdminValue, type TestWorld } from "./fixtures";
 import { initPlatformOwner, poLogin } from "./platform-helpers";
 
 /**

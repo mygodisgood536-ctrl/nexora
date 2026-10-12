@@ -11,7 +11,9 @@ export default tseslint.config(
     }
   },
   {
-    files: ["**/scripts/**/*.mjs"],
+    // Verification harnesses and build scripts print their results to the
+    // terminal — that output IS the deliverable, so `no-console` does not apply.
+    files: ["**/scripts/**/*.mjs", "**/scripts/**/*.ts"],
     rules: {
       "no-console": "off"
     }

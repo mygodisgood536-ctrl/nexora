@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 // Read-only DB health probe used by _verify.cmd to PROVE PostgreSQL is
 // actually reachable (and the schema is applied) before any verification runs.
 //

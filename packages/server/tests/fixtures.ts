@@ -76,46 +76,6 @@ export async function withAppSession(
   }
 }
 
-async function loadWorld(db: pg.Client): Promise<TestWorld> {
-  const one = async (sql: string, params: unknown[]): Promise<uuid> => {
-    const row = (await db.query<{ id: uuid }>(sql, params)).rows[0];
-    if (!row) throw new Error(`loadWorld: no row for ${sql}`);
-    return row.id;
-  };
-
-  const companyA = await one(`SELECT id FROM companies WHERE slug='alpha-test'`, []);
-  const companyB = await one(`SELECT id FROM companies WHERE slug='beta-test'`, []);
-  const branchA1 = await one(`SELECT id FROM branches WHERE company_id=$1 AND code='ALP-001'`, [companyA]);
-  const branchA2 = await one(`SELECT id FROM branches WHERE company_id=$1 AND code='ALP-002'`, [companyA]);
-  const branchB1 = await one(`SELECT id FROM branches WHERE company_id=$1 AND code='BTA-001'`, [companyB]);
-  const userA = await one(`SELECT id FROM users WHERE company_id=$1 AND worker_code='W001'`, [companyA]);
-  const userB = await one(`SELECT id FROM users WHERE company_id=$1 AND worker_code='W001'`, [companyB]);
-  const customerA1 = await one(`SELECT id FROM customers WHERE company_id=$1 AND customer_code='CUST-0001'`, [companyA]);
-  const customerA2 = await one(`SELECT id FROM customers WHERE company_id=$1 AND customer_code='CUST-0002'`, [companyA]);
-  const customerB1 = await one(`SELECT id FROM customers WHERE company_id=$1 AND customer_code='CUST-0001'`, [companyB]);
-  const vaA1 = await one(`SELECT id FROM virtual_accounts WHERE company_id=$1 AND account_number='1000000001'`, [companyA]);
-  const loanA1 = await one(`SELECT id FROM loans WHERE company_id=$1 LIMIT 1`, [companyA]);
-  // Stage 2 entities are part of the world's completeness contract.
-  await one(
-    `SELECT ra.id FROM role_assignments ra
-      JOIN roles r ON r.id = ra.role_id
-     WHERE ra.user_id=$1 AND r.role_key='collection_officer' LIMIT 1`,
-    [userA]
-  );
-  const userAMD = await one(`SELECT id FROM users WHERE company_id=$1 AND username='amy'`, [companyA]);
-  const userAuditor = await one(
-    `SELECT id FROM users WHERE company_id=$1 AND username='audrey'`, [companyA]
-  );
-  const userFinance = await one(
-    `SELECT id FROM users WHERE company_id=$1 AND username='fiona'`, [companyA]
-  );
-  const userHr = await one(
-    `SELECT id FROM users WHERE company_id=$1 AND username='harry'`, [companyA]
-  );
-
-  return { companyA, companyB, branchA1, branchA2, branchB1, userA, userB, userAMD, userAuditor, userFinance, userHr, customerA1, customerA2, customerB1, vaA1, loanA1 };
-}
-
 /** Idempotently seeds two isolated companies with branches/users/customers/VA/loan.
  *  Rebuilds from scratch whenever the stored world is incomplete or mutated,
  *  and serializes concurrent vitest workers via an advisory lock. */

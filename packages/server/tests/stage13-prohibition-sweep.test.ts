@@ -5,7 +5,7 @@ import { readFileSync, readdirSync, statSync } from "node:fs";
 import { createHmac } from "node:crypto";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { seedWorld, withAdmin, withAdminValue, type TestWorld } from "./fixtures";
+import { seedWorld, withAdminValue, type TestWorld } from "./fixtures";
 import { staffLogin, completeProfile, attachVerifiedFaceEvidence } from "./platform-helpers";
 
 const ALPHA_HOST = "alpha-test.localhost";

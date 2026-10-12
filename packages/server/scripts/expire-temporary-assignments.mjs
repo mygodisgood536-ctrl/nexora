@@ -41,15 +41,7 @@ async function expireTemporaryAssignmentsForCompany(companyId: string): Promise<
     await client.query("SELECT set_config('app.company_id', $1, true)", [companyId]);
 
     // Find all active temporary assignments where ends_at < now()
-    const expired = await client.query<{
-      id: string;
-      user_id: string;
-      role_id: string;
-      ends_at: Date;
-      assigned_by: string | null;
-      branch_id: string | null;
-      role_key: string;
-    }>(
+    const expired = await client.query(
       `SELECT ra.id, ra.user_id, ra.role_id, ra.ends_at, ra.assigned_by,
               u.branch_id, r.role_key
          FROM role_assignments ra

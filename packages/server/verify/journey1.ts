@@ -13,6 +13,7 @@ process.env.DATABASE_URL = "postgres://nexora:nexora@localhost:5432/nexora_test"
 
 import request from "supertest";
 import type { Express } from "express";
+import type { Client } from "pg";
 import { log, check, admin, totp, writeReport, setPhase } from "./e2e-harness";
 
 const PO_EMAIL = "owner.journey@nexora.test";
@@ -48,7 +49,7 @@ export function hostOf(url: string): string {
  * so this harness stays runnable outside the vitest runner: the shared helper
  * imports `expect`, which throws outside vitest.
  */
-export async function ensurePlatformOwnerSecret(db: import("pg").Client): Promise<string> {
+export async function ensurePlatformOwnerSecret(db: Client): Promise<string> {
   let secret = "";
   const existing = await db.query<{ totp_secret_encrypted: string | null }>(
     `SELECT totp_secret_encrypted FROM platform_owners WHERE email=$1`,

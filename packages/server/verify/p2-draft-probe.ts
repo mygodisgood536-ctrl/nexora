@@ -7,9 +7,19 @@
  *    Platform Owner completes Create Company successfully, the company is
  *    provisioned and becomes live immediately..."
  *
- * Two obligations. The second is F-02 (already resolved). This probe drives the
- * FIRST through real HTTP against real PostgreSQL and records what actually
- * happens. It does not assert a verdict - it records evidence.
+ * The draft workflow is now implemented (saveCompanyDraft / discardCompanyDraft /
+ * createCompany({ draftId })). This probe drives the FULL lifecycle over real
+ * HTTP against real PostgreSQL and records what actually happens:
+ *
+ *   1. save a draft (both save paths), assert it persists as `in_setup`
+ *   2. list drafts, assert both are visible
+ *   3. attempt to log into the draft - must be refused (403, not active)
+ *   4. update the draft, assert the change is persisted
+ *   5. complete the draft - company must go live and admit its MD
+ *   6. discard the other draft - row disappears, second discard is 404
+ *   7. suspend / reactivate gate - a suspended company admits no login
+ *
+ * It does not assert a verdict on the product - it records evidence via check().
  *
  * Product code is NOT modified. This is verification only.
  */
@@ -23,18 +33,18 @@ import { ensurePlatformOwnerSecret, platformOwnerLogin, hostOf } from "./journey
 import { log, check, writeReport } from "./e2e-harness";
 
 const stamp = Date.now().toString(36).replace(/[^a-z]/g, "").slice(-5).toUpperCase();
-const PREFIX = `D${stamp}`.slice(0, 6);
+// RULE 3.3.1 - code prefixes are 3-6 LETTERS and unique platform-wide, so the
+// probe derives letters-only prefixes stamped with the run time.
+const base = (stamp.replace(/[^A-Z]/g, "") + "WXYZ").slice(0, 4);
+const PREFIX_A = `${base}A`;
+const PREFIX_B = `${base}B`;
 
-// Candidate routes a draft-save could plausibly live at. RULE 3.3.3 says the
-// wizard "may be saved as a draft", so a real implementation must expose some
-// way to persist a partial company.
-const DRAFT_ROUTES: [string, string][] = [
-  ["POST", "/platform/v1/companies/draft"],
-  ["POST", "/platform/v1/companies/drafts"],
-  ["POST", "/platform/v1/companies?draft=true"],
-  ["POST", "/platform/v1/companies/save-draft"],
-  ["PUT", "/platform/v1/companies/draft"]
-];
+interface DraftBody {
+  id?: string;
+  slug?: string;
+  status?: string;
+  code_prefix?: string;
+}
 
 async function main(): Promise<void> {
   const app = createApp();
@@ -44,73 +54,181 @@ async function main(): Promise<void> {
   const poToken = await platformOwnerLogin(app, secret);
   log(`Platform Owner authenticated for the draft probe`);
 
-  // ---- 1. Can the wizard be saved as a draft at all? -----------------------
-  for (const [method, path] of DRAFT_ROUTES) {
-    const res = await (request(app) as any)
-      [method.toLowerCase()](path)
-      .set("Authorization", `Bearer ${poToken}`)
-      .send({
-        name: `Draft Probe MFI ${stamp}`,
-        codePrefix: PREFIX,
-        mdFullName: `Draft MD ${stamp}`,
-        mdPhone: "+2348009900001"
-      });
-    check(
-      `Draft-save route is absent: ${method} ${path}`,
-      res.status === 404 || res.status === 405,
-      `status=${res.status} body=${JSON.stringify(res.body).slice(0, 120)}`
-    );
+  // ---- 1. Save a draft through POST /companies/draft ----------------------
+  const draftA = await request(app)
+    .post("/platform/v1/companies/draft")
+    .set("Authorization", `Bearer ${poToken}`)
+    .send({
+      name: `Draft Probe A ${stamp}`,
+      codePrefix: PREFIX_A,
+      planTier: "growth"
+    });
+  check(
+    "Draft saves over real HTTP (201)",
+    draftA.status === 201,
+    `status=${draftA.status} body=${JSON.stringify(draftA.body).slice(0, 160)}`
+  );
+  const idA = (draftA.body as DraftBody).id ?? "";
+  const slugA = (draftA.body as DraftBody).slug ?? "";
+  check(
+    "Saved draft sits in 'in_setup' (RULE 3.3.3 first half)",
+    (draftA.body as DraftBody).status === "in_setup",
+    `status=${(draftA.body as DraftBody).status}`
+  );
+  if (!idA || !slugA) {
+    await db.end();
+    throw new Error("draft A was not saved; remaining steps cannot be driven");
   }
 
-  // ---- 2. Does a company actually reach "in_setup" by any route? -----------
-  // Each company needs its OWN unique prefix: RULE 3.3.1 prefixes are unique
-  // platform-wide, so reusing one yields 409 and cascades into undefined ids.
-  // NOTE: PREFIX is already 6 chars, so appending then slicing would reproduce
-  // the same prefix. The last character is REPLACED instead.
-  const livePrefix = PREFIX.slice(0, 5) + "L";
-  const created = await request(app)
+  // ---- 1b. The same save through POST /companies?draft=true ---------------
+  // ISS-004: this route used to silently create a LIVE company. It must now
+  // save a draft instead.
+  const draftB = await request(app)
+    .post("/platform/v1/companies?draft=true")
+    .set("Authorization", `Bearer ${poToken}`)
+    .send({ name: `Draft Probe B ${stamp}`, codePrefix: PREFIX_B });
+  const bodyB = draftB.body as DraftBody;
+  check(
+    "POST /companies?draft=true saves a DRAFT, never a live company",
+    draftB.status === 201 && bodyB.status === "in_setup",
+    `status=${draftB.status} statusField=${bodyB.status} body=${JSON.stringify(bodyB).slice(0, 160)}`
+  );
+  const idB = bodyB.id ?? "";
+
+  // ---- 2. Both drafts are persisted and listable --------------------------
+  const rows = await db.query<{ id: string; status: string }>(
+    `SELECT id, status FROM companies WHERE id = ANY($1::uuid[])`,
+    [[idA, idB].filter(Boolean)]
+  );
+  const persisted = rows.rows.filter((r) => r.status === "in_setup").length;
+  check(
+    "Both drafts persist as 'in_setup' in the database",
+    persisted === rows.rows.length && rows.rows.length >= 2,
+    `rows=${JSON.stringify(rows.rows)}`
+  );
+
+  const list = await request(app)
+    .get("/platform/v1/companies/drafts")
+    .set("Authorization", `Bearer ${poToken}`);
+  const items = Array.isArray((list.body as { items?: { id: string }[] }).items)
+    ? (list.body as { items: { id: string }[] }).items
+    : [];
+  check(
+    "GET /companies/drafts returns both drafts",
+    list.status === 200 && items.some((i) => i.id === idA) && items.some((i) => i.id === idB),
+    `status=${list.status} ids=${items.map((i) => i.id).join(",")}`
+  );
+
+  // ---- 3. The draft cannot be logged into ---------------------------------
+  // The host resolves (the company row exists) but the login gate must refuse
+  // before any credential is examined: "Company is in setup".
+  const draftLogin = await request(app)
+    .post("/api/v1/auth/login")
+    .set("Host", `${slugA}.localhost`)
+    .send({ username: "nobody-at-all", password: "irrelevant-password" });
+  check(
+    "Login into a draft company is refused (RULE 3.3.3: cannot be logged into)",
+    draftLogin.status !== 200,
+    `status=${draftLogin.status} body=${JSON.stringify(draftLogin.body).slice(0, 160)}`
+  );
+  log(`draft login refusal: status=${draftLogin.status} body=${JSON.stringify(draftLogin.body).slice(0, 200)}`);
+
+  // ---- 4. The draft can be updated before completion ----------------------
+  const updated = await request(app)
+    .put(`/platform/v1/companies/drafts/${idA}`)
+    .set("Authorization", `Bearer ${poToken}`)
+    .send({ contactEmail: `probe+${stamp.toLowerCase()}@example.test`, planTier: "standard" });
+  check(
+    "Draft update returns 200",
+    updated.status === 200,
+    `status=${updated.status} body=${JSON.stringify(updated.body).slice(0, 160)}`
+  );
+  const dbContact = await db.query<{ contact_email: string | null; plan_tier: string | null }>(
+    `SELECT contact_email, plan_tier FROM companies WHERE id=$1`,
+    [idA]
+  );
+  check(
+    "Draft update is persisted",
+    dbContact.rows[0]?.contact_email === `probe+${stamp.toLowerCase()}@example.test`,
+    `row=${JSON.stringify(dbContact.rows[0])}`
+  );
+
+  // ---- 5. Completing the draft makes the company live ---------------------
+  const completed = await request(app)
     .post("/platform/v1/companies")
     .set("Authorization", `Bearer ${poToken}`)
     .send({
-      name: `Draft Probe Live ${stamp}`,
-      codePrefix: livePrefix,
-      mdFullName: `Live MD ${stamp}`,
-      mdPhone: "+2348009900002"
+      name: `Draft Probe A ${stamp}`,
+      codePrefix: PREFIX_A,
+      mdFullName: `Draft MD ${stamp}`,
+      mdPhone: "+2438009000001",
+      draftId: idA
     });
-  check("Probe company created over real HTTP", created.status === 201, `status=${created.status} body=${JSON.stringify(created.body).slice(0, 140)}`);
-
-  const companyId = created.body?.id ?? "";
-  if (!companyId) {
-    await db.end();
-    throw new Error("probe company was not created; remaining steps cannot be driven");
-  }
-
-  const dbStatus = await db.query<{ status: string }>(
-    "SELECT status FROM companies WHERE id=$1",
-    [created.body?.id]
-  );
-  const persisted = dbStatus.rows[0]?.status ?? "(none)";
   check(
-    "A completed company is NOT in_setup (RULE 3.3.3 second half = F-02)",
-    persisted === "active",
-    `persisted status=${persisted}`
+    "Completing the draft provisions the company (201)",
+    completed.status === 201,
+    `status=${completed.status} body=${JSON.stringify(completed.body).slice(0, 200)}`
+  );
+
+  const completedStatus = await db.query<{ status: string }>(
+    `SELECT status FROM companies WHERE id=$1`,
+    [idA]
+  );
+  check(
+    "Completed company is 'active' immediately (RULE 3.3.3 second half)",
+    completedStatus.rows[0]?.status === "active",
+    `persisted status=${completedStatus.rows[0]?.status}`
+  );
+
+  const md = (completed.body as {
+    company_url?: string;
+    md?: { username?: string; initial_password?: string };
+  });
+  const host = hostOf(md.company_url ?? "");
+  const mdUsername = md.md?.username ?? "";
+  const mdPassword = md.md?.initial_password ?? "";
+
+  const liveLogin = await request(app)
+    .post("/api/v1/auth/login")
+    .set("Host", host)
+    .send({ username: mdUsername, password: mdPassword });
+  check(
+    "The MD can log into the completed company",
+    liveLogin.status === 200,
+    `status=${liveLogin.status} body=${JSON.stringify(liveLogin.body).slice(0, 160)}`
   );
 
   const inSetupCount = await db.query<{ n: number }>(
     "SELECT count(*)::int n FROM companies WHERE status='in_setup'"
   );
-  log(`companies currently in 'in_setup' across the whole database: ${inSetupCount.rows[0]?.n}`);
+  log(`companies still in 'in_setup' across the whole database: ${inSetupCount.rows[0]?.n}`);
 
-  // ---- 3. Is the login gate real for a NON-active company? -----------------
-  // A draft company cannot be produced (step 1), so the reachable proxy for
-  // "must not be loggable into" is suspension, which uses the same gate.
-  const host = hostOf(created.body?.company_url ?? "");
-  const mdUsername = created.body?.md?.username ?? "";
+  // ---- 6. A draft can be discarded ----------------------------------------
+  const discarded = await request(app)
+    .delete(`/platform/v1/companies/drafts/${idB}`)
+    .set("Authorization", `Bearer ${poToken}`);
+  check(
+    "Discarding a draft returns 204",
+    discarded.status === 204,
+    `status=${discarded.status} body=${JSON.stringify(discarded.body).slice(0, 160)}`
+  );
+  const gone = await db.query(`SELECT 1 FROM companies WHERE id=$1`, [idB]);
+  check("Discarded draft row is deleted", (gone.rowCount ?? 0) === 0, `rowCount=${gone.rowCount}`);
 
+  const discardAgain = await request(app)
+    .delete(`/platform/v1/companies/drafts/${idB}`)
+    .set("Authorization", `Bearer ${poToken}`);
+  check(
+    "Discarding an already-discarded draft is a 404, not a crash",
+    discardAgain.status === 404,
+    `status=${discardAgain.status}`
+  );
+
+  // ---- 7. The suspend gate still holds for a live company -----------------
   const beforeSuspend = await request(app)
     .post("/api/v1/auth/login")
     .set("Host", host)
-    .send({ username: mdUsername, password: created.body?.md?.initialPassword ?? "" });
+    .send({ username: mdUsername, password: mdPassword });
   check(
     "MD login works while the company is live",
     beforeSuspend.status === 200,
@@ -118,15 +236,19 @@ async function main(): Promise<void> {
   );
 
   const susp = await request(app)
-    .post(`/platform/v1/companies/${companyId}/status`)
+    .post(`/platform/v1/companies/${idA}/status`)
     .set("Authorization", `Bearer ${poToken}`)
     .send({ action: "suspend", reason: "ISS-004 probe: verify the non-live login gate" });
-  check("Company suspended over real HTTP", susp.status === 200 || susp.status === 204, `status=${susp.status} body=${JSON.stringify(susp.body).slice(0, 140)}`);
+  check(
+    "Company suspended over real HTTP",
+    susp.status === 200 || susp.status === 204,
+    `status=${susp.status} body=${JSON.stringify(susp.body).slice(0, 140)}`
+  );
 
   const afterSuspend = await request(app)
     .post("/api/v1/auth/login")
     .set("Host", host)
-    .send({ username: mdUsername, password: created.body?.md?.initialPassword ?? "" });
+    .send({ username: mdUsername, password: mdPassword });
   check(
     "Login into a NON-live company is refused",
     afterSuspend.status !== 200,
@@ -134,15 +256,14 @@ async function main(): Promise<void> {
   );
   log(`login into suspended company returned: ${afterSuspend.status}`);
 
-  // ---- 4. Can a non-active company still be driven to 'in_setup'? ----------
-  const toSetup = await request(app)
-    .post(`/platform/v1/companies/${companyId}/status`)
+  const reactivate = await request(app)
+    .post(`/platform/v1/companies/${idA}/status`)
     .set("Authorization", `Bearer ${poToken}`)
-    .send({ action: "activate" });
+    .send({ action: "reactivate" });
   check(
     "Company can be reactivated (state machine supports active<->suspended)",
-    toSetup.status === 200 || toSetup.status === 204,
-    `status=${toSetup.status} body=${JSON.stringify(toSetup.body).slice(0, 140)}`
+    reactivate.status === 200 || reactivate.status === 204,
+    `status=${reactivate.status} body=${JSON.stringify(reactivate.body).slice(0, 140)}`
   );
 
   await db.end();

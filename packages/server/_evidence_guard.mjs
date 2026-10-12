@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 // Evidence guard: a verification run is only honest if it PROVES its journeys ran.
 //
 // Why this exists: _go_roles.cmd reported EXITCODE=0 while never executing

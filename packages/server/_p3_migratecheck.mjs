@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 // Does src/db/migrate.ts DESTROY existing data?
 // Phase 3 found nexora_test completely empty (companies/users/roles/customers = 0)
 // immediately after runs that had reported real data. The only thing _verify.cmd

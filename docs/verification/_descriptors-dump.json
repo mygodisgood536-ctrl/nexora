@@ -1,0 +1,3282 @@
+[
+  {
+    "key": "md",
+    "label": "MD Board",
+    "purpose": "Owns the company; sees everything, decides everything, authorises at the end of any chain.",
+    "workplace": "all",
+    "blocks": [
+      {
+        "label": "Portfolio outstanding",
+        "metric": "portfolio"
+      },
+      {
+        "label": "Collected today",
+        "metric": "collections_today"
+      },
+      {
+        "label": "Pending approvals",
+        "metric": "pending_approvals"
+      },
+      {
+        "label": "Branches live",
+        "metric": "branches"
+      }
+    ],
+    "groups": [
+      {
+        "key": "command",
+        "title": "Command",
+        "items": [
+          {
+            "to": "/",
+            "label": "Command dashboard",
+            "icon": "dashboard"
+          },
+          {
+            "to": "/performance",
+            "label": "Performance",
+            "icon": "trend"
+          },
+          {
+            "to": "/reports",
+            "label": "Reports",
+            "icon": "reports"
+          }
+        ]
+      },
+      {
+        "key": "money",
+        "title": "Money",
+        "items": [
+          {
+            "to": "/money",
+            "label": "Money & ledger",
+            "icon": "money"
+          },
+          {
+            "to": "/reconciliation",
+            "label": "Reconciliation",
+            "icon": "clipboard"
+          },
+          {
+            "to": "/eod",
+            "label": "End of day",
+            "icon": "wallet"
+          }
+        ]
+      },
+      {
+        "key": "branches",
+        "title": "Branches",
+        "items": [
+          {
+            "to": "/branches",
+            "label": "Branch registry",
+            "icon": "branch"
+          },
+          {
+            "to": "/workplace",
+            "label": "Branch workplace",
+            "icon": "building"
+          }
+        ]
+      },
+      {
+        "key": "people",
+        "title": "People",
+        "items": [
+          {
+            "to": "/people",
+            "label": "Workers",
+            "icon": "users"
+          },
+          {
+            "to": "/control",
+            "label": "Roles & control",
+            "icon": "key"
+          }
+        ]
+      },
+      {
+        "key": "customers",
+        "title": "Customers",
+        "items": [
+          {
+            "to": "/customers",
+            "label": "Customers",
+            "icon": "customers"
+          },
+          {
+            "to": "/groups",
+            "label": "Groups",
+            "icon": "people"
+          }
+        ]
+      },
+      {
+        "key": "credit",
+        "title": "Credit",
+        "items": [
+          {
+            "to": "/credit",
+            "label": "Applications & credit",
+            "icon": "credit"
+          },
+          {
+            "to": "/approvals",
+            "label": "Approvals",
+            "icon": "approvals"
+          }
+        ]
+      },
+      {
+        "key": "providers",
+        "title": "Providers",
+        "items": [
+          {
+            "to": "/providers",
+            "label": "Payment providers",
+            "icon": "provider"
+          },
+          {
+            "to": "/technical",
+            "label": "Webhooks & health",
+            "icon": "activity"
+          }
+        ]
+      },
+      {
+        "key": "approvals",
+        "title": "Approvals",
+        "items": [
+          {
+            "to": "/approvals",
+            "label": "Approval inbox",
+            "icon": "approvals"
+          }
+        ]
+      },
+      {
+        "key": "audit",
+        "title": "Audit",
+        "items": [
+          {
+            "to": "/audit",
+            "label": "Audit trail",
+            "icon": "audit"
+          }
+        ]
+      },
+      {
+        "key": "control",
+        "title": "Control",
+        "items": [
+          {
+            "to": "/control",
+            "label": "Company control",
+            "icon": "control"
+          },
+          {
+            "to": "/capability/findings",
+            "label": "Findings",
+            "icon": "file"
+          }
+        ]
+      },
+      {
+        "key": "reports",
+        "title": "Reports",
+        "items": [
+          {
+            "to": "/reports",
+            "label": "Report library",
+            "icon": "reports"
+          },
+          {
+            "to": "/performance",
+            "label": "Performance views",
+            "icon": "trend"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "key": "deputy_md",
+    "label": "Deputy MD Board",
+    "purpose": "The MD's stand-in; the same board, with Control read-only unless the MD delegates a specific change.",
+    "workplace": "all",
+    "blocks": [
+      {
+        "label": "Portfolio outstanding",
+        "metric": "portfolio"
+      },
+      {
+        "label": "Collected today",
+        "metric": "collections_today"
+      },
+      {
+        "label": "Pending approvals",
+        "metric": "pending_approvals"
+      },
+      {
+        "label": "Branches live",
+        "metric": "branches"
+      }
+    ],
+    "groups": [
+      {
+        "key": "command",
+        "title": "Command",
+        "items": [
+          {
+            "to": "/",
+            "label": "Command dashboard",
+            "icon": "dashboard"
+          },
+          {
+            "to": "/performance",
+            "label": "Performance",
+            "icon": "trend"
+          },
+          {
+            "to": "/reports",
+            "label": "Reports",
+            "icon": "reports"
+          }
+        ]
+      },
+      {
+        "key": "money",
+        "title": "Money",
+        "items": [
+          {
+            "to": "/money",
+            "label": "Money & ledger",
+            "icon": "money"
+          },
+          {
+            "to": "/reconciliation",
+            "label": "Reconciliation",
+            "icon": "clipboard"
+          }
+        ]
+      },
+      {
+        "key": "branches",
+        "title": "Branches",
+        "items": [
+          {
+            "to": "/branches",
+            "label": "Branch registry",
+            "icon": "branch"
+          },
+          {
+            "to": "/workplace",
+            "label": "Branch workplace",
+            "icon": "building"
+          }
+        ]
+      },
+      {
+        "key": "people",
+        "title": "People",
+        "items": [
+          {
+            "to": "/people",
+            "label": "Workers",
+            "icon": "users"
+          },
+          {
+            "to": "/control",
+            "label": "Roles & control (read)",
+            "icon": "key"
+          }
+        ]
+      },
+      {
+        "key": "customers",
+        "title": "Customers",
+        "items": [
+          {
+            "to": "/customers",
+            "label": "Customers",
+            "icon": "customers"
+          },
+          {
+            "to": "/groups",
+            "label": "Groups",
+            "icon": "people"
+          }
+        ]
+      },
+      {
+        "key": "credit",
+        "title": "Credit",
+        "items": [
+          {
+            "to": "/credit",
+            "label": "Applications & credit",
+            "icon": "credit"
+          },
+          {
+            "to": "/approvals",
+            "label": "Approvals",
+            "icon": "approvals"
+          }
+        ]
+      },
+      {
+        "key": "providers",
+        "title": "Providers",
+        "items": [
+          {
+            "to": "/providers",
+            "label": "Payment providers",
+            "icon": "provider"
+          }
+        ]
+      },
+      {
+        "key": "audit",
+        "title": "Audit",
+        "items": [
+          {
+            "to": "/audit",
+            "label": "Audit trail",
+            "icon": "audit"
+          }
+        ]
+      },
+      {
+        "key": "reports",
+        "title": "Reports",
+        "items": [
+          {
+            "to": "/reports",
+            "label": "Report library",
+            "icon": "reports"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "key": "gm",
+    "label": "Operations hub",
+    "purpose": "Runs day-to-day operations; normally a mid-chain or final approver.",
+    "workplace": "all",
+    "blocks": [
+      {
+        "label": "Branch performance",
+        "metric": "branch_performance"
+      },
+      {
+        "label": "Pending approvals",
+        "metric": "pending_approvals"
+      },
+      {
+        "label": "Workers active",
+        "metric": "workers"
+      },
+      {
+        "label": "Collected today",
+        "metric": "collections_today"
+      }
+    ],
+    "groups": [
+      {
+        "key": "operations",
+        "title": "Branch performance",
+        "items": [
+          {
+            "to": "/performance",
+            "label": "Performance views",
+            "icon": "trend"
+          },
+          {
+            "to": "/branches",
+            "label": "Branches",
+            "icon": "branch"
+          },
+          {
+            "to": "/workplace",
+            "label": "Branch workplace",
+            "icon": "building"
+          }
+        ]
+      },
+      {
+        "key": "workers",
+        "title": "Workers",
+        "items": [
+          {
+            "to": "/people",
+            "label": "Worker directory",
+            "icon": "users"
+          }
+        ]
+      },
+      {
+        "key": "approvals",
+        "title": "Approvals",
+        "items": [
+          {
+            "to": "/approvals",
+            "label": "Approval inbox",
+            "icon": "approvals"
+          },
+          {
+            "to": "/credit",
+            "label": "Applications",
+            "icon": "credit"
+          }
+        ]
+      },
+      {
+        "key": "credit",
+        "title": "Credit",
+        "items": [
+          {
+            "to": "/credit",
+            "label": "Applications & credit",
+            "icon": "credit"
+          }
+        ]
+      },
+      {
+        "key": "providers",
+        "title": "Providers",
+        "items": [
+          {
+            "to": "/providers",
+            "label": "Payment providers",
+            "icon": "provider"
+          }
+        ]
+      },
+      {
+        "key": "reports",
+        "title": "Reports",
+        "items": [
+          {
+            "to": "/reports",
+            "label": "Report library",
+            "icon": "reports"
+          }
+        ]
+      },
+      {
+        "key": "audit",
+        "title": "Audit",
+        "items": [
+          {
+            "to": "/audit",
+            "label": "Audit trail",
+            "icon": "audit"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "key": "assistant_gm",
+    "label": "Operations hub (Assistant)",
+    "purpose": "Operational coverage for the GM: views everything the GM views, acts only where the chain includes this role.",
+    "workplace": "all",
+    "blocks": [
+      {
+        "label": "Branch performance",
+        "metric": "branch_performance"
+      },
+      {
+        "label": "Pending approvals",
+        "metric": "pending_approvals"
+      },
+      {
+        "label": "Workers active",
+        "metric": "workers"
+      },
+      {
+        "label": "Notifications",
+        "metric": "unread"
+      }
+    ],
+    "groups": [
+      {
+        "key": "operations",
+        "title": "Branch performance",
+        "items": [
+          {
+            "to": "/performance",
+            "label": "Performance views",
+            "icon": "trend"
+          },
+          {
+            "to": "/branches",
+            "label": "Branches",
+            "icon": "branch"
+          },
+          {
+            "to": "/workplace",
+            "label": "Branch workplace",
+            "icon": "building"
+          }
+        ]
+      },
+      {
+        "key": "workers",
+        "title": "Workers",
+        "items": [
+          {
+            "to": "/people",
+            "label": "Worker directory",
+            "icon": "users"
+          }
+        ]
+      },
+      {
+        "key": "approvals",
+        "title": "Approvals",
+        "items": [
+          {
+            "to": "/approvals",
+            "label": "Approval inbox",
+            "icon": "approvals"
+          }
+        ]
+      },
+      {
+        "key": "credit",
+        "title": "Credit",
+        "items": [
+          {
+            "to": "/credit",
+            "label": "Applications",
+            "icon": "credit"
+          }
+        ]
+      },
+      {
+        "key": "providers",
+        "title": "Providers",
+        "items": [
+          {
+            "to": "/providers",
+            "label": "Payment providers (view)",
+            "icon": "provider"
+          }
+        ]
+      },
+      {
+        "key": "reports",
+        "title": "Reports",
+        "items": [
+          {
+            "to": "/reports",
+            "label": "Report library",
+            "icon": "reports"
+          }
+        ]
+      },
+      {
+        "key": "audit",
+        "title": "Audit",
+        "items": [
+          {
+            "to": "/audit",
+            "label": "Audit trail",
+            "icon": "audit"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "key": "operations_manager",
+    "label": "Operations hub",
+    "purpose": "Process, branch operations and service levels.",
+    "workplace": "all",
+    "blocks": [
+      {
+        "label": "Branch operations",
+        "metric": "branch_performance"
+      },
+      {
+        "label": "Process exceptions",
+        "metric": "exceptions"
+      },
+      {
+        "label": "Workers in branch scope",
+        "metric": "workers"
+      },
+      {
+        "label": "Pending approvals",
+        "metric": "pending_approvals"
+      }
+    ],
+    "groups": [
+      {
+        "key": "branch_operations",
+        "title": "Branch operations",
+        "items": [
+          {
+            "to": "/branches",
+            "label": "Branch registry",
+            "icon": "branch"
+          },
+          {
+            "to": "/workplace",
+            "label": "Branch workplace",
+            "icon": "building"
+          },
+          {
+            "to": "/performance",
+            "label": "Performance",
+            "icon": "trend"
+          }
+        ]
+      },
+      {
+        "key": "exceptions",
+        "title": "Process exceptions",
+        "items": [
+          {
+            "to": "/reconciliation",
+            "label": "Exceptions queue",
+            "icon": "alert"
+          },
+          {
+            "to": "/technical",
+            "label": "Webhook exceptions",
+            "icon": "activity"
+          }
+        ]
+      },
+      {
+        "key": "workers",
+        "title": "Workers (branch)",
+        "items": [
+          {
+            "to": "/people",
+            "label": "Worker directory",
+            "icon": "users"
+          }
+        ]
+      },
+      {
+        "key": "approvals",
+        "title": "Approvals",
+        "items": [
+          {
+            "to": "/approvals",
+            "label": "Approval inbox",
+            "icon": "approvals"
+          }
+        ]
+      },
+      {
+        "key": "reports",
+        "title": "Reports",
+        "items": [
+          {
+            "to": "/reports",
+            "label": "Report library",
+            "icon": "reports"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "key": "assistant_operations_manager",
+    "label": "Operations hub (Assistant)",
+    "purpose": "Operations support: branch inspection and process exception follow-up, minus configuration surfaces.",
+    "workplace": "all",
+    "blocks": [
+      {
+        "label": "Branch operations",
+        "metric": "branch_performance"
+      },
+      {
+        "label": "Process exceptions",
+        "metric": "exceptions"
+      },
+      {
+        "label": "Workers in branch scope",
+        "metric": "workers"
+      },
+      {
+        "label": "Notifications",
+        "metric": "unread"
+      }
+    ],
+    "groups": [
+      {
+        "key": "branch_operations",
+        "title": "Branch operations",
+        "items": [
+          {
+            "to": "/branches",
+            "label": "Branches (view)",
+            "icon": "branch"
+          },
+          {
+            "to": "/workplace",
+            "label": "Branch workplace",
+            "icon": "building"
+          },
+          {
+            "to": "/performance",
+            "label": "Performance",
+            "icon": "trend"
+          }
+        ]
+      },
+      {
+        "key": "exceptions",
+        "title": "Process exceptions",
+        "items": [
+          {
+            "to": "/reconciliation",
+            "label": "Exceptions queue",
+            "icon": "alert"
+          }
+        ]
+      },
+      {
+        "key": "workers",
+        "title": "Workers (branch)",
+        "items": [
+          {
+            "to": "/people",
+            "label": "Worker directory",
+            "icon": "users"
+          }
+        ]
+      },
+      {
+        "key": "approvals",
+        "title": "Approvals",
+        "items": [
+          {
+            "to": "/approvals",
+            "label": "Approval inbox",
+            "icon": "approvals"
+          }
+        ]
+      },
+      {
+        "key": "reports",
+        "title": "Reports",
+        "items": [
+          {
+            "to": "/reports",
+            "label": "Report library",
+            "icon": "reports"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "key": "head_office_administrator",
+    "label": "Administration hub",
+    "purpose": "Executes the company's configuration day to day: profile, branding, roles, branches.",
+    "workplace": "all",
+    "blocks": [
+      {
+        "label": "Roles enabled",
+        "metric": "roles_enabled"
+      },
+      {
+        "label": "Branches",
+        "metric": "branches"
+      },
+      {
+        "label": "Workers",
+        "metric": "workers"
+      },
+      {
+        "label": "Notifications",
+        "metric": "unread"
+      }
+    ],
+    "groups": [
+      {
+        "key": "company",
+        "title": "Company",
+        "items": [
+          {
+            "to": "/control",
+            "label": "Company profile & branding",
+            "icon": "settings"
+          },
+          {
+            "to": "/control",
+            "label": "Roles",
+            "icon": "key"
+          }
+        ]
+      },
+      {
+        "key": "branches",
+        "title": "Branches",
+        "items": [
+          {
+            "to": "/branches",
+            "label": "Branch registry",
+            "icon": "branch"
+          }
+        ]
+      },
+      {
+        "key": "workers",
+        "title": "Workers",
+        "items": [
+          {
+            "to": "/people",
+            "label": "Workers (view)",
+            "icon": "users"
+          }
+        ]
+      },
+      {
+        "key": "providers",
+        "title": "Providers (view)",
+        "items": [
+          {
+            "to": "/providers",
+            "label": "Payment providers",
+            "icon": "provider"
+          }
+        ]
+      },
+      {
+        "key": "reports",
+        "title": "Reports",
+        "items": [
+          {
+            "to": "/reports",
+            "label": "Report library",
+            "icon": "reports"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "key": "finance_manager",
+    "label": "Finance hub",
+    "purpose": "The truth of money: reconciliation, exceptions, reversals, settlements, statements.",
+    "workplace": "all",
+    "blocks": [
+      {
+        "label": "Unallocated payments",
+        "metric": "unallocated"
+      },
+      {
+        "label": "Unmatched items",
+        "metric": "unmatched"
+      },
+      {
+        "label": "Collected today",
+        "metric": "collections_today"
+      },
+      {
+        "label": "Exceptions open",
+        "metric": "exceptions"
+      }
+    ],
+    "groups": [
+      {
+        "key": "reconciliation",
+        "title": "Reconciliation",
+        "items": [
+          {
+            "to": "/reconciliation",
+            "label": "Settlement matching",
+            "icon": "clipboard"
+          },
+          {
+            "to": "/money",
+            "label": "Cash book",
+            "icon": "money"
+          }
+        ]
+      },
+      {
+        "key": "exceptions",
+        "title": "Exceptions",
+        "items": [
+          {
+            "to": "/reconciliation",
+            "label": "Exceptions queue",
+            "icon": "alert"
+          },
+          {
+            "to": "/technical",
+            "label": "Webhook exceptions",
+            "icon": "activity"
+          }
+        ]
+      },
+      {
+        "key": "reversals",
+        "title": "Reversals",
+        "items": [
+          {
+            "to": "/reconciliation",
+            "label": "Corrections & reversals",
+            "icon": "receipt"
+          }
+        ]
+      },
+      {
+        "key": "settlements",
+        "title": "Settlements",
+        "items": [
+          {
+            "to": "/money",
+            "label": "Settlement view",
+            "icon": "wallet"
+          },
+          {
+            "to": "/providers",
+            "label": "Provider status",
+            "icon": "provider"
+          }
+        ]
+      },
+      {
+        "key": "statements",
+        "title": "Statements",
+        "items": [
+          {
+            "to": "/money",
+            "label": "Statements & ledger",
+            "icon": "file"
+          },
+          {
+            "to": "/reports",
+            "label": "Reports",
+            "icon": "reports"
+          }
+        ]
+      },
+      {
+        "key": "providers",
+        "title": "Provider status",
+        "items": [
+          {
+            "to": "/providers",
+            "label": "Payment providers",
+            "icon": "provider"
+          }
+        ]
+      },
+      {
+        "key": "reports",
+        "title": "Reports",
+        "items": [
+          {
+            "to": "/reports",
+            "label": "Report library",
+            "icon": "reports"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "key": "accountant",
+    "label": "Accounting hub",
+    "purpose": "Postings, statements and schedules from the verified data.",
+    "workplace": "all",
+    "blocks": [
+      {
+        "label": "Trial balance",
+        "metric": "trial_balance"
+      },
+      {
+        "label": "Cash position",
+        "metric": "cash_position"
+      },
+      {
+        "label": "Collected today",
+        "metric": "collections_today"
+      },
+      {
+        "label": "Notifications",
+        "metric": "unread"
+      }
+    ],
+    "groups": [
+      {
+        "key": "ledger",
+        "title": "Ledger",
+        "items": [
+          {
+            "to": "/money",
+            "label": "General ledger",
+            "icon": "money"
+          },
+          {
+            "to": "/money",
+            "label": "Trial balance",
+            "icon": "clipboard"
+          }
+        ]
+      },
+      {
+        "key": "schedules",
+        "title": "Schedules",
+        "items": [
+          {
+            "to": "/money",
+            "label": "Cash flow & schedules",
+            "icon": "trend"
+          }
+        ]
+      },
+      {
+        "key": "statements",
+        "title": "Statements",
+        "items": [
+          {
+            "to": "/money",
+            "label": "Income statement & position",
+            "icon": "file"
+          },
+          {
+            "to": "/reports",
+            "label": "Reports",
+            "icon": "reports"
+          }
+        ]
+      },
+      {
+        "key": "reconciliation",
+        "title": "Reconciliation (assist)",
+        "items": [
+          {
+            "to": "/reconciliation",
+            "label": "Reconciliation view",
+            "icon": "clipboard"
+          }
+        ]
+      },
+      {
+        "key": "reports",
+        "title": "Reports",
+        "items": [
+          {
+            "to": "/reports",
+            "label": "Report library",
+            "icon": "reports"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "key": "assistant_accountant",
+    "label": "Accounting hub (reduced)",
+    "purpose": "Accounting support: prepare schedules, view the ledger, assist reconciliation.",
+    "workplace": "all",
+    "blocks": [
+      {
+        "label": "Trial balance",
+        "metric": "trial_balance"
+      },
+      {
+        "label": "Cash position",
+        "metric": "cash_position"
+      },
+      {
+        "label": "Notifications",
+        "metric": "unread"
+      }
+    ],
+    "groups": [
+      {
+        "key": "ledger",
+        "title": "Ledger (view)",
+        "items": [
+          {
+            "to": "/money",
+            "label": "General ledger",
+            "icon": "money"
+          }
+        ]
+      },
+      {
+        "key": "schedules",
+        "title": "Schedules",
+        "items": [
+          {
+            "to": "/money",
+            "label": "Cash flow & schedules",
+            "icon": "trend"
+          }
+        ]
+      },
+      {
+        "key": "statements",
+        "title": "Statements (assist)",
+        "items": [
+          {
+            "to": "/money",
+            "label": "Statements",
+            "icon": "file"
+          }
+        ]
+      },
+      {
+        "key": "reconciliation",
+        "title": "Reconciliation (assist)",
+        "items": [
+          {
+            "to": "/reconciliation",
+            "label": "Reconciliation view",
+            "icon": "clipboard"
+          }
+        ]
+      },
+      {
+        "key": "reports",
+        "title": "Reports",
+        "items": [
+          {
+            "to": "/reports",
+            "label": "Report library",
+            "icon": "reports"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "key": "cash_bank_reconciliation_officer",
+    "label": "Reconciliation hub",
+    "purpose": "Matches provider settlements to internal records and triages exceptions before Finance sees them.",
+    "workplace": "all",
+    "blocks": [
+      {
+        "label": "Unmatched settlements",
+        "metric": "unmatched"
+      },
+      {
+        "label": "Unallocated",
+        "metric": "unallocated"
+      },
+      {
+        "label": "Exceptions open",
+        "metric": "exceptions"
+      },
+      {
+        "label": "Collected today",
+        "metric": "collections_today"
+      }
+    ],
+    "groups": [
+      {
+        "key": "matching",
+        "title": "Settlement matching",
+        "items": [
+          {
+            "to": "/reconciliation",
+            "label": "Matching queue",
+            "icon": "clipboard"
+          }
+        ]
+      },
+      {
+        "key": "exceptions",
+        "title": "Exceptions",
+        "items": [
+          {
+            "to": "/reconciliation",
+            "label": "Exceptions queue",
+            "icon": "alert"
+          }
+        ]
+      },
+      {
+        "key": "statements",
+        "title": "Provider statements",
+        "items": [
+          {
+            "to": "/providers",
+            "label": "Provider statements",
+            "icon": "file"
+          },
+          {
+            "to": "/money",
+            "label": "Cash book",
+            "icon": "money"
+          }
+        ]
+      },
+      {
+        "key": "reports",
+        "title": "Reports",
+        "items": [
+          {
+            "to": "/reports",
+            "label": "Reconciliation reports",
+            "icon": "reports"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "key": "hr_manager",
+    "label": "HR hub",
+    "purpose": "Owns the workforce: who is here, how they perform, what happens to their seats.",
+    "workplace": "all",
+    "blocks": [
+      {
+        "label": "Workers",
+        "metric": "workers"
+      },
+      {
+        "label": "Active today",
+        "metric": "workers_active_today"
+      },
+      {
+        "label": "Role assignments open",
+        "metric": "assignments_open"
+      },
+      {
+        "label": "Branches",
+        "metric": "branches"
+      }
+    ],
+    "groups": [
+      {
+        "key": "people",
+        "title": "People",
+        "items": [
+          {
+            "to": "/people",
+            "label": "Worker directory",
+            "icon": "users"
+          },
+          {
+            "to": "/people",
+            "label": "Create worker",
+            "icon": "plus"
+          },
+          {
+            "to": "/people",
+            "label": "Account controls",
+            "icon": "lock"
+          }
+        ]
+      },
+      {
+        "key": "assignments",
+        "title": "Role assignments",
+        "items": [
+          {
+            "to": "/people",
+            "label": "Assignments",
+            "icon": "layers"
+          },
+          {
+            "to": "/control",
+            "label": "Role catalogue",
+            "icon": "key"
+          }
+        ]
+      },
+      {
+        "key": "performance",
+        "title": "Worker performance",
+        "items": [
+          {
+            "to": "/performance",
+            "label": "Staff performance",
+            "icon": "trend"
+          }
+        ]
+      },
+      {
+        "key": "organisation",
+        "title": "Organisation performance",
+        "items": [
+          {
+            "to": "/performance",
+            "label": "Company & branch performance",
+            "icon": "trend"
+          },
+          {
+            "to": "/reports",
+            "label": "Reports",
+            "icon": "reports"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "key": "hr_officer",
+    "label": "HR hub (reduced)",
+    "purpose": "HR operations under the HR Manager: records, attendance and performance views.",
+    "workplace": "all",
+    "blocks": [
+      {
+        "label": "Workers",
+        "metric": "workers"
+      },
+      {
+        "label": "Active today",
+        "metric": "workers_active_today"
+      },
+      {
+        "label": "Notifications",
+        "metric": "unread"
+      }
+    ],
+    "groups": [
+      {
+        "key": "people",
+        "title": "People",
+        "items": [
+          {
+            "to": "/people",
+            "label": "Worker directory",
+            "icon": "users"
+          },
+          {
+            "to": "/people",
+            "label": "Create worker (where granted)",
+            "icon": "plus"
+          }
+        ]
+      },
+      {
+        "key": "records",
+        "title": "Records",
+        "items": [
+          {
+            "to": "/people",
+            "label": "Worker records",
+            "icon": "file"
+          }
+        ]
+      },
+      {
+        "key": "performance",
+        "title": "Worker performance (view)",
+        "items": [
+          {
+            "to": "/performance",
+            "label": "Staff performance",
+            "icon": "trend"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "key": "internal_auditor",
+    "label": "Audit hub",
+    "purpose": "Independent, unlimited, read-only assurance over everything.",
+    "workplace": "all",
+    "blocks": [
+      {
+        "label": "Audit events (24h)",
+        "metric": "audit_events"
+      },
+      {
+        "label": "Open exceptions",
+        "metric": "exceptions"
+      },
+      {
+        "label": "Branches in scope",
+        "metric": "branches"
+      },
+      {
+        "label": "Findings open",
+        "metric": "findings"
+      }
+    ],
+    "groups": [
+      {
+        "key": "performance",
+        "title": "Performance",
+        "items": [
+          {
+            "to": "/performance",
+            "label": "Company performance",
+            "icon": "trend"
+          },
+          {
+            "to": "/reports",
+            "label": "Branch performance",
+            "icon": "branch"
+          }
+        ]
+      },
+      {
+        "key": "explorers",
+        "title": "Explorers",
+        "items": [
+          {
+            "to": "/customers",
+            "label": "Customer explorer",
+            "icon": "customers"
+          },
+          {
+            "to": "/credit",
+            "label": "Loan explorer",
+            "icon": "credit"
+          },
+          {
+            "to": "/reconciliation",
+            "label": "Payment explorer",
+            "icon": "money"
+          }
+        ]
+      },
+      {
+        "key": "exceptions",
+        "title": "Exception explorer",
+        "items": [
+          {
+            "to": "/reconciliation",
+            "label": "Exceptions & reversals",
+            "icon": "alert"
+          },
+          {
+            "to": "/technical",
+            "label": "Webhook exceptions",
+            "icon": "activity"
+          }
+        ]
+      },
+      {
+        "key": "trail",
+        "title": "Audit trail",
+        "items": [
+          {
+            "to": "/audit",
+            "label": "Audit trail",
+            "icon": "audit"
+          },
+          {
+            "to": "/trace",
+            "label": "Traceability chain",
+            "icon": "layers"
+          }
+        ]
+      },
+      {
+        "key": "findings",
+        "title": "Findings",
+        "items": [
+          {
+            "to": "/capability/findings",
+            "label": "Findings & annotations",
+            "icon": "clipboard"
+          }
+        ]
+      },
+      {
+        "key": "reports",
+        "title": "Reports",
+        "items": [
+          {
+            "to": "/reports",
+            "label": "Report library",
+            "icon": "reports"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "key": "audit_officer",
+    "label": "Audit hub (reduced)",
+    "purpose": "Audit fieldwork: reads everything, drafts findings for the Internal Auditor.",
+    "workplace": "all",
+    "blocks": [
+      {
+        "label": "Audit events (24h)",
+        "metric": "audit_events"
+      },
+      {
+        "label": "Open exceptions",
+        "metric": "exceptions"
+      },
+      {
+        "label": "Notifications",
+        "metric": "unread"
+      }
+    ],
+    "groups": [
+      {
+        "key": "performance",
+        "title": "Performance",
+        "items": [
+          {
+            "to": "/performance",
+            "label": "Performance views",
+            "icon": "trend"
+          }
+        ]
+      },
+      {
+        "key": "explorers",
+        "title": "Explorers",
+        "items": [
+          {
+            "to": "/customers",
+            "label": "Customer explorer",
+            "icon": "customers"
+          },
+          {
+            "to": "/credit",
+            "label": "Loan explorer",
+            "icon": "credit"
+          },
+          {
+            "to": "/reconciliation",
+            "label": "Payment explorer",
+            "icon": "money"
+          }
+        ]
+      },
+      {
+        "key": "trail",
+        "title": "Audit trail",
+        "items": [
+          {
+            "to": "/audit",
+            "label": "Audit trail",
+            "icon": "audit"
+          }
+        ]
+      },
+      {
+        "key": "findings",
+        "title": "Findings (draft)",
+        "items": [
+          {
+            "to": "/capability/findings",
+            "label": "Draft findings",
+            "icon": "clipboard"
+          }
+        ]
+      },
+      {
+        "key": "reports",
+        "title": "Reports",
+        "items": [
+          {
+            "to": "/reports",
+            "label": "Report library",
+            "icon": "reports"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "key": "compliance_officer",
+    "label": "Compliance hub",
+    "purpose": "Regulatory and policy compliance oversight with remediation demands.",
+    "workplace": "all",
+    "blocks": [
+      {
+        "label": "Findings open",
+        "metric": "findings"
+      },
+      {
+        "label": "Branches in scope",
+        "metric": "branches"
+      },
+      {
+        "label": "Audit events (24h)",
+        "metric": "audit_events"
+      },
+      {
+        "label": "Notifications",
+        "metric": "unread"
+      }
+    ],
+    "groups": [
+      {
+        "key": "policy",
+        "title": "Policy",
+        "items": [
+          {
+            "to": "/capability/policy_checklist",
+            "label": "Policy checklist",
+            "icon": "file"
+          }
+        ]
+      },
+      {
+        "key": "findings",
+        "title": "Compliance findings",
+        "items": [
+          {
+            "to": "/capability/findings",
+            "label": "Findings & remediation",
+            "icon": "clipboard"
+          }
+        ]
+      },
+      {
+        "key": "branches",
+        "title": "Branch compliance",
+        "items": [
+          {
+            "to": "/branches",
+            "label": "Branch compliance view",
+            "icon": "branch"
+          },
+          {
+            "to": "/performance",
+            "label": "Branch performance",
+            "icon": "trend"
+          }
+        ]
+      },
+      {
+        "key": "conduct",
+        "title": "Worker conduct",
+        "items": [
+          {
+            "to": "/people",
+            "label": "Worker records",
+            "icon": "users"
+          }
+        ]
+      },
+      {
+        "key": "trail",
+        "title": "Audit trail (read)",
+        "items": [
+          {
+            "to": "/audit",
+            "label": "Audit trail",
+            "icon": "audit"
+          }
+        ]
+      },
+      {
+        "key": "reports",
+        "title": "Reports",
+        "items": [
+          {
+            "to": "/reports",
+            "label": "Report library",
+            "icon": "reports"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "key": "risk_officer",
+    "label": "Risk hub",
+    "purpose": "Portfolio risk and control gaps.",
+    "workplace": "all",
+    "blocks": [
+      {
+        "label": "Portfolio at risk",
+        "metric": "portfolio_at_risk"
+      },
+      {
+        "label": "Outstanding portfolio",
+        "metric": "portfolio"
+      },
+      {
+        "label": "Branches in scope",
+        "metric": "branches"
+      },
+      {
+        "label": "Findings open",
+        "metric": "findings"
+      }
+    ],
+    "groups": [
+      {
+        "key": "portfolio",
+        "title": "Portfolio",
+        "items": [
+          {
+            "to": "/reports",
+            "label": "Portfolio at risk",
+            "icon": "trend"
+          },
+          {
+            "to": "/credit",
+            "label": "Loan explorer",
+            "icon": "credit"
+          }
+        ]
+      },
+      {
+        "key": "concentration",
+        "title": "Concentration",
+        "items": [
+          {
+            "to": "/reports",
+            "label": "Concentration views",
+            "icon": "reports"
+          },
+          {
+            "to": "/branches",
+            "label": "Branch risk ranking",
+            "icon": "branch"
+          }
+        ]
+      },
+      {
+        "key": "signals",
+        "title": "Worker risk signals",
+        "items": [
+          {
+            "to": "/performance",
+            "label": "Worker performance",
+            "icon": "users"
+          }
+        ]
+      },
+      {
+        "key": "gaps",
+        "title": "Control gaps",
+        "items": [
+          {
+            "to": "/capability/findings",
+            "label": "Risk findings",
+            "icon": "clipboard"
+          }
+        ]
+      },
+      {
+        "key": "reports",
+        "title": "Reports",
+        "items": [
+          {
+            "to": "/reports",
+            "label": "Report library",
+            "icon": "reports"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "key": "credit_manager",
+    "label": "Credit hub",
+    "purpose": "Credit policy, credit decisions and the credit stages of the approval chain.",
+    "workplace": "all",
+    "blocks": [
+      {
+        "label": "Applications pending",
+        "metric": "applications_pending"
+      },
+      {
+        "label": "Awaiting my decision",
+        "metric": "pending_approvals"
+      },
+      {
+        "label": "Disbursed this month",
+        "metric": "disbursed_month"
+      },
+      {
+        "label": "Portfolio at risk",
+        "metric": "portfolio_at_risk"
+      }
+    ],
+    "groups": [
+      {
+        "key": "applications",
+        "title": "Applications",
+        "items": [
+          {
+            "to": "/credit",
+            "label": "Application queue",
+            "icon": "credit"
+          },
+          {
+            "to": "/approvals",
+            "label": "My approvals",
+            "icon": "approvals"
+          }
+        ]
+      },
+      {
+        "key": "assessment",
+        "title": "Credit assessment",
+        "items": [
+          {
+            "to": "/credit",
+            "label": "Assessments",
+            "icon": "file"
+          }
+        ]
+      },
+      {
+        "key": "catalogue",
+        "title": "Products and chains",
+        "items": [
+          {
+            "to": "/control",
+            "label": "Loan products & chains",
+            "icon": "layers"
+          }
+        ]
+      },
+      {
+        "key": "quality",
+        "title": "Portfolio quality",
+        "items": [
+          {
+            "to": "/reports",
+            "label": "Portfolio quality",
+            "icon": "trend"
+          }
+        ]
+      },
+      {
+        "key": "disbursement",
+        "title": "Disbursement register",
+        "items": [
+          {
+            "to": "/credit",
+            "label": "Disbursement register",
+            "icon": "wallet"
+          }
+        ]
+      },
+      {
+        "key": "reports",
+        "title": "Reports",
+        "items": [
+          {
+            "to": "/reports",
+            "label": "Report library",
+            "icon": "reports"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "key": "credit_officer",
+    "label": "Credit hub (reduced)",
+    "purpose": "Credit assessment under the Credit Manager: assigned applications and decisions with reasons.",
+    "workplace": "all",
+    "blocks": [
+      {
+        "label": "Assigned applications",
+        "metric": "applications_pending"
+      },
+      {
+        "label": "Awaiting my decision",
+        "metric": "pending_approvals"
+      },
+      {
+        "label": "Notifications",
+        "metric": "unread"
+      }
+    ],
+    "groups": [
+      {
+        "key": "applications",
+        "title": "Assigned applications",
+        "items": [
+          {
+            "to": "/credit",
+            "label": "My application queue",
+            "icon": "credit"
+          },
+          {
+            "to": "/approvals",
+            "label": "My approvals",
+            "icon": "approvals"
+          }
+        ]
+      },
+      {
+        "key": "assessment",
+        "title": "Assessment",
+        "items": [
+          {
+            "to": "/credit",
+            "label": "Assessment forms",
+            "icon": "file"
+          }
+        ]
+      },
+      {
+        "key": "detail",
+        "title": "Customer & loan detail",
+        "items": [
+          {
+            "to": "/customers",
+            "label": "Customers",
+            "icon": "customers"
+          }
+        ]
+      },
+      {
+        "key": "reports",
+        "title": "Reports",
+        "items": [
+          {
+            "to": "/reports",
+            "label": "Reports",
+            "icon": "reports"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "key": "customer_service_manager",
+    "label": "Service hub",
+    "purpose": "Customer service operations and escalations.",
+    "workplace": "all",
+    "blocks": [
+      {
+        "label": "Customers",
+        "metric": "customers"
+      },
+      {
+        "label": "Corrections open",
+        "metric": "exceptions"
+      },
+      {
+        "label": "Branches",
+        "metric": "branches"
+      },
+      {
+        "label": "Notifications",
+        "metric": "unread"
+      }
+    ],
+    "groups": [
+      {
+        "key": "lookup",
+        "title": "Customer lookup",
+        "items": [
+          {
+            "to": "/customers",
+            "label": "Customer directory",
+            "icon": "customers"
+          }
+        ]
+      },
+      {
+        "key": "tickets",
+        "title": "Queries and tickets",
+        "items": [
+          {
+            "to": "/capability/tickets",
+            "label": "Tickets",
+            "icon": "message"
+          }
+        ]
+      },
+      {
+        "key": "escalations",
+        "title": "Escalations",
+        "items": [
+          {
+            "to": "/recovery",
+            "label": "Escalations",
+            "icon": "alert"
+          }
+        ]
+      },
+      {
+        "key": "refunds",
+        "title": "Refund requests (raise)",
+        "items": [
+          {
+            "to": "/service",
+            "label": "Raise correction",
+            "icon": "receipt"
+          }
+        ]
+      },
+      {
+        "key": "reports",
+        "title": "Reports",
+        "items": [
+          {
+            "to": "/reports",
+            "label": "Reports",
+            "icon": "reports"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "key": "customer_service_officer",
+    "label": "Service hub (reduced)",
+    "purpose": "Customer queries and record support within scope.",
+    "workplace": "own",
+    "blocks": [
+      {
+        "label": "My branch customers",
+        "metric": "customers"
+      },
+      {
+        "label": "Corrections open",
+        "metric": "exceptions"
+      },
+      {
+        "label": "Notifications",
+        "metric": "unread"
+      }
+    ],
+    "groups": [
+      {
+        "key": "lookup",
+        "title": "Customer lookup",
+        "items": [
+          {
+            "to": "/customers",
+            "label": "Customer directory",
+            "icon": "customers"
+          }
+        ]
+      },
+      {
+        "key": "tickets",
+        "title": "Own queue",
+        "items": [
+          {
+            "to": "/capability/tickets",
+            "label": "Tickets",
+            "icon": "message"
+          }
+        ]
+      },
+      {
+        "key": "records",
+        "title": "Profile updates",
+        "items": [
+          {
+            "to": "/customers",
+            "label": "Permitted fields",
+            "icon": "edit"
+          }
+        ]
+      },
+      {
+        "key": "reports",
+        "title": "Reports (own)",
+        "items": [
+          {
+            "to": "/reports",
+            "label": "Reports",
+            "icon": "reports"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "key": "mis_reporting_officer",
+    "label": "Reporting hub",
+    "purpose": "Pure reporting: build, run, schedule, export.",
+    "workplace": "all",
+    "blocks": [
+      {
+        "label": "Reports available",
+        "metric": "reports_available"
+      },
+      {
+        "label": "Branches in reports",
+        "metric": "branches"
+      },
+      {
+        "label": "Audit events (24h)",
+        "metric": "audit_events"
+      },
+      {
+        "label": "Notifications",
+        "metric": "unread"
+      }
+    ],
+    "groups": [
+      {
+        "key": "library",
+        "title": "Report library",
+        "items": [
+          {
+            "to": "/reports",
+            "label": "Run a report",
+            "icon": "reports"
+          }
+        ]
+      },
+      {
+        "key": "builder",
+        "title": "Report builder",
+        "items": [
+          {
+            "to": "/capability/report_builder",
+            "label": "Builder",
+            "icon": "edit"
+          }
+        ]
+      },
+      {
+        "key": "scheduled",
+        "title": "Scheduled reports",
+        "items": [
+          {
+            "to": "/capability/scheduled_reports",
+            "label": "Schedules",
+            "icon": "calendar"
+          }
+        ]
+      },
+      {
+        "key": "performance",
+        "title": "Performance views (read)",
+        "items": [
+          {
+            "to": "/performance",
+            "label": "Performance",
+            "icon": "trend"
+          }
+        ]
+      },
+      {
+        "key": "trail",
+        "title": "Audit trail (metadata)",
+        "items": [
+          {
+            "to": "/audit",
+            "label": "Audit trail",
+            "icon": "audit"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "key": "it_system_administrator",
+    "label": "Technical hub",
+    "purpose": "Technical health of the tenant: providers, integrations, webhooks, sessions.",
+    "workplace": "all",
+    "blocks": [
+      {
+        "label": "Webhook exceptions",
+        "metric": "exceptions"
+      },
+      {
+        "label": "Providers configured",
+        "metric": "providers"
+      },
+      {
+        "label": "Notifications",
+        "metric": "unread"
+      },
+      {
+        "label": "Audit events (24h)",
+        "metric": "audit_events"
+      }
+    ],
+    "groups": [
+      {
+        "key": "providers",
+        "title": "Provider health",
+        "items": [
+          {
+            "to": "/providers",
+            "label": "Providers",
+            "icon": "provider"
+          },
+          {
+            "to": "/technical",
+            "label": "Health checks",
+            "icon": "activity"
+          }
+        ]
+      },
+      {
+        "key": "webhooks",
+        "title": "Webhook exceptions",
+        "items": [
+          {
+            "to": "/technical",
+            "label": "Webhook queue",
+            "icon": "alert"
+          }
+        ]
+      },
+      {
+        "key": "integrations",
+        "title": "Integration settings",
+        "items": [
+          {
+            "to": "/technical",
+            "label": "Integration settings",
+            "icon": "settings"
+          }
+        ]
+      },
+      {
+        "key": "logs",
+        "title": "System logs",
+        "items": [
+          {
+            "to": "/capability/system_logs",
+            "label": "System logs",
+            "icon": "file"
+          },
+          {
+            "to": "/audit",
+            "label": "Technical audit",
+            "icon": "audit"
+          }
+        ]
+      },
+      {
+        "key": "sessions",
+        "title": "Sessions",
+        "items": [
+          {
+            "to": "/capability/sessions",
+            "label": "Active sessions",
+            "icon": "lock"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "key": "branch_manager",
+    "label": "Branch hub",
+    "purpose": "Runs one branch: its customers, collections, workers and day-to-day discipline.",
+    "workplace": "own",
+    "blocks": [
+      {
+        "label": "Collected today",
+        "metric": "collections_today"
+      },
+      {
+        "label": "Expected today",
+        "metric": "expected_today"
+      },
+      {
+        "label": "My customers",
+        "metric": "customers"
+      },
+      {
+        "label": "Pending approvals",
+        "metric": "pending_approvals"
+      }
+    ],
+    "groups": [
+      {
+        "key": "dashboard",
+        "title": "Branch dashboard",
+        "items": [
+          {
+            "to": "/",
+            "label": "Branch command",
+            "icon": "dashboard"
+          },
+          {
+            "to": "/performance",
+            "label": "My branch money",
+            "icon": "money"
+          }
+        ]
+      },
+      {
+        "key": "workers",
+        "title": "My workers",
+        "items": [
+          {
+            "to": "/people",
+            "label": "Branch workers",
+            "icon": "users"
+          }
+        ]
+      },
+      {
+        "key": "groups",
+        "title": "Groups",
+        "items": [
+          {
+            "to": "/groups",
+            "label": "Branch groups",
+            "icon": "people"
+          }
+        ]
+      },
+      {
+        "key": "customers",
+        "title": "Customers",
+        "items": [
+          {
+            "to": "/customers",
+            "label": "Branch customers",
+            "icon": "customers"
+          }
+        ]
+      },
+      {
+        "key": "loans",
+        "title": "Loans and applications",
+        "items": [
+          {
+            "to": "/credit",
+            "label": "Applications",
+            "icon": "credit"
+          },
+          {
+            "to": "/approvals",
+            "label": "Approvals",
+            "icon": "approvals"
+          }
+        ]
+      },
+      {
+        "key": "collections",
+        "title": "Collections ledger",
+        "items": [
+          {
+            "to": "/reconciliation",
+            "label": "Collections ledger",
+            "icon": "clipboard"
+          },
+          {
+            "to": "/field",
+            "label": "Awaiting allocation",
+            "icon": "wallet"
+          }
+        ]
+      },
+      {
+        "key": "reports",
+        "title": "Reports",
+        "items": [
+          {
+            "to": "/reports",
+            "label": "Branch reports",
+            "icon": "reports"
+          }
+        ]
+      },
+      {
+        "key": "notifications",
+        "title": "Notifications",
+        "items": [
+          {
+            "to": "/notifications",
+            "label": "Notifications",
+            "icon": "bell"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "key": "deputy_branch_manager",
+    "label": "Branch hub (delegated)",
+    "purpose": "Branch coverage and delegated branch duties within company limits.",
+    "workplace": "own",
+    "blocks": [
+      {
+        "label": "Collected today",
+        "metric": "collections_today"
+      },
+      {
+        "label": "Expected today",
+        "metric": "expected_today"
+      },
+      {
+        "label": "My customers",
+        "metric": "customers"
+      },
+      {
+        "label": "Pending approvals",
+        "metric": "pending_approvals"
+      }
+    ],
+    "groups": [
+      {
+        "key": "dashboard",
+        "title": "Branch dashboard",
+        "items": [
+          {
+            "to": "/",
+            "label": "Branch command",
+            "icon": "dashboard"
+          },
+          {
+            "to": "/performance",
+            "label": "My branch money",
+            "icon": "money"
+          }
+        ]
+      },
+      {
+        "key": "workers",
+        "title": "Worker supervision",
+        "items": [
+          {
+            "to": "/people",
+            "label": "Branch workers",
+            "icon": "users"
+          }
+        ]
+      },
+      {
+        "key": "groups",
+        "title": "Group management",
+        "items": [
+          {
+            "to": "/groups",
+            "label": "Branch groups",
+            "icon": "people"
+          }
+        ]
+      },
+      {
+        "key": "customers",
+        "title": "Customers",
+        "items": [
+          {
+            "to": "/customers",
+            "label": "Branch customers",
+            "icon": "customers"
+          }
+        ]
+      },
+      {
+        "key": "loans",
+        "title": "Loans and applications",
+        "items": [
+          {
+            "to": "/credit",
+            "label": "Applications",
+            "icon": "credit"
+          },
+          {
+            "to": "/approvals",
+            "label": "Approvals",
+            "icon": "approvals"
+          }
+        ]
+      },
+      {
+        "key": "reports",
+        "title": "Reports",
+        "items": [
+          {
+            "to": "/reports",
+            "label": "Branch reports",
+            "icon": "reports"
+          }
+        ]
+      },
+      {
+        "key": "notifications",
+        "title": "Notifications",
+        "items": [
+          {
+            "to": "/notifications",
+            "label": "Notifications",
+            "icon": "bell"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "key": "area_manager",
+    "label": "Area hub",
+    "purpose": "Oversight of a group of branches in a region.",
+    "workplace": "area",
+    "blocks": [
+      {
+        "label": "Branches in area",
+        "metric": "branches"
+      },
+      {
+        "label": "Collected today (area)",
+        "metric": "collections_today"
+      },
+      {
+        "label": "Pending approvals",
+        "metric": "pending_approvals"
+      },
+      {
+        "label": "Workers in area",
+        "metric": "workers"
+      }
+    ],
+    "groups": [
+      {
+        "key": "area",
+        "title": "Area performance",
+        "items": [
+          {
+            "to": "/performance",
+            "label": "Area performance",
+            "icon": "trend"
+          },
+          {
+            "to": "/",
+            "label": "Area command",
+            "icon": "dashboard"
+          }
+        ]
+      },
+      {
+        "key": "branches",
+        "title": "Branches in area",
+        "items": [
+          {
+            "to": "/branches",
+            "label": "My branches",
+            "icon": "branch"
+          },
+          {
+            "to": "/workplace",
+            "label": "Branch workplaces",
+            "icon": "building"
+          }
+        ]
+      },
+      {
+        "key": "workers",
+        "title": "Worker performance in area",
+        "items": [
+          {
+            "to": "/performance",
+            "label": "Staff performance",
+            "icon": "users"
+          }
+        ]
+      },
+      {
+        "key": "approvals",
+        "title": "Approvals",
+        "items": [
+          {
+            "to": "/approvals",
+            "label": "Approval inbox",
+            "icon": "approvals"
+          }
+        ]
+      },
+      {
+        "key": "reports",
+        "title": "Reports",
+        "items": [
+          {
+            "to": "/reports",
+            "label": "Area reports",
+            "icon": "reports"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "key": "collection_officer",
+    "label": "C.O. hub",
+    "purpose": "The field worker: registers customers, submits applications, keeps customers paying, allocates money.",
+    "workplace": "none",
+    "blocks": [
+      {
+        "label": "Expected today",
+        "metric": "expected_today"
+      },
+      {
+        "label": "Realised today",
+        "metric": "collections_today"
+      },
+      {
+        "label": "Collection rate",
+        "metric": "collection_rate"
+      },
+      {
+        "label": "Awaiting allocation",
+        "metric": "unallocated"
+      }
+    ],
+    "groups": [
+      {
+        "key": "today",
+        "title": "Today",
+        "items": [
+          {
+            "to": "/",
+            "label": "Today dashboard",
+            "icon": "dashboard"
+          },
+          {
+            "to": "/performance",
+            "label": "My performance",
+            "icon": "trend"
+          }
+        ]
+      },
+      {
+        "key": "customers",
+        "title": "My Customers",
+        "items": [
+          {
+            "to": "/customers",
+            "label": "My customers",
+            "icon": "customers"
+          }
+        ]
+      },
+      {
+        "key": "groups",
+        "title": "My Groups",
+        "items": [
+          {
+            "to": "/groups",
+            "label": "My groups",
+            "icon": "people"
+          }
+        ]
+      },
+      {
+        "key": "register",
+        "title": "Register Customer",
+        "items": [
+          {
+            "to": "/customers",
+            "label": "Registration form",
+            "icon": "plus"
+          }
+        ]
+      },
+      {
+        "key": "application",
+        "title": "New Loan Application",
+        "items": [
+          {
+            "to": "/credit",
+            "label": "New application",
+            "icon": "credit"
+          }
+        ]
+      },
+      {
+        "key": "ledger",
+        "title": "Collections Ledger",
+        "items": [
+          {
+            "to": "/field",
+            "label": "My ledger",
+            "icon": "clipboard"
+          }
+        ]
+      },
+      {
+        "key": "allocation",
+        "title": "Awaiting Allocation",
+        "items": [
+          {
+            "to": "/field",
+            "label": "Allocation queue",
+            "icon": "wallet"
+          }
+        ]
+      },
+      {
+        "key": "performance",
+        "title": "My Performance",
+        "items": [
+          {
+            "to": "/performance",
+            "label": "Trend & ranking",
+            "icon": "trend"
+          }
+        ]
+      },
+      {
+        "key": "notifications",
+        "title": "Notifications",
+        "items": [
+          {
+            "to": "/notifications",
+            "label": "Notifications",
+            "icon": "bell"
+          }
+        ]
+      },
+      {
+        "key": "support",
+        "title": "Support",
+        "items": [
+          {
+            "to": "/capability/support",
+            "label": "Raise a query",
+            "icon": "message"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "key": "senior_collection_officer",
+    "label": "C.O. hub (senior)",
+    "purpose": "The same field function with light mentoring and escalation over junior officers.",
+    "workplace": "none",
+    "blocks": [
+      {
+        "label": "Expected today",
+        "metric": "expected_today"
+      },
+      {
+        "label": "Realised today",
+        "metric": "collections_today"
+      },
+      {
+        "label": "Team overdue cases",
+        "metric": "exceptions"
+      },
+      {
+        "label": "Awaiting allocation",
+        "metric": "unallocated"
+      }
+    ],
+    "groups": [
+      {
+        "key": "today",
+        "title": "Today",
+        "items": [
+          {
+            "to": "/",
+            "label": "Today dashboard",
+            "icon": "dashboard"
+          },
+          {
+            "to": "/performance",
+            "label": "My performance",
+            "icon": "trend"
+          }
+        ]
+      },
+      {
+        "key": "team",
+        "title": "Team overdue cases",
+        "items": [
+          {
+            "to": "/recovery",
+            "label": "Junior officer overdue",
+            "icon": "alert"
+          }
+        ]
+      },
+      {
+        "key": "customers",
+        "title": "My Customers",
+        "items": [
+          {
+            "to": "/customers",
+            "label": "My customers",
+            "icon": "customers"
+          }
+        ]
+      },
+      {
+        "key": "groups",
+        "title": "My Groups",
+        "items": [
+          {
+            "to": "/groups",
+            "label": "My groups",
+            "icon": "people"
+          }
+        ]
+      },
+      {
+        "key": "register",
+        "title": "Register Customer",
+        "items": [
+          {
+            "to": "/customers",
+            "label": "Registration form",
+            "icon": "plus"
+          }
+        ]
+      },
+      {
+        "key": "application",
+        "title": "New Loan Application",
+        "items": [
+          {
+            "to": "/credit",
+            "label": "New application",
+            "icon": "credit"
+          }
+        ]
+      },
+      {
+        "key": "ledger",
+        "title": "Collections Ledger",
+        "items": [
+          {
+            "to": "/field",
+            "label": "My ledger",
+            "icon": "clipboard"
+          }
+        ]
+      },
+      {
+        "key": "allocation",
+        "title": "Awaiting Allocation",
+        "items": [
+          {
+            "to": "/field",
+            "label": "Allocation queue",
+            "icon": "wallet"
+          }
+        ]
+      },
+      {
+        "key": "notifications",
+        "title": "Notifications",
+        "items": [
+          {
+            "to": "/notifications",
+            "label": "Notifications",
+            "icon": "bell"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "key": "recovery_officer",
+    "label": "Recovery hub",
+    "purpose": "Aged-debt recovery across branches where assigned.",
+    "workplace": "none",
+    "blocks": [
+      {
+        "label": "My overdue cases",
+        "metric": "exceptions"
+      },
+      {
+        "label": "Escalations open",
+        "metric": "escalations"
+      },
+      {
+        "label": "Collected on cases",
+        "metric": "collections_today"
+      },
+      {
+        "label": "Notifications",
+        "metric": "unread"
+      }
+    ],
+    "groups": [
+      {
+        "key": "cases",
+        "title": "My overdue cases",
+        "items": [
+          {
+            "to": "/recovery",
+            "label": "Case list",
+            "icon": "alert"
+          }
+        ]
+      },
+      {
+        "key": "detail",
+        "title": "Case detail",
+        "items": [
+          {
+            "to": "/recovery",
+            "label": "Loans & payments (read)",
+            "icon": "credit"
+          }
+        ]
+      },
+      {
+        "key": "contact",
+        "title": "Contact log",
+        "items": [
+          {
+            "to": "/recovery",
+            "label": "Contact log",
+            "icon": "message"
+          }
+        ]
+      },
+      {
+        "key": "escalations",
+        "title": "Escalations",
+        "items": [
+          {
+            "to": "/recovery",
+            "label": "Escalations",
+            "icon": "trend"
+          }
+        ]
+      },
+      {
+        "key": "performance",
+        "title": "Recovery performance",
+        "items": [
+          {
+            "to": "/performance",
+            "label": "My performance",
+            "icon": "trend"
+          }
+        ]
+      },
+      {
+        "key": "notifications",
+        "title": "Notifications",
+        "items": [
+          {
+            "to": "/notifications",
+            "label": "Notifications",
+            "icon": "bell"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "key": "template_finance_officer",
+    "label": "Finance workspace (custom)",
+    "purpose": "Custom role built from the Finance Officer template: exactly the granted permissions.",
+    "workplace": "all",
+    "blocks": [
+      {
+        "label": "Unallocated",
+        "metric": "unallocated"
+      },
+      {
+        "label": "Collected today",
+        "metric": "collections_today"
+      }
+    ],
+    "groups": [
+      {
+        "key": "money",
+        "title": "Money",
+        "items": [
+          {
+            "to": "/money",
+            "label": "Cash book",
+            "icon": "money"
+          },
+          {
+            "to": "/reconciliation",
+            "label": "Reconciliation",
+            "icon": "clipboard"
+          }
+        ]
+      },
+      {
+        "key": "reports",
+        "title": "Reports",
+        "items": [
+          {
+            "to": "/reports",
+            "label": "Reports",
+            "icon": "reports"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "key": "template_hr_assistant",
+    "label": "HR workspace (custom)",
+    "purpose": "Custom role built from the HR Assistant template.",
+    "workplace": "all",
+    "blocks": [
+      {
+        "label": "Workers",
+        "metric": "workers"
+      },
+      {
+        "label": "Notifications",
+        "metric": "unread"
+      }
+    ],
+    "groups": [
+      {
+        "key": "people",
+        "title": "People",
+        "items": [
+          {
+            "to": "/people",
+            "label": "Worker directory",
+            "icon": "users"
+          }
+        ]
+      },
+      {
+        "key": "performance",
+        "title": "Performance",
+        "items": [
+          {
+            "to": "/performance",
+            "label": "Staff",
+            "icon": "trend"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "key": "template_administrative_officer",
+    "label": "Administration workspace (custom)",
+    "purpose": "Custom role built from the Administrative Officer template.",
+    "workplace": "all",
+    "blocks": [
+      {
+        "label": "Branches",
+        "metric": "branches"
+      },
+      {
+        "label": "Workers",
+        "metric": "workers"
+      }
+    ],
+    "groups": [
+      {
+        "key": "admin",
+        "title": "Administration",
+        "items": [
+          {
+            "to": "/control",
+            "label": "Company control",
+            "icon": "settings"
+          },
+          {
+            "to": "/branches",
+            "label": "Branches",
+            "icon": "branch"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "key": "template_loan_processing_officer",
+    "label": "Loan processing workspace (custom)",
+    "purpose": "Custom role built from the Loan Processing Officer template.",
+    "workplace": "all",
+    "blocks": [
+      {
+        "label": "Applications pending",
+        "metric": "applications_pending"
+      },
+      {
+        "label": "Awaiting approvals",
+        "metric": "pending_approvals"
+      }
+    ],
+    "groups": [
+      {
+        "key": "credit",
+        "title": "Applications",
+        "items": [
+          {
+            "to": "/credit",
+            "label": "Processing queue",
+            "icon": "credit"
+          },
+          {
+            "to": "/approvals",
+            "label": "Approvals",
+            "icon": "approvals"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "key": "template_credit_analyst",
+    "label": "Credit analysis workspace (custom)",
+    "purpose": "Custom role built from the Credit Analyst template.",
+    "workplace": "all",
+    "blocks": [
+      {
+        "label": "Assigned applications",
+        "metric": "applications_pending"
+      },
+      {
+        "label": "Portfolio at risk",
+        "metric": "portfolio_at_risk"
+      }
+    ],
+    "groups": [
+      {
+        "key": "credit",
+        "title": "Credit",
+        "items": [
+          {
+            "to": "/credit",
+            "label": "Applications",
+            "icon": "credit"
+          },
+          {
+            "to": "/reports",
+            "label": "Portfolio",
+            "icon": "reports"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "key": "template_operations_officer",
+    "label": "Operations workspace (custom)",
+    "purpose": "Custom role built from the Operations Officer template.",
+    "workplace": "all",
+    "blocks": [
+      {
+        "label": "Branch performance",
+        "metric": "branch_performance"
+      },
+      {
+        "label": "Workers",
+        "metric": "workers"
+      }
+    ],
+    "groups": [
+      {
+        "key": "ops",
+        "title": "Operations",
+        "items": [
+          {
+            "to": "/performance",
+            "label": "Performance",
+            "icon": "trend"
+          },
+          {
+            "to": "/branches",
+            "label": "Branches",
+            "icon": "branch"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "key": "template_portfolio_manager",
+    "label": "Portfolio workspace (custom)",
+    "purpose": "Custom role built from the Portfolio Manager template.",
+    "workplace": "all",
+    "blocks": [
+      {
+        "label": "Portfolio outstanding",
+        "metric": "portfolio"
+      },
+      {
+        "label": "Portfolio at risk",
+        "metric": "portfolio_at_risk"
+      }
+    ],
+    "groups": [
+      {
+        "key": "portfolio",
+        "title": "Portfolio",
+        "items": [
+          {
+            "to": "/reports",
+            "label": "Portfolio views",
+            "icon": "trend"
+          },
+          {
+            "to": "/credit",
+            "label": "Loans",
+            "icon": "credit"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "key": "template_treasury_officer",
+    "label": "Treasury workspace (custom)",
+    "purpose": "Custom role built from the Treasury Officer template.",
+    "workplace": "all",
+    "blocks": [
+      {
+        "label": "Cash position",
+        "metric": "cash_position"
+      },
+      {
+        "label": "Unallocated",
+        "metric": "unallocated"
+      }
+    ],
+    "groups": [
+      {
+        "key": "treasury",
+        "title": "Treasury",
+        "items": [
+          {
+            "to": "/money",
+            "label": "Cash book",
+            "icon": "money"
+          },
+          {
+            "to": "/reconciliation",
+            "label": "Reconciliation",
+            "icon": "clipboard"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "key": "template_data_reporting_analyst",
+    "label": "Reporting workspace (custom)",
+    "purpose": "Custom role built from the Data/Reporting Analyst template.",
+    "workplace": "all",
+    "blocks": [
+      {
+        "label": "Reports available",
+        "metric": "reports_available"
+      },
+      {
+        "label": "Audit events (24h)",
+        "metric": "audit_events"
+      }
+    ],
+    "groups": [
+      {
+        "key": "reporting",
+        "title": "Reporting",
+        "items": [
+          {
+            "to": "/reports",
+            "label": "Report library",
+            "icon": "reports"
+          },
+          {
+            "to": "/performance",
+            "label": "Performance",
+            "icon": "trend"
+          }
+        ]
+      }
+    ]
+  }
+]

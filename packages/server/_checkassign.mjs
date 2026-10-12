@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 // Applies migrations and reports whether the Collection Officer role now holds
 // the `assign` verb (the F-03 fix), for both the bundle and live companies.
 import { spawnSync } from "node:child_process";

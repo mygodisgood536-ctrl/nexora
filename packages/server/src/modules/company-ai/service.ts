@@ -51,7 +51,7 @@ async function auditQuery(
   answer: Record<string, unknown>,
   citations: Array<Record<string, unknown>>,
   createdAt: Date,
-  meta: CompanyAiMeta
+  _meta: CompanyAiMeta
 ): Promise<void> {
   await db.query(
     `INSERT INTO company_ai_query_log

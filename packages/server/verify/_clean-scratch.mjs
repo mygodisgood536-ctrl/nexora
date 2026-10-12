@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 // Removes ABANDONED scratch databases left by earlier aborted proof runs.
 // Only ever touches names beginning with the scratch prefix - never a real
 // database - and terminates only backends attached to those scratch databases.

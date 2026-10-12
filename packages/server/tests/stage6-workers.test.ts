@@ -214,7 +214,7 @@ describe("stage 6 — workers and role assignments", () => {
     await seedWorld();
     const { token } = await staffLogin(app, ALPHA_HOST, "alice");
     const branchA1 = await getAlphaBranchA1();
-    const branchA2 = await getAlphaBranchA2();
+    await getAlphaBranchA2();
 
     // First, get alice's user ID
     let userId = "";
@@ -410,7 +410,6 @@ describe("stage 6 — active role lens (role switcher)", () => {
       .send({ roleKey: "branch_manager" });
 
     // Refresh token
-    const cookie = `nx_refresh=${token}`; // Not exact, but we test via /auth/me instead
     const meRes = await request(app)
       .get("/api/v1/auth/me")
       .set("Authorization", `Bearer ${token}`);

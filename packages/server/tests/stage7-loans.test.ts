@@ -3,6 +3,7 @@
 // approval decision, disbursement (with active-customer guard).
 import { describe, expect, it } from "vitest";
 import request from "supertest";
+import type { Express } from "express";
 import { seedWorld, withAdmin, withAdminValue } from "./fixtures";
 import { staffLogin, completeProfile, attachVerifiedFaceEvidence, attachVerifiedBankDetails, attachApplicationTerms } from "./platform-helpers";
 
@@ -20,7 +21,7 @@ async function getAlphaBranchA1(): Promise<string> {
   return id;
 }
 
-async function getAlphaCustomerId(app: any, token: string, branchId: string, first: string, last: string): Promise<string> {
+async function getAlphaCustomerId(app: Express, token: string, branchId: string, first: string, last: string): Promise<string> {
   // RULE 9.2.2 — a disbursement needs a complete profile, so the test
   // customer is registered with every required group captured.
   const r = await request(app)
@@ -40,7 +41,7 @@ async function getAlphaCustomerId(app: any, token: string, branchId: string, fir
 interface Seeded { productId: string; chainId: string; customerId: string; }
 
 let seedCounter = 0;
-async function seedLoanWorld(app: any, token: string, nameSuffix = ""): Promise<Seeded> {
+async function seedLoanWorld(app: Express, token: string, nameSuffix = ""): Promise<Seeded> {
   const branchA1 = await getAlphaBranchA1();
   const customerId = await getAlphaCustomerId(app, token, branchA1, `LoanCust${nameSuffix}`, "Tester");
   const actor = await withAdminValue(async (db) => {

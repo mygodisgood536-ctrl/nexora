@@ -333,7 +333,7 @@ export async function getTraceabilityChain(
       [customerId]
     );
     for (const account of accounts.rows) {
-      const accountNode = addNode({
+      addNode({
         type: "virtual_account",
         id: account.id,
         label: `${account.bank_name} ${account.account_number}`,
@@ -353,7 +353,7 @@ export async function getTraceabilityChain(
       [customerId]
     );
     for (const loan of loans.rows) {
-      const loanNode = addNode({
+      addNode({
         type: "loan",
         id: loan.id,
         label: `Loan ${loan.principal_amount}`,
@@ -374,7 +374,7 @@ export async function getTraceabilityChain(
         [loan.id]
       );
       for (const row of schedule.rows) {
-        const scheduleNode = addNode({
+        addNode({
           type: "schedule_row",
           id: row.id,
           label: `Cycle ${row.cycle_number} due ${row.due_date}`,
@@ -401,7 +401,7 @@ export async function getTraceabilityChain(
       [customerId]
     );
     for (const payment of payments.rows) {
-      const paymentNode = addNode({
+      addNode({
         type: "payment",
         id: payment.id,
         label: `${payment.provider} ${payment.provider_txn_ref}`,
@@ -418,7 +418,7 @@ export async function getTraceabilityChain(
         );
         if ((webhook.rowCount ?? 0) > 0) {
           const w = webhook.rows[0]!;
-          const webhookNode = addNode({
+          addNode({
             type: "webhook",
             id: w.id,
             label: `${w.provider} ${w.event_type}`,
@@ -443,7 +443,7 @@ export async function getTraceabilityChain(
         [payment.id]
       );
       for (const allocation of allocations.rows) {
-        const allocationNode = addNode({
+        addNode({
           type: "allocation",
           id: allocation.id,
           label: `Allocation ${allocation.repayment_amount} + ${allocation.savings_amount}`,
@@ -472,7 +472,7 @@ export async function getTraceabilityChain(
         [payment.id]
       );
       for (const entry of journal.rows) {
-        const journalNode = addNode({
+        addNode({
           type: "journal_entry",
           id: entry.id,
           label: entry.description,

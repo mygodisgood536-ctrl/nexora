@@ -45,10 +45,15 @@ export function themeRowToCssVars(row: Record<string, unknown>): Record<string, 
     vars[cssVar] =
       column === "font_family" ? `"${raw.replace(/"/g, "")}"${FONT_STACK_FALLBACK}` : raw;
   }
-  // RULE 13.5.1 — the label colour on the accent is computed, never chosen.
-  const accent = typeof row.primary_color === "string" && HEX_COLOR_RE.test(row.primary_color)
-    ? row.primary_color
-    : DEFAULT_ACCENT;
+  // RULE 13.4.3 / 13.5.1 — the accent is the company's chosen colour (the
+  // stored primary; `accent_color` is the fallback when only it is set) and
+  // the label colour sitting on it is computed, never chosen.
+  const accent =
+    (typeof row.primary_color === "string" && HEX_COLOR_RE.test(row.primary_color)
+      ? row.primary_color
+      : typeof row.accent_color === "string" && HEX_COLOR_RE.test(row.accent_color)
+        ? row.accent_color
+        : DEFAULT_ACCENT);
   vars["--nx-color-accent"] = accent;
   vars["--nx-color-on-primary"] = labelColorFor(accent);
   return vars;

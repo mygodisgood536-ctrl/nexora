@@ -17,12 +17,10 @@
 import { existsSync } from "node:fs";
 import { cp, mkdir, readdir, rm, stat } from "node:fs/promises";
 import { join, resolve } from "node:path";
-import { deriveBackupKeys, decryptFile, sha256File } from "../src/modules/backup/crypto.ts";
+import { deriveBackupKeys, sha256File } from "../src/modules/backup/crypto.ts";
 import { loadPolicy, siteById } from "../src/modules/backup/policy.ts";
 import {
-  addEntry,
   manifestPath,
-  newManifest,
   readManifest,
   writeManifest
 } from "../src/modules/backup/manifest.ts";

@@ -1,6 +1,7 @@
 ﻿// Stage 7B - Group management tests (Part 2 Section 27).
 import { describe, expect, it } from "vitest";
 import request from "supertest";
+import type { Express } from "express";
 import { seedWorld, withAdmin } from "./fixtures";
 import { staffLogin } from "./platform-helpers";
 
@@ -48,7 +49,7 @@ function memberFields(first: string, last: string): Record<string, string> {
   };
 }
 
-async function createCustomerInBranch(app: any, token: string, branchId: string, first: string, last: string): Promise<string> {
+async function createCustomerInBranch(app: Express, token: string, branchId: string, first: string, last: string): Promise<string> {
   const r = await request(app)
     .post("/api/v1/customers")
     .set("Authorization", `Bearer ${token}`)

@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 // Reports the brace/paren balance of a TS file so structural errors can be
 // found precisely instead of guessed at.
 import fs from "node:fs";

@@ -9,6 +9,7 @@ import { setup } from "../tests/global-setup";
 
 setup()
   .then(() => {
+    // eslint-disable-next-line no-console -- probe harness prints its verdict
     console.log("GLOBAL_SETUP_OK");
     process.exit(0);
   })

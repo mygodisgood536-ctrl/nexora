@@ -125,16 +125,29 @@ export async function createGroup(
     );
     if ((b.rowCount ?? 0) === 0) throw AppError.notFound("Branch not found");
 
-    const inserted = await db.query<GroupRow>(
-      `INSERT INTO groups (company_id, branch_id, name, group_number, group_address,
-                            date_created, description, created_by)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
-       RETURNING ${GROUP_SELECT}`,
-      [
-        actor.companyId, input.branchId, input.name.trim(), input.groupNumber.trim(),
-        input.groupAddress.trim(), input.dateCreated, input.description ?? null, actor.sub,
-      ]
-    );
+    // ISS-001 — a re-used group name in the same branch is a predictable user
+    // mistake, not a server fault: translate the unique violation into 409
+    // instead of letting the raw constraint name surface as a 500.
+    let inserted;
+    try {
+      inserted = await db.query<GroupRow>(
+        `INSERT INTO groups (company_id, branch_id, name, group_number, group_address,
+                              date_created, description, created_by)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+         RETURNING ${GROUP_SELECT}`,
+        [
+          actor.companyId, input.branchId, input.name.trim(), input.groupNumber.trim(),
+          input.groupAddress.trim(), input.dateCreated, input.description ?? null, actor.sub,
+        ]
+      );
+    } catch (err) {
+      if ((err as { code?: string }).code === "23505") {
+        throw AppError.conflict(
+          "A group with this name or number already exists in this branch."
+        );
+      }
+      throw err;
+    }
     const group = inserted.rows[0]!;
 
     await auditGroup(

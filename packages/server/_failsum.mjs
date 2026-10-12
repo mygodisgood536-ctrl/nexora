@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 // Summarises a vitest JSON artifact: lists failing suites/tests with the first
 // lines of each assertion message, so a RED verdict can be triaged directly.
 import fs from "node:fs";

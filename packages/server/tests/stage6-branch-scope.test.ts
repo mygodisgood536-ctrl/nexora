@@ -1,11 +1,9 @@
 import { describe, expect, it } from "vitest";
 import request from "supertest";
-import type { Express } from "express";
 import { seedWorld, withAdmin } from "./fixtures";
 import { staffLogin } from "./platform-helpers";
 
 const ALPHA_HOST = "alpha-test.localhost";
-const BETA_HOST = "beta-test.localhost";
 
 describe("stage 6 — branch-scoped session enforcement", () => {
   it("login at branch URL resolves branchId and restricts session to that branch", async () => {
@@ -17,12 +15,10 @@ describe("stage 6 — branch-scoped session enforcement", () => {
 
     // Verify the session is branch-scoped by trying to access data
     // First, get the branch ID
-    let branchA1 = "";
     await withAdmin(async (db) => {
-      const b = await db.query<{ id: string }>(
+      await db.query<{ id: string }>(
         `SELECT id FROM branches WHERE company_id=(SELECT id FROM companies WHERE slug='alpha-test') AND code='ALP-001'`
       );
-      branchA1 = b.rows[0]!.id;
     });
 
     // Try to list workers - should only see workers in branch A1
@@ -116,8 +112,9 @@ describe("stage 6 — branch-scoped session enforcement", () => {
     const app = (await import("../src/app")).createApp();
     await seedWorld();
 
-    // Login at company URL as a Head Office user (alice has company-wide permissions via MD role)
-    const { token } = await staffLogin(app, ALPHA_HOST, "alice");
+    // Login at company URL as a Head Office user with branch rights (RULE
+    // 7.2.1 — alice is a C.O./Branch Manager and is deliberately refused).
+    const { token } = await staffLogin(app, ALPHA_HOST, "amy");
 
     // Should be able to list all branches
     const branchesRes = await request(app)
@@ -127,20 +124,35 @@ describe("stage 6 — branch-scoped session enforcement", () => {
     expect(branchesRes.body.length).toBeGreaterThanOrEqual(2); // ALP-001, ALP-002
   });
 
+  it("RULE 7.2.2 refuses the branch register to a role outside the list", async () => {
+    const app = (await import("../src/app")).createApp();
+    await seedWorld();
+
+    const { token } = await staffLogin(app, ALPHA_HOST, "alice");
+    const res = await request(app)
+      .get("/api/v1/branches")
+      .set("Authorization", `Bearer ${token}`);
+    expect(res.status).toBe(403);
+
+    const create = await request(app)
+      .post("/api/v1/branches")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ name: "Unauthorised Branch", address: "1 Nowhere Rd" });
+    expect(create.status).toBe(403); // RULE 7.4.1 — not a branch-creation role
+  });
+
   it("cross-branch isolation: company A branch session cannot access company B data", async () => {
     const app = (await import("../src/app")).createApp();
     await seedWorld();
 
-    // Login at company A's branch URL
-    const { token: aToken } = await staffLogin(app, "alpha-test-abj.localhost", "alice");
+    // Login at company A's URL as a role that may read the register
+    const { token: aToken } = await staffLogin(app, ALPHA_HOST, "amy");
 
     // Get company B's branch ID
-    let branchB1 = "";
     await withAdmin(async (db) => {
-      const b = await db.query<{ id: string }>(
+      await db.query<{ id: string }>(
         `SELECT id FROM branches WHERE company_id=(SELECT id FROM companies WHERE slug='beta-test') AND code='BTA-001'`
       );
-      branchB1 = b.rows[0]!.id;
     });
 
     // Try to access company B's branch - should fail

@@ -10,7 +10,7 @@ describe("theme token architecture", () => {
     expect(THEME_VAR_MAP.font_family).toBe("--nx-font-family");
   });
 
-  it("passes stored colors through verbatim", () => {
+  it("passes stored colors through verbatim and derives the accent from the primary", () => {
     const vars = themeRowToCssVars({
       primary_color: "#112233",
       secondary_color: "#ffffff",
@@ -20,14 +20,26 @@ describe("theme token architecture", () => {
     expect(vars).toEqual({
       "--nx-color-primary": "#112233",
       "--nx-color-secondary": "#ffffff",
-      "--nx-color-accent": "#f59e0b",
-      "--nx-color-navy": "#0b1f4b"
+      // RULE 13.4.3 — the company's chosen colour drives every accent element.
+      "--nx-color-accent": "#112233",
+      "--nx-color-navy": "#0b1f4b",
+      // RULE 13.5.1 — the label on the accent is computed, never chosen.
+      "--nx-color-on-primary": "#ffffff"
     });
   });
 
-  it("skips null/absent tokens so stylesheet Nexora defaults remain in effect", () => {
+  it("falls back to the stored accent colour when no primary is stored", () => {
+    const vars = themeRowToCssVars({ primary_color: null, accent_color: "#0a7d4b" });
+    expect(vars["--nx-color-accent"]).toBe("#0a7d4b");
+    expect(vars["--nx-color-on-primary"]).toBe("#ffffff");
+    expect(Object.hasOwn(vars, "--nx-color-primary")).toBe(false);
+  });
+
+  it("keeps the neutral black accent when no company colour is stored at all", () => {
     const vars = themeRowToCssVars({ primary_color: null, accent_color: undefined });
-    expect(vars).toEqual({});
+    expect(vars["--nx-color-accent"]).toBe("#111111");
+    expect(vars["--nx-color-on-primary"]).toBe("#ffffff");
+    expect(Object.hasOwn(vars, "--nx-color-primary")).toBe(false);
     expect(Object.hasOwn(themeRowToCssVars({}), "--nx-color-primary")).toBe(false);
   });
 

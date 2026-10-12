@@ -700,7 +700,10 @@ const disburseSchema = z.object({
 loanDisbursementsRouter.post(
   "/",
   requireCompleteSession,
-  requirePermission("create"),
+  // RULE 19.13.1 / 10.4.3 — disbursement authority is the end of the
+  // configured chain: it is its own verb, not a side effect of holding the
+  // generic `create` used to raise an application.
+  requirePermission(["disburse", "create"]),
   wrap(async (req, res) => {
     const parsed = disburseSchema.safeParse(req.body ?? {});
     if (!parsed.success) throw AppError.unprocessable("Validation failed");

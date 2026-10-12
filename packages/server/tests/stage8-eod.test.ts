@@ -6,17 +6,13 @@ import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { withAdmin } from "./fixtures";
 import { randomPrefix } from "./platform-helpers";
 import { runEndOfDay, lastEndOfDay, type EodActor } from "../src/modules/eod/service";
-import type pg from "pg";
-import { pool } from "../src/db/pool";
 
 const PREFIX = randomPrefix();
 
 describe("stage 7E - end-of-day job", () => {
-  let adminDb: pg.PoolClient;
   let alphaCompanyId: string;
   let betaCompanyId: string;
   let aliceBranchId: string;
-  let betaBranchId: string;
   let tempUserId: string;
   let tempUserId2: string;
   let tempRoleKey: string;
@@ -26,10 +22,6 @@ describe("stage 7E - end-of-day job", () => {
   let loanCustomerId: string;
   let aliceId: string;
   let bobId: string;
-
-  async function q<T extends pg.QueryResultRow = pg.QueryResultRow>(sql: string, params: unknown[] = []): Promise<pg.QueryResult<T>> {
-    return pool.query<T>(sql, params);
-  }
 
   beforeAll(async () => {
     await withAdmin(async (db) => {
@@ -52,7 +44,6 @@ describe("stage 7E - end-of-day job", () => {
         [betaCompanyId]
       );
       bobId = bobUser.rows[0]!.id;
-      betaBranchId = bobUser.rows[0]!.branch_id;
 
       // Create a temporary role assignment for a user in alpha with end date yesterday
       const tempUser = await db.query<{ id: string }>(
@@ -176,6 +167,7 @@ describe("stage 7E - end-of-day job", () => {
          ORDER BY created_at DESC`,
         [alphaCompanyId]
       );
+      // eslint-disable-next-line no-console -- debug output kept for failure triage
       console.log("All audits:", allAudits.rows.map(r => ({ action: r.action, entity_type: r.entity_type, entity_id: r.entity_id })));
 
       // Assignment 1 should be ended

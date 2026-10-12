@@ -1,10 +1,36 @@
 import pg from "pg";
 import { env } from "../config/env";
 
+/**
+ * Serverless-aware connection pool.
+ *
+ * On a long-running Node server this pool is warm and `max: 10` is sensible.
+ * On a serverless platform (Vercel) EVERY concurrent invocation may get its own
+ * instance and therefore its own pool, so the effective ceiling is
+ * `max x concurrent instances`. A fixed 10 can exhaust the database's
+ * connection limit quickly and produce intermittent "timeout exceeded when
+ * trying to connect" failures that look nothing like the real cause.
+ *
+ * Two things make this safe on Vercel without weakening it locally:
+ *   - `DATABASE_POOL_MAX` is configurable, and the deployment guide tells you
+ *     to point DATABASE_URL at a POOLED endpoint (Neon pooler / PgBouncer /
+ *     Supabase pooler) so the database, not the lambda, bounds concurrency.
+ *   - `connectionTimeoutMillis` is bounded, so an unreachable database fails
+ *     the request quickly instead of burning the function's wall-clock.
+ */
 export const pool = new pg.Pool({
   connectionString: env.DATABASE_URL,
-  max: 10,
-  idleTimeoutMillis: 30_000
+  max: env.DATABASE_POOL_MAX,
+  idleTimeoutMillis: env.DATABASE_IDLE_TIMEOUT_MS,
+  // Fail fast rather than hanging a serverless invocation on an unreachable DB.
+  connectionTimeoutMillis: env.DATABASE_CONNECT_TIMEOUT_MS,
+  // TLS is driven by DATABASE_URL (sslmode=/sslrootcert=) unless explicitly
+  // overridden. There is no "encrypt but do not verify" option here.
+  ...(env.DATABASE_SSL === "disable"
+    ? { ssl: false }
+    : env.DATABASE_SSL === "verify-full"
+      ? { ssl: { rejectUnauthorized: true } }
+      : {})
 });
 
 export async function dbHealth(): Promise<"up" | "down"> {

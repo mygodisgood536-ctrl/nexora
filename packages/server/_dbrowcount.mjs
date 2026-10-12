@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 // ISS-007 regression probe: prove the full suite never mutates the JOURNEY
 // database (nexora_test), which the journeys own and which must survive a test
 // run untouched.

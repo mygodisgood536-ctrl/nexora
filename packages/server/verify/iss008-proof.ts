@@ -250,7 +250,7 @@ void (async () => {
     console.log(`\nISS-008 PROOF: ${passed}/${results.length} checks passed`);
     if (passed !== results.length) code = 1;
   } catch (e) {
-    // eslint-disable-next-line no-console -- proof output
+     
     console.error("PROOF ERROR:", e);
     code = 1;
   }

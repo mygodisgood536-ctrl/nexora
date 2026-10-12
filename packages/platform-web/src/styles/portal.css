@@ -1,0 +1,189 @@
+/* Platform Owner portal specifics. The token law lives in @nexora/ui;
+   only portal-only composition lives here. */
+
+.nxp-login {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+}
+
+.nxp-login__brand {
+  background:
+    radial-gradient(1200px 500px at 10% 0%, rgb(255 255 255 / 0.14), transparent 60%),
+    linear-gradient(150deg, #0b3d29 0%, #0f7b4f 58%, #17915f 100%);
+  color: #fff;
+  padding: clamp(32px, 6vw, 72px);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 32px;
+}
+
+.nxp-login__brand h1 { color: #fff; font-size: clamp(26px, 3vw, 36px); letter-spacing: -0.02em; }
+.nxp-login__brand p { color: rgb(255 255 255 / 0.82); max-width: 46ch; }
+
+.nxp-login__marks { display: flex; gap: 10px; flex-wrap: wrap; }
+.nxp-login__mark {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.12);
+  border: 1px solid rgb(255 255 255 / 0.22);
+  font-size: 0.8125rem;
+}
+
+.nxp-login__form {
+  display: grid;
+  place-items: center;
+  padding: clamp(24px, 5vw, 64px);
+  background: var(--nx-bg-app);
+}
+
+.nxp-login__card { width: min(420px, 100%); }
+
+@media (max-width: 900px) {
+  .nxp-login { grid-template-columns: minmax(0, 1fr); }
+  .nxp-login__brand { min-height: 220px; }
+}
+
+/* Dashboard chart (first series is the accent - RULE 13.3). */
+.nxp-chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  height: 150px;
+  padding-top: 8px;
+}
+
+.nxp-chart__bar {
+  flex: 1;
+  min-width: 10px;
+  border-radius: 6px 6px 3px 3px;
+  background: var(--nx-chart-2);
+  position: relative;
+  transition: background var(--nx-fast) var(--nx-ease);
+}
+
+.nxp-chart__bar.is-lead { background: var(--nx-color-accent); }
+.nxp-chart__bar:hover { filter: brightness(1.08); }
+
+.nxp-chart__label {
+  position: absolute;
+  bottom: -20px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-size: 0.65rem;
+  color: var(--nx-text-muted);
+}
+
+/* Company branding preview card (RULE 3.3.2 - live preview). */
+.nxp-preview {
+  border: 1px solid var(--nx-border);
+  border-radius: var(--nx-radius);
+  overflow: hidden;
+  background: var(--nx-bg-app);
+}
+
+.nxp-preview__bar {
+  height: 8px;
+  background: var(--pv-accent, var(--nx-color-accent));
+}
+
+.nxp-preview__body { padding: 16px; display: grid; gap: 12px; }
+
+.nxp-preview__login {
+  background: #fff;
+  border: 1px solid var(--nx-border);
+  border-radius: 8px;
+  padding: 16px;
+  display: grid;
+  gap: 10px;
+}
+
+.nxp-preview__side {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  background: #fff;
+  border: 1px solid var(--nx-border);
+  border-radius: 8px;
+  padding: 10px;
+}
+
+.nxp-preview__active {
+  color: var(--pv-accent, var(--nx-color-accent));
+  font-weight: 600;
+  font-size: 0.8125rem;
+  border-left: 3px solid var(--pv-accent, var(--nx-color-accent));
+  padding-left: 8px;
+}
+
+.nxp-preview__btn {
+  background: var(--pv-accent, var(--nx-color-accent));
+  color: var(--pv-on-accent, var(--nx-color-on-accent));
+  border: 0;
+  border-radius: 6px;
+  padding: 7px 14px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.nxp-swatch-row { display: flex; gap: 8px; flex-wrap: wrap; }
+
+.nxp-swatch {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  border: 2px solid rgb(0 0 0 / 0.08);
+  cursor: pointer;
+  padding: 0;
+}
+
+.nxp-swatch[aria-pressed="true"] { outline: 2px solid var(--nx-color-accent); outline-offset: 2px; }
+
+/* Wizard steps */
+.nxp-steps { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 20px; }
+
+.nxp-step {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--nx-border);
+  background: var(--nx-surface);
+  font-size: 0.8125rem;
+  color: var(--nx-text-secondary);
+}
+
+.nxp-step.is-active {
+  border-color: var(--nx-color-accent);
+  color: var(--nx-color-accent);
+  background: var(--nx-color-accent-soft);
+  font-weight: 600;
+}
+
+.nxp-step.is-done { border-color: var(--nx-success-border); background: var(--nx-success-bg); color: var(--nx-success); }
+
+/* Credential one-time panel (RULE 3.4.1 item 8). */
+.nxp-credential {
+  border: 1px solid var(--nx-success-border);
+  background: var(--nx-success-bg);
+  border-radius: var(--nx-radius);
+  padding: 16px;
+  display: grid;
+  gap: 10px;
+}
+
+.nxp-credential code {
+  font-family: var(--nx-font-mono);
+  background: #fff;
+  border: 1px solid var(--nx-border);
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 0.8125rem;
+  word-break: break-all;
+}

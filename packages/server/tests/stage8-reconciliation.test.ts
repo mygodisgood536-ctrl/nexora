@@ -5,6 +5,7 @@
 // never see or act on them.
 import { describe, expect, it } from "vitest";
 import request from "supertest";
+import type { Express } from "express";
 import { seedWorld, withAdmin } from "./fixtures";
 import { staffLogin } from "./platform-helpers";
 
@@ -28,7 +29,7 @@ async function alphaCompanyId(): Promise<string> {
   return id;
 }
 
-async function seedOpenItems(app: import("express").Express, token: string, refs: string[]): Promise<void> {
+async function seedOpenItems(app: Express, token: string, refs: string[]): Promise<void> {
   for (const ref of refs) {
     const rec = await request(app)
       .post("/api/v1/payments/reconcile")
@@ -45,7 +46,7 @@ async function seedOpenItems(app: import("express").Express, token: string, refs
 }
 
 async function findItemId(
-  app: import("express").Express,
+  app: Express,
   token: string,
   ref: string
 ): Promise<string> {
@@ -169,7 +170,7 @@ describe("stage 7D - reconciliation exception lifecycle", () => {
     const app = (await import("../src/app")).createApp();
     await seedWorld();
     const { token } = await staffLogin(app, ALPHA_HOST, "alice");
-    const finToken = (await staffLogin(app, ALPHA_HOST, "amy")).token;
+    await staffLogin(app, ALPHA_HOST, "amy");
     const { token: bToken } = await staffLogin(app, BETA_HOST, "bob");
     const ref = nextRef("REC-ISOLATE");
     await seedOpenItems(app, token, [ref]);

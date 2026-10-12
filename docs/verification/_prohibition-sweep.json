@@ -1,0 +1,1213 @@
+[
+  {
+    "name": "Head Office portal",
+    "occurrences": 9,
+    "sample": [
+      {
+        "path": "docs/Cornelius Nexora Finance design instructions.md",
+        "line": 1325,
+        "match": "Head Office portal"
+      },
+      {
+        "path": "docs/verification/VISION-AUDIT-FINDINGS.md",
+        "line": 38,
+        "match": "Head Office portal"
+      },
+      {
+        "path": "docs/verification/vision-rules.json",
+        "line": 152,
+        "match": "Head Office portal"
+      },
+      {
+        "path": "docs/verification/_prohibition-sweep.json",
+        "line": 3,
+        "match": "Head Office portal"
+      },
+      {
+        "path": "packages/server/tests/stage13-prohibition-sweep.test.ts",
+        "line": 89,
+        "match": "Head Office portal"
+      },
+      {
+        "path": "packages/server/tests/stage13-stories.test.ts",
+        "line": 11,
+        "match": "Head Office portal"
+      },
+      {
+        "path": "packages/server/verify/journey1.ts",
+        "line": 154,
+        "match": "Head Office portal"
+      },
+      {
+        "path": "scripts/audit-sweep.mjs",
+        "line": 55,
+        "match": "Head Office portal"
+      }
+    ]
+  },
+  {
+    "name": "MD board not generated",
+    "occurrences": 3,
+    "sample": [
+      {
+        "path": "docs/verification/_prohibition-sweep.json",
+        "line": 45,
+        "match": "md_board"
+      },
+      {
+        "path": "packages/server/tests/stage13-prohibition-sweep.test.ts",
+        "line": 120,
+        "match": "md_board"
+      },
+      {
+        "path": "scripts/audit-sweep.mjs",
+        "line": 56,
+        "match": "company_provisioning"
+      }
+    ]
+  },
+  {
+    "name": "Data before ritual",
+    "occurrences": 25,
+    "sample": [
+      {
+        "path": "docs/verification/VISION-AUDIT-FINDINGS.md",
+        "line": 40,
+        "match": "requireCompleteSession"
+      },
+      {
+        "path": "docs/verification/_prohibition-sweep.json",
+        "line": 61,
+        "match": "requireCompleteSession"
+      },
+      {
+        "path": "packages/server/src/middleware/auth.ts",
+        "line": 125,
+        "match": "requireCompleteSession"
+      },
+      {
+        "path": "packages/server/src/modules/accounting/routes.ts",
+        "line": 9,
+        "match": "requireCompleteSession"
+      },
+      {
+        "path": "packages/server/src/modules/audit/routes.ts",
+        "line": 8,
+        "match": "requireCompleteSession"
+      },
+      {
+        "path": "packages/server/src/modules/auth/routes.ts",
+        "line": 5,
+        "match": "requireCompleteSession"
+      },
+      {
+        "path": "packages/server/src/modules/branch-workplace/routes.ts",
+        "line": 16,
+        "match": "requireCompleteSession"
+      },
+      {
+        "path": "packages/server/src/modules/branches/routes.ts",
+        "line": 5,
+        "match": "requireCompleteSession"
+      }
+    ]
+  },
+  {
+    "name": "Initial password still valid",
+    "occurrences": 35,
+    "sample": [
+      {
+        "path": "docs/Cornelius Nexora Finance design instructions.md",
+        "line": 192,
+        "match": "one-time"
+      },
+      {
+        "path": "docs/verification/INDEPENDENT-VERIFICATION.md",
+        "line": 169,
+        "match": "one-time"
+      },
+      {
+        "path": "docs/verification/VISION-AUDIT-FINDINGS.md",
+        "line": 20,
+        "match": "one-time"
+      },
+      {
+        "path": "docs/verification/vision-rules.json",
+        "line": 495,
+        "match": "one-time"
+      },
+      {
+        "path": "docs/verification/_prohibition-sweep.json",
+        "line": 107,
+        "match": "one-time"
+      },
+      {
+        "path": "packages/platform-web/src/pages/CreateCompanyPage.tsx",
+        "line": 43,
+        "match": "credential_state"
+      },
+      {
+        "path": "packages/platform-web/src/pages/LoginPage.tsx",
+        "line": 129,
+        "match": "one-time"
+      },
+      {
+        "path": "packages/platform-web/src/styles/portal.css",
+        "line": 171,
+        "match": "one-time"
+      }
+    ]
+  },
+  {
+    "name": "Credential that cannot log in",
+    "occurrences": 15,
+    "sample": [
+      {
+        "path": "docs/verification/INDEPENDENT-VERIFICATION.md",
+        "line": 309,
+        "match": "initialPassword"
+      },
+      {
+        "path": "docs/verification/_prohibition-sweep.json",
+        "line": 153,
+        "match": "initialPassword"
+      },
+      {
+        "path": "packages/server/src/lib/credential.ts",
+        "line": 55,
+        "match": "initialPassword"
+      },
+      {
+        "path": "packages/server/src/modules/auth/service.ts",
+        "line": 16,
+        "match": "initialPassword"
+      },
+      {
+        "path": "packages/server/src/modules/customers/service.ts",
+        "line": 5,
+        "match": "initialPassword"
+      },
+      {
+        "path": "packages/server/src/modules/loans/service.ts",
+        "line": 22,
+        "match": "initialPassword"
+      },
+      {
+        "path": "packages/server/src/modules/platform/service.ts",
+        "line": 11,
+        "match": "initialPassword"
+      },
+      {
+        "path": "packages/server/src/modules/workers/service.ts",
+        "line": 16,
+        "match": "initialPassword"
+      }
+    ]
+  },
+  {
+    "name": "Username != full name",
+    "occurrences": 5,
+    "sample": [
+      {
+        "path": "docs/verification/_prohibition-sweep.json",
+        "line": 199,
+        "match": "username = fullName"
+      },
+      {
+        "path": "packages/server/src/modules/platform/service.ts",
+        "line": 640,
+        "match": "username = fullName"
+      },
+      {
+        "path": "packages/server/src/modules/workers/service.ts",
+        "line": 343,
+        "match": "username = fullName"
+      },
+      {
+        "path": "packages/server/tests/stage12-role-matrix.test.ts",
+        "line": 56,
+        "match": "username: fullName"
+      },
+      {
+        "path": "scripts/audit-sweep.mjs",
+        "line": 60,
+        "match": "full_name.*username|usernameFromName|buildUsername"
+      }
+    ]
+  },
+  {
+    "name": "Authenticator exemption",
+    "occurrences": 4,
+    "sample": [
+      {
+        "path": "docs/verification/VISION-AUDIT-FINDINGS.md",
+        "line": 20,
+        "match": "exempt from security\"); Prohib. 7 | Platform Owner had **no authenticator enrolment path**. `poLogin"
+      },
+      {
+        "path": "docs/verification/_prohibition-sweep.json",
+        "line": 225,
+        "match": "totp: z.string().optional"
+      },
+      {
+        "path": "packages/server/src/modules/platform/routes.ts",
+        "line": 89,
+        "match": "totp: z.string().optional"
+      },
+      {
+        "path": "scripts/audit-sweep.mjs",
+        "line": 61,
+        "match": "exemption\", [/exempt.*authenticat"
+      }
+    ]
+  },
+  {
+    "name": "Manual money entry",
+    "occurrences": 7,
+    "sample": [
+      {
+        "path": "docs/verification/_prohibition-sweep.json",
+        "line": 241,
+        "match": "INSERT INTO payments"
+      },
+      {
+        "path": "packages/server/src/modules/payments/service.ts",
+        "line": 930,
+        "match": "INSERT INTO payments"
+      },
+      {
+        "path": "packages/server/tests/model.test.ts",
+        "line": 65,
+        "match": "INSERT INTO payments"
+      },
+      {
+        "path": "packages/server/tests/stage11-final-acceptance.test.ts",
+        "line": 460,
+        "match": "INSERT INTO payments"
+      },
+      {
+        "path": "packages/server/tests/stage12-role-matrix.test.ts",
+        "line": 114,
+        "match": "INSERT INTO payments"
+      },
+      {
+        "path": "packages/server/tests/stage9-fixes-runtime.test.ts",
+        "line": 2806,
+        "match": "INSERT INTO payments"
+      },
+      {
+        "path": "scripts/audit-sweep.mjs",
+        "line": 62,
+        "match": "createManualPayment"
+      }
+    ]
+  },
+  {
+    "name": "Edit over money",
+    "occurrences": 13,
+    "sample": [
+      {
+        "path": "docs/verification/VISION-AUDIT-FINDINGS.md",
+        "line": 46,
+        "match": "UPDATE payments"
+      },
+      {
+        "path": "docs/verification/_prohibition-sweep.json",
+        "line": 277,
+        "match": "UPDATE payments"
+      },
+      {
+        "path": "packages/server/src/db/migrations/0030_payment_allocation_redesign.sql",
+        "line": 115,
+        "match": "UPDATE payments"
+      },
+      {
+        "path": "packages/server/src/modules/payments/routes.ts",
+        "line": 593,
+        "match": "UPDATE payments"
+      },
+      {
+        "path": "packages/server/src/modules/payments/service.ts",
+        "line": 1126,
+        "match": "UPDATE payments"
+      },
+      {
+        "path": "packages/server/tests/model.test.ts",
+        "line": 191,
+        "match": "UPDATE payments"
+      },
+      {
+        "path": "packages/server/tests/stage7-accounting.test.ts",
+        "line": 251,
+        "match": "UPDATE payments"
+      },
+      {
+        "path": "packages/server/tests/stage8-allocation.test.ts",
+        "line": 138,
+        "match": "UPDATE payments"
+      }
+    ]
+  },
+  {
+    "name": "Delete over financial record",
+    "occurrences": 11,
+    "sample": [
+      {
+        "path": "docs/verification/_prohibition-sweep.json",
+        "line": 323,
+        "match": "DELETE FROM payments"
+      },
+      {
+        "path": "packages/server/tests/stage11-final-acceptance.test.ts",
+        "line": 528,
+        "match": "DELETE FROM payments"
+      },
+      {
+        "path": "packages/server/tests/stage7-accounting.test.ts",
+        "line": 268,
+        "match": "DELETE FROM payments"
+      },
+      {
+        "path": "packages/server/tests/stage7-payments.test.ts",
+        "line": 186,
+        "match": "DELETE FROM payments"
+      },
+      {
+        "path": "packages/server/tests/stage8-allocation.test.ts",
+        "line": 146,
+        "match": "DELETE FROM payments"
+      },
+      {
+        "path": "packages/server/tests/stage8-audit.test.ts",
+        "line": 57,
+        "match": "DELETE FROM payments"
+      },
+      {
+        "path": "packages/server/tests/stage8-eod.test.ts",
+        "line": 143,
+        "match": "DELETE FROM loans"
+      },
+      {
+        "path": "packages/server/tests/stage8-notifications.test.ts",
+        "line": 146,
+        "match": "DELETE FROM payments"
+      }
+    ]
+  },
+  {
+    "name": "Savings-only role",
+    "occurrences": 4,
+    "sample": [
+      {
+        "path": "docs/Cornelius Nexora Finance design instructions.md",
+        "line": 1323,
+        "match": "Savings Officer"
+      },
+      {
+        "path": "docs/verification/_prohibition-sweep.json",
+        "line": 369,
+        "match": "Savings Officer"
+      },
+      {
+        "path": "packages/server/tests/stage13-prohibition-sweep.test.ts",
+        "line": 355,
+        "match": "Savings Officer"
+      },
+      {
+        "path": "scripts/audit-sweep.mjs",
+        "line": 65,
+        "match": "savings_officer"
+      }
+    ]
+  },
+  {
+    "name": "VA at registration",
+    "occurrences": 60,
+    "sample": [
+      {
+        "path": "docs/Cornelius Nexora Finance design instructions.md",
+        "line": 33,
+        "match": "virtual account"
+      },
+      {
+        "path": "docs/EXTERNAL-DEPENDENCIES.md",
+        "line": 37,
+        "match": "virtual account"
+      },
+      {
+        "path": "docs/OPENCODE-AI-CLOUD-INTEGRATION.md",
+        "line": 33,
+        "match": "Virtual-account"
+      },
+      {
+        "path": "docs/verification/VISION-AUDIT-FINDINGS.md",
+        "line": 93,
+        "match": "virtual-account"
+      },
+      {
+        "path": "docs/verification/vision-rules.json",
+        "line": 355,
+        "match": "virtual account"
+      },
+      {
+        "path": "docs/verification/_corpus-stats.json",
+        "line": 89,
+        "match": "virtual_account"
+      },
+      {
+        "path": "docs/verification/_prohibition-sweep.json",
+        "line": 385,
+        "match": "virtual account"
+      },
+      {
+        "path": "OPENCode-NEXORA-TAKEOVER-TODO.md",
+        "line": 42,
+        "match": "virtual account"
+      }
+    ]
+  },
+  {
+    "name": "Upload/gallery photo",
+    "occurrences": 3,
+    "sample": [
+      {
+        "path": "docs/verification/VISION-AUDIT-FINDINGS.md",
+        "line": 50,
+        "match": "type=\"file\""
+      },
+      {
+        "path": "docs/verification/_prohibition-sweep.json",
+        "line": 431,
+        "match": "uploadPhoto"
+      },
+      {
+        "path": "scripts/audit-sweep.mjs",
+        "line": 67,
+        "match": "uploadPhoto"
+      }
+    ]
+  },
+  {
+    "name": "Disburse without VA+schedule",
+    "occurrences": 61,
+    "sample": [
+      {
+        "path": "docs/Cornelius Nexora Finance design instructions.md",
+        "line": 33,
+        "match": "disburs"
+      },
+      {
+        "path": "docs/EXTERNAL-DEPENDENCIES.md",
+        "line": 41,
+        "match": "disburs"
+      },
+      {
+        "path": "docs/POSTGRESQL-CLOUD-INTEGRATION.md",
+        "line": 91,
+        "match": "disburs"
+      },
+      {
+        "path": "docs/verification/VISION-AUDIT-FINDINGS.md",
+        "line": 49,
+        "match": "disburs"
+      },
+      {
+        "path": "docs/verification/vision-rules.json",
+        "line": 369,
+        "match": "disburs"
+      },
+      {
+        "path": "docs/verification/_corpus-stats.json",
+        "line": 121,
+        "match": "disburs"
+      },
+      {
+        "path": "docs/verification/_descriptors-dump.json",
+        "line": 1791,
+        "match": "Disburs"
+      },
+      {
+        "path": "docs/verification/_design-roles.md",
+        "line": 445,
+        "match": "Disburs"
+      }
+    ]
+  },
+  {
+    "name": "Duplicate customer on loan/portal",
+    "occurrences": 12,
+    "sample": [
+      {
+        "path": "docs/verification/_prohibition-sweep.json",
+        "line": 488,
+        "match": "INSERT INTO customers"
+      },
+      {
+        "path": "packages/server/src/modules/customers/service.ts",
+        "line": 311,
+        "match": "INSERT INTO customers"
+      },
+      {
+        "path": "packages/server/tests/fixtures.ts",
+        "line": 279,
+        "match": "INSERT INTO customers"
+      },
+      {
+        "path": "packages/server/tests/model.test.ts",
+        "line": 28,
+        "match": "INSERT INTO customers"
+      },
+      {
+        "path": "packages/server/tests/rls-isolation.test.ts",
+        "line": 48,
+        "match": "INSERT INTO customers"
+      },
+      {
+        "path": "packages/server/tests/stage7-accounting.test.ts",
+        "line": 87,
+        "match": "INSERT INTO customers"
+      },
+      {
+        "path": "packages/server/tests/stage7-groups.test.ts",
+        "line": 246,
+        "match": "INSERT INTO customers"
+      },
+      {
+        "path": "packages/server/tests/stage8-eod.test.ts",
+        "line": 91,
+        "match": "INSERT INTO customers"
+      }
+    ]
+  },
+  {
+    "name": "Branch workplace password gate",
+    "occurrences": 13,
+    "sample": [
+      {
+        "path": "docs/verification/VISION-AUDIT-FINDINGS.md",
+        "line": 53,
+        "match": "branchActor"
+      },
+      {
+        "path": "docs/verification/_corpus-stats.json",
+        "line": 164,
+        "match": "branch-workplace"
+      },
+      {
+        "path": "docs/verification/_prohibition-sweep.json",
+        "line": 79,
+        "match": "branch-workplace"
+      },
+      {
+        "path": "packages/server/src/app.ts",
+        "line": 41,
+        "match": "branchWorkplace"
+      },
+      {
+        "path": "packages/server/src/db/migrations/0083_branch_and_disbursement_authority.sql",
+        "line": 29,
+        "match": "BRANCH_WORKPLACE"
+      },
+      {
+        "path": "packages/server/src/modules/branch-workplace/routes.ts",
+        "line": 17,
+        "match": "BranchWorkplace"
+      },
+      {
+        "path": "packages/server/src/modules/branch-workplace/service.ts",
+        "line": 6,
+        "match": "BranchWorkplace"
+      },
+      {
+        "path": "packages/server/src/modules/branches/service.ts",
+        "line": 13,
+        "match": "BranchActor"
+      }
+    ]
+  },
+  {
+    "name": "Worker sees HO looked at book",
+    "occurrences": 3,
+    "sample": [
+      {
+        "path": "docs/verification/VISION-AUDIT-FINDINGS.md",
+        "line": 54,
+        "match": "book | absent | workplace entry is audited silently; no notification"
+      },
+      {
+        "path": "docs/verification/_prohibition-sweep.json",
+        "line": 580,
+        "match": "book\\\", [/notify.*book|book.*notification"
+      },
+      {
+        "path": "scripts/audit-sweep.mjs",
+        "line": 71,
+        "match": "book\", [/notify.*book|book.*notification"
+      }
+    ]
+  },
+  {
+    "name": "Typed webhook URL",
+    "occurrences": 3,
+    "sample": [
+      {
+        "path": "docs/verification/_prohibition-sweep.json",
+        "line": 591,
+        "match": "webhookUrl"
+      },
+      {
+        "path": "packages/server/tests/stage13-prohibition-sweep.test.ts",
+        "line": 675,
+        "match": "webhookUrl"
+      },
+      {
+        "path": "scripts/audit-sweep.mjs",
+        "line": 72,
+        "match": "webhook_url"
+      }
+    ]
+  },
+  {
+    "name": "Provider activated w/o test",
+    "occurrences": 15,
+    "sample": [
+      {
+        "path": "docs/OPENCODE-AI-CLOUD-INTEGRATION.md",
+        "line": 65,
+        "match": "activated — an unverified one is not usable, mirroring the provider"
+      },
+      {
+        "path": "docs/verification/VISION-AUDIT-FINDINGS.md",
+        "line": 26,
+        "match": "activate the provider — exactly what test 11 forbids. | A wrong key must fail; activation requires a"
+      },
+      {
+        "path": "docs/verification/_corpus-stats.json",
+        "line": 86,
+        "match": "connection_test"
+      },
+      {
+        "path": "docs/verification/_prohibition-sweep.json",
+        "line": 605,
+        "match": "connection_test"
+      },
+      {
+        "path": "packages/server/src/db/migrations/0038_provider_connection_test.sql",
+        "line": 1,
+        "match": "connection_test"
+      },
+      {
+        "path": "packages/server/src/modules/payments/service.ts",
+        "line": 252,
+        "match": "connection_test"
+      },
+      {
+        "path": "packages/server/tests/multi-company-concurrency.test.ts",
+        "line": 237,
+        "match": "connection_test"
+      },
+      {
+        "path": "packages/server/tests/platform-helpers.ts",
+        "line": 293,
+        "match": "activates a payment provider"
+      }
+    ]
+  },
+  {
+    "name": "Non-MD provider change",
+    "occurrences": 14,
+    "sample": [
+      {
+        "path": "docs/Cornelius Nexora Finance design instructions.md",
+        "line": 96,
+        "match": "Providers (subject to MD authorisation), Reports, Audit. **Cannot** change branding unless granted, "
+      },
+      {
+        "path": "docs/verification/VISION-AUDIT-FINDINGS.md",
+        "line": 58,
+        "match": "md_approved"
+      },
+      {
+        "path": "docs/verification/vision-rules.json",
+        "line": 516,
+        "match": "provider changes made by non-MD users (Part 8.5) — the authorisation arrives as a queue item in the "
+      },
+      {
+        "path": "docs/verification/_prohibition-sweep.json",
+        "line": 658,
+        "match": "md_approved"
+      },
+      {
+        "path": "packages/server/src/db/migrations/0036_provider_md_approval_company_url_face_capture.sql",
+        "line": 16,
+        "match": "md_approved"
+      },
+      {
+        "path": "packages/server/src/db/migrations/0080_prohibition_sweep_findings.sql",
+        "line": 12,
+        "match": "provider changes\"; 12.23 \"Cannot ... approve"
+      },
+      {
+        "path": "packages/server/src/modules/payments/service.ts",
+        "line": 93,
+        "match": "mdApproved"
+      },
+      {
+        "path": "packages/server/tests/multi-company-concurrency.test.ts",
+        "line": 237,
+        "match": "provider, api_base_url, api_key, is_active, md_approve"
+      }
+    ]
+  },
+  {
+    "name": "Provider secret displayed",
+    "occurrences": 77,
+    "sample": [
+      {
+        "path": "docs/Cornelius Nexora Finance design instructions.md",
+        "line": 192,
+        "match": "secret"
+      },
+      {
+        "path": "docs/EXTERNAL-DEPENDENCIES.md",
+        "line": 45,
+        "match": "secret"
+      },
+      {
+        "path": "docs/OPENCODE-AI-CLOUD-INTEGRATION.md",
+        "line": 21,
+        "match": "secret"
+      },
+      {
+        "path": "docs/POSTGRESQL-CLOUD-INTEGRATION.md",
+        "line": 18,
+        "match": "Secret"
+      },
+      {
+        "path": "docs/verification/VISION-AUDIT-FINDINGS.md",
+        "line": 20,
+        "match": "secret"
+      },
+      {
+        "path": "docs/verification/vision-rules.json",
+        "line": 334,
+        "match": "secret"
+      },
+      {
+        "path": "docs/verification/_corpus-stats.json",
+        "line": 82,
+        "match": "secret"
+      },
+      {
+        "path": "docs/verification/_prohibition-sweep.json",
+        "line": 673,
+        "match": "api_key"
+      }
+    ]
+  },
+  {
+    "name": "Fixed provider form",
+    "occurrences": 12,
+    "sample": [
+      {
+        "path": "docs/Cornelius Nexora Finance design instructions.md",
+        "line": 1073,
+        "match": "provider's requirement"
+      },
+      {
+        "path": "docs/EXTERNAL-DEPENDENCIES.md",
+        "line": 42,
+        "match": "provider — each with its own requirement"
+      },
+      {
+        "path": "docs/verification/VISION-AUDIT-FINDINGS.md",
+        "line": 60,
+        "match": "provider form | absent | per-provider requirement"
+      },
+      {
+        "path": "docs/verification/vision-rules.json",
+        "line": 1118,
+        "match": "providers require a BVN or NIN to create a customer's virtual account — the customer record must hol"
+      },
+      {
+        "path": "docs/verification/_prohibition-sweep.json",
+        "line": 750,
+        "match": "provider's requirement"
+      },
+      {
+        "path": "packages/server/src/db/migrations/0045_payment_provider_registry.sql",
+        "line": 5,
+        "match": "provider's requirement"
+      },
+      {
+        "path": "packages/server/src/modules/loans/service.ts",
+        "line": 3116,
+        "match": "provider's per-customer KYC requirement"
+      },
+      {
+        "path": "packages/server/src/modules/payments/service.ts",
+        "line": 169,
+        "match": "requirementSet"
+      }
+    ]
+  },
+  {
+    "name": "Hard-coded company colour",
+    "occurrences": 13,
+    "sample": [
+      {
+        "path": "docs/verification/_prohibition-sweep.json",
+        "line": 791,
+        "match": "#0f7b4f"
+      },
+      {
+        "path": "packages/platform-web/src/components/BrandPreview.tsx",
+        "line": 17,
+        "match": "#0f7b4f"
+      },
+      {
+        "path": "packages/platform-web/src/pages/CompanyDetailPage.tsx",
+        "line": 307,
+        "match": "#0f7b4f"
+      },
+      {
+        "path": "packages/platform-web/src/pages/CreateCompanyPage.tsx",
+        "line": 48,
+        "match": "#0f7b4f"
+      },
+      {
+        "path": "packages/platform-web/src/styles/portal.css",
+        "line": 13,
+        "match": "#0b3d29"
+      },
+      {
+        "path": "packages/server/src/db/migrations/0001_platform.sql",
+        "line": 20,
+        "match": "#2547e0"
+      },
+      {
+        "path": "packages/server/src/db/migrations/0002_tenants.sql",
+        "line": 20,
+        "match": "#2547e0"
+      },
+      {
+        "path": "packages/server/tests/stage10-theme-law.test.ts",
+        "line": 29,
+        "match": "#f5e663"
+      }
+    ]
+  },
+  {
+    "name": "Cross-company visibility",
+    "occurrences": 146,
+    "sample": [
+      {
+        "path": "docs/EXTERNAL-DEPENDENCIES.md",
+        "line": 17,
+        "match": "company_id"
+      },
+      {
+        "path": "docs/POSTGRESQL-CLOUD-INTEGRATION.md",
+        "line": 15,
+        "match": "company_id"
+      },
+      {
+        "path": "docs/verification/INDEPENDENT-VERIFICATION.md",
+        "line": 60,
+        "match": "company_id"
+      },
+      {
+        "path": "docs/verification/ISSUE-LOG.md",
+        "line": 26,
+        "match": "company_id"
+      },
+      {
+        "path": "docs/verification/VISION-AUDIT-FINDINGS.md",
+        "line": 62,
+        "match": "company_id"
+      },
+      {
+        "path": "docs/verification/vision-rules.json",
+        "line": 334,
+        "match": "company_id"
+      },
+      {
+        "path": "docs/verification/_prohibition-sweep.json",
+        "line": 683,
+        "match": "company_id"
+      },
+      {
+        "path": "packages/platform-web/src/pages/ActivityPage.tsx",
+        "line": 23,
+        "match": "company_id"
+      }
+    ]
+  },
+  {
+    "name": "Platform brand in company workspace",
+    "occurrences": 11,
+    "sample": [
+      {
+        "path": "docs/Cornelius Nexora Finance design instructions.md",
+        "line": 1,
+        "match": "Nexora Finance"
+      },
+      {
+        "path": "docs/verification/INDEPENDENT-VERIFICATION.md",
+        "line": 1,
+        "match": "Nexora Finance"
+      },
+      {
+        "path": "docs/verification/ISSUE-LOG.md",
+        "line": 1,
+        "match": "Nexora Finance"
+      },
+      {
+        "path": "docs/verification/VISION-AUDIT-FINDINGS.md",
+        "line": 4,
+        "match": "Nexora Finance"
+      },
+      {
+        "path": "docs/verification/vision-rules.json",
+        "line": 257,
+        "match": "powered by"
+      },
+      {
+        "path": "docs/verification/_prohibition-sweep.json",
+        "line": 883,
+        "match": "Nexora Finance"
+      },
+      {
+        "path": "OPENCode-NEXORA-TAKEOVER-TODO.md",
+        "line": 1,
+        "match": "NEXORA FINANCE"
+      },
+      {
+        "path": "packages/web/src/auth/LoginPage.tsx",
+        "line": 59,
+        "match": "Powered by"
+      }
+    ]
+  },
+  {
+    "name": "Dashboard off-engine",
+    "occurrences": 15,
+    "sample": [
+      {
+        "path": "docs/verification/VISION-AUDIT-FINDINGS.md",
+        "line": 64,
+        "match": "calculatePerformanceSet"
+      },
+      {
+        "path": "docs/verification/_prohibition-sweep.json",
+        "line": 929,
+        "match": "calculatePerformanceSet"
+      },
+      {
+        "path": "packages/server/src/modules/branch-workplace/service.ts",
+        "line": 4,
+        "match": "calculatePerformanceSet"
+      },
+      {
+        "path": "packages/server/src/modules/collection-watch/service.ts",
+        "line": 4,
+        "match": "calculatePerformanceSet"
+      },
+      {
+        "path": "packages/server/src/modules/performance/engine.ts",
+        "line": 88,
+        "match": "calculatePerformanceSet"
+      },
+      {
+        "path": "packages/server/src/modules/performance/service.ts",
+        "line": 12,
+        "match": "calculatePerformanceSet"
+      },
+      {
+        "path": "packages/server/src/modules/reports/service.ts",
+        "line": 14,
+        "match": "calculatePerformanceSet"
+      },
+      {
+        "path": "packages/server/tests/stage13-prohibition-sweep.test.ts",
+        "line": 225,
+        "match": "performance/summary"
+      }
+    ]
+  },
+  {
+    "name": "Role rendered from another role",
+    "occurrences": 14,
+    "sample": [
+      {
+        "path": "docs/verification/VISION-AUDIT-FINDINGS.md",
+        "line": 22,
+        "match": "Descriptors"
+      },
+      {
+        "path": "docs/verification/_corpus-stats.json",
+        "line": 347,
+        "match": "descriptors"
+      },
+      {
+        "path": "docs/verification/_prohibition-sweep.json",
+        "line": 975,
+        "match": "descriptors"
+      },
+      {
+        "path": "package-lock.json",
+        "line": 3449,
+        "match": "descriptors"
+      },
+      {
+        "path": "packages/web/src/pages/DashboardPage.tsx",
+        "line": 5,
+        "match": "workspaceFor"
+      },
+      {
+        "path": "packages/web/src/shell/CommandPalette.tsx",
+        "line": 5,
+        "match": "descriptors"
+      },
+      {
+        "path": "packages/web/src/shell/Shell.tsx",
+        "line": 52,
+        "match": "workspaceFor"
+      },
+      {
+        "path": "packages/web/src/workspaces/descriptors.ts",
+        "line": 724,
+        "match": "workspaceFor"
+      }
+    ]
+  },
+  {
+    "name": "Role page mismatch",
+    "occurrences": 19,
+    "sample": [
+      {
+        "path": "docs/Cornelius Nexora Finance design instructions.md",
+        "line": 232,
+        "match": "descriptor"
+      },
+      {
+        "path": "docs/verification/VISION-AUDIT-FINDINGS.md",
+        "line": 22,
+        "match": "Descriptor"
+      },
+      {
+        "path": "docs/verification/_corpus-stats.json",
+        "line": 347,
+        "match": "descriptor"
+      },
+      {
+        "path": "docs/verification/_prohibition-sweep.json",
+        "line": 975,
+        "match": "descriptor"
+      },
+      {
+        "path": "package-lock.json",
+        "line": 3449,
+        "match": "descriptor"
+      },
+      {
+        "path": "packages/server/src/db/migrations/0045_payment_provider_registry.sql",
+        "line": 6,
+        "match": "descriptor"
+      },
+      {
+        "path": "packages/server/src/modules/loans/service.ts",
+        "line": 2689,
+        "match": "descriptor"
+      },
+      {
+        "path": "packages/server/src/modules/payments/service.ts",
+        "line": 171,
+        "match": "Descriptor"
+      }
+    ]
+  },
+  {
+    "name": "Fake data in live view",
+    "occurrences": 2,
+    "sample": [
+      {
+        "path": "docs/verification/_prohibition-sweep.json",
+        "line": 1057,
+        "match": "lorem"
+      },
+      {
+        "path": "scripts/audit-sweep.mjs",
+        "line": 83,
+        "match": "lorem"
+      }
+    ]
+  },
+  {
+    "name": "Owner view of company data",
+    "occurrences": 21,
+    "sample": [
+      {
+        "path": "docs/Cornelius Nexora Finance design instructions.md",
+        "line": 83,
+        "match": "support session"
+      },
+      {
+        "path": "docs/verification/vision-rules.json",
+        "line": 677,
+        "match": "support session"
+      },
+      {
+        "path": "docs/verification/_corpus-stats.json",
+        "line": 31,
+        "match": "SupportAccess"
+      },
+      {
+        "path": "docs/verification/_prohibition-sweep.json",
+        "line": 1068,
+        "match": "support session"
+      },
+      {
+        "path": "packages/platform-web/src/App.tsx",
+        "line": 16,
+        "match": "SupportAccess"
+      },
+      {
+        "path": "packages/platform-web/src/pages/CompaniesPage.tsx",
+        "line": 227,
+        "match": "support session"
+      },
+      {
+        "path": "packages/platform-web/src/pages/CompanyDetailPage.tsx",
+        "line": 445,
+        "match": "support session"
+      },
+      {
+        "path": "packages/platform-web/src/pages/DashboardPage.tsx",
+        "line": 220,
+        "match": "support session"
+      }
+    ]
+  },
+  {
+    "name": "Worker record deleted on leaving",
+    "occurrences": 3,
+    "sample": [
+      {
+        "path": "docs/verification/_prohibition-sweep.json",
+        "line": 1114,
+        "match": "DELETE FROM users"
+      },
+      {
+        "path": "packages/server/tests/stage8-eod.test.ts",
+        "line": 146,
+        "match": "DELETE FROM users"
+      },
+      {
+        "path": "scripts/audit-sweep.mjs",
+        "line": 85,
+        "match": "DELETE FROM users"
+      }
+    ]
+  }
+]

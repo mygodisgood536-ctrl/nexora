@@ -1,7 +1,6 @@
 import { chmod, mkdir, readdir, rm, stat, writeFile } from "node:fs/promises";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import pg from "pg";
 import { AppError } from "../../lib/errors";
 import { decryptFile, encryptFile, sha256File, type BackupKeys } from "./crypto";
 import { addEntry, newManifest, readManifest, writeManifest, manifestPath, type BackupManifest } from "./manifest";

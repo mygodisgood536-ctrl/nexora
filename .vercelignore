@@ -1,0 +1,44 @@
+# Vercel upload filter.
+#
+# Vercel already ignores node_modules and .git. These entries additionally keep
+# the deployment upload small and prevent test fixtures, local scripts and
+# documentation from ever being included in the serverless bundle.
+#
+# NOTE: this is an UPLOAD filter, not a bundler input filter. It does not stop
+# TypeScript from being compiled — only `api/**` is built into the function.
+
+# tests and fixtures must never ship
+packages/server/tests
+packages/server/verify
+packages/server/scripts
+packages/*/tests
+**/*.test.ts
+**/*.test.tsx
+
+# local tooling and scratch output
+scripts
+temp-verify
+docs
+VISION-AUDIT.md
+_extract_vision.ps1
+_reextract_vision.ps1
+
+# build output is produced by the build command
+packages/*/dist
+packages/*/.vite
+
+# editor / OS noise
+.vscode
+.idea
+**/.DS_Store
+Thumbs.db
+**/*.log
+
+# environment files must never be committed or uploaded
+.env
+.env.*
+!.env.example
+
+# local database artefacts (if any are ever produced)
+**/*.dump
+**/*.backup

@@ -1,11 +1,16 @@
 // Virtual Account lifecycle endpoints (RULE 9.5.1 — VAs are a disbursement
-// artifact; RULE 5.6.1 — only MD/Finance/IT may adjust them). List/read stay
-// open to the branch dashboard per Part 1 §22.
+// artifact; RULE 5.6.1 — a virtual account is never an ordinary CRUD surface,
+// so every status transition is refused to roles outside the named club).
+// List/read stay open to the branch dashboard per Part 1 §22.
+//
+// RULE 9.5.4 / §provider change — replacement is a real operation ("the branch
+// must regenerate virtual accounts with the new provider"), so it is gated by
+// role authority rather than by a generic verb.
 import { Router } from "express";
 import { z } from "zod";
 import type { Request, Response, NextFunction } from "express";
 import { AppError } from "../../lib/errors";
-import { requireCompleteSession } from "../../middleware/auth";
+import { requireAnyRole, requireCompleteSession } from "../../middleware/auth";
 import {
   activateVirtualAccount,
   closeVirtualAccount,
@@ -15,6 +20,16 @@ import {
 } from "./service";
 
 export const virtualAccountsRouter = Router();
+
+/** RULE 5.6.1 / 1272 — who may move a virtual account through its lifecycle. */
+const VA_ADJUST_ROLES = [
+  "md",
+  "deputy_md",
+  "finance_manager",
+  "it_system_administrator",
+  "head_office_administrator",
+  "branch_manager",
+] as const;
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -56,6 +71,7 @@ const replaceSchema = z.object({
 virtualAccountsRouter.post(
   "/replace",
   requireCompleteSession,
+  requireAnyRole([...VA_ADJUST_ROLES]),
   wrap(async (req, res) => {
     const parsed = replaceSchema.safeParse(req.body ?? {});
     if (!parsed.success) throw AppError.unprocessable("Validation failed");
@@ -76,6 +92,7 @@ virtualAccountsRouter.get(
 virtualAccountsRouter.post(
   "/:id/activate",
   requireCompleteSession,
+  requireAnyRole([...VA_ADJUST_ROLES]),
   wrap(async (req, res) => {
     const id = String(req.params.id);
     if (!UUID_RE.test(id)) throw AppError.badRequest("Invalid virtual account id");
@@ -90,6 +107,7 @@ const closeSchema = z.object({
 virtualAccountsRouter.post(
   "/:id/close",
   requireCompleteSession,
+  requireAnyRole([...VA_ADJUST_ROLES]),
   wrap(async (req, res) => {
     const id = String(req.params.id);
     if (!UUID_RE.test(id)) throw AppError.badRequest("Invalid virtual account id");

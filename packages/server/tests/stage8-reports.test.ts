@@ -3,11 +3,8 @@
 // role-based scoping, tenant isolation, and format switching.
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { withAdmin } from "./fixtures";
-import { randomPrefix } from "./platform-helpers";
 import { pool } from "../src/db/pool";
 import type pg from "pg";
-
-const PREFIX = randomPrefix();
 
 async function q<T extends pg.QueryResultRow = pg.QueryResultRow>(sql: string, params: unknown[] = []): Promise<{ rows: T[]; rowCount: number | null }> {
   return pool.query<T>(sql, params);
@@ -55,7 +52,7 @@ describe("stage 7E - reports + CSV export", () => {
 
   it("GET /reports/summary returns JSON for company scope", async () => {
     const actor = makeActor(aliceId, alphaCompanyId, null);
-    const result = await q<{ expected: string }>(
+    await q<{ expected: string }>(
       `SELECT * FROM calculate_performance_set($1, $2, $3, $4, $5, $6, $7)`,
       [alphaCompanyId, 0, "2026-01-01", "2026-12-31", null, null, null]
     ).catch(() => ({ rows: [] }));

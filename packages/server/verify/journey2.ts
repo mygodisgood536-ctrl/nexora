@@ -22,12 +22,9 @@ process.env.DATABASE_URL = "postgres://nexora:nexora@localhost:5432/nexora_test"
 
 import request from "supertest";
 import type { Express } from "express";
-import { createHmac } from "node:crypto";
 import fs from "node:fs";
 import { log, check, admin, totp, writeReport, setPhase } from "./e2e-harness";
 import { ensurePlatformOwnerSecret, platformOwnerLogin, hostOf } from "./journey1";
-
-const PROVIDER_SECRET = "journey-deep-signing-secret-0123456789";
 
 interface Actor {
   name: string;
@@ -45,7 +42,7 @@ async function createWorker(
   host: string,
   token: string,
   body: Record<string, unknown>
-): Promise<{ status: number; body: any }> {
+): Promise<{ status: number; body: Record<string, unknown> }> {
   const res = await request(app)
     .post("/api/v1/workers")
     .set("Host", host)
@@ -125,10 +122,6 @@ async function doRitual(
 }
 
 export {};
-function branchSlugOf(branchUrl: string, companySlug: string): string {
-  const raw = branchUrl.replace(/^https?:\/\//, "").replace(/\.nexora\.app.*$/, "");
-  return raw.startsWith(`${companySlug}-`) ? raw.slice(companySlug.length + 1) : raw;
-}
 
 async function mkBranchWorker(
   app: Express, md: Actor, companyHost: string, branchHost: string,

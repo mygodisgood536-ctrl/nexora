@@ -20,7 +20,16 @@ import fs from "node:fs";
 import { log, check, admin, writeReport, setPhase } from "./e2e-harness";
 
 const SECRET = "journey-deep-signing-secret-0123456789";
-let state: any;
+interface Journey2State {
+  slug: string;
+  branchHost: string;
+  companyHost: string;
+  branchId: string;
+  companyId: string;
+  actors: Record<string, { token: string }>;
+  md: { token: string };
+}
+let state: Journey2State;
 let refSeq = 0;
 const nextRef = () => `J3-${Date.now().toString(36)}-${refSeq++}`;
 

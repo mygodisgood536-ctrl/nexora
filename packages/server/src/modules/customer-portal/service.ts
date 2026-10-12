@@ -10,8 +10,6 @@ import { withBypass } from "../../db/repo";
 import { AppError } from "../../lib/errors";
 import { env } from "../../config/env";
 
-const BCRYPT_ROUNDS = 10;
-
 export interface PortalPrincipal {
   customerId: string;
   companyId: string;

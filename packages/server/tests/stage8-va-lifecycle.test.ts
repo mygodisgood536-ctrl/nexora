@@ -6,6 +6,7 @@
 // retry, and the terminal close with open-loan guard.
 import { describe, expect, it } from "vitest";
 import request from "supertest";
+import type { Express } from "express";
 import { seedWorld, withAdmin } from "./fixtures";
 import { staffLogin } from "./platform-helpers";
 
@@ -37,7 +38,7 @@ async function getAlphaCompanyId(): Promise<string> {
 }
 
 /** Create a customer via the API (active, no VA yet). */
-async function createCustomer(app: any, token: string, branchId: string, first: string, last: string): Promise<string> {
+async function createCustomer(app: Express, token: string, branchId: string, first: string, last: string): Promise<string> {
   const r = await request(app)
     .post("/api/v1/customers")
     .set("Authorization", `Bearer ${token}`)

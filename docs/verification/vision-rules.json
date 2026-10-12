@@ -1,0 +1,3021 @@
+{
+  "total": 411,
+  "byPart": {
+    "0": 1,
+    "2": 7,
+    "3": 28,
+    "4": 19,
+    "5": 37,
+    "6": 14,
+    "7": 31,
+    "8": 24,
+    "9": 35,
+    "10": 25,
+    "11": 17,
+    "12": 5,
+    "13": 18,
+    "14": 13,
+    "16": 10,
+    "17": 10,
+    "19": 61,
+    "20": 21,
+    "21": 35
+  },
+  "parts": [
+    {
+      "part": 0,
+      "title": "HOW TO READ THIS DOCUMENT",
+      "line": 12
+    },
+    {
+      "part": 1,
+      "title": "THE VISION",
+      "line": 107
+    },
+    {
+      "part": 2,
+      "title": "LAYER MAP AND END-TO-END FLOW",
+      "line": 143
+    },
+    {
+      "part": 3,
+      "title": "THE PLATFORM OWNER LAYER (GREEN)",
+      "line": 273
+    },
+    {
+      "part": 4,
+      "title": "THE MD BOARD (THE HEAD OFFICE)",
+      "line": 460
+    },
+    {
+      "part": 5,
+      "title": "THE CREDENTIAL AND ROLE LAW (EVERY USER, EVERY ROLE)",
+      "line": 688
+    },
+    {
+      "part": 6,
+      "title": "THE COMPANY'S PEOPLE STRUCTURE",
+      "line": 892
+    },
+    {
+      "part": 7,
+      "title": "THE BRANCH WORKPLACE AND THE BRANCH PORTAL",
+      "line": 1112
+    },
+    {
+      "part": 8,
+      "title": "PAYMENT PROVIDERS: THE DYNAMIC PROVIDER REGISTRY",
+      "line": 1365
+    },
+    {
+      "part": 9,
+      "title": "CUSTOMERS",
+      "line": 1530
+    },
+    {
+      "part": 10,
+      "title": "THE LOAN LIFECYCLE",
+      "line": 1688
+    },
+    {
+      "part": 11,
+      "title": "MONEY TRUTH, PERFORMANCE AND VISIBILITY",
+      "line": 1758
+    },
+    {
+      "part": 12,
+      "title": "EVERY ROLE, ONE BY ONE",
+      "line": 1947
+    },
+    {
+      "part": 13,
+      "title": "THE COLOUR, LOGO AND VISUAL LAW",
+      "line": 2183
+    },
+    {
+      "part": 14,
+      "title": "SECURITY AND ACCOUNT-STATE LAW",
+      "line": 2348
+    },
+    {
+      "part": 15,
+      "title": "THE HARD PROHIBITIONS",
+      "line": 2368
+    },
+    {
+      "part": 16,
+      "title": "THE BUILD ORDER (BACKEND FIRST, THEN DESIGN INSTRUCTIONS, THEN FRONT END)",
+      "line": 2469
+    },
+    {
+      "part": 17,
+      "title": "THE DESIGN INSTRUCTIONS DOCUMENT",
+      "line": 2680
+    },
+    {
+      "part": 18,
+      "title": "DECISIONS MADE WHERE THE INSTRUCTION WAS OPEN",
+      "line": 2745
+    },
+    {
+      "part": 19,
+      "title": "GROUP LENDING AND COMPLETE LOAN APPLICATION LAW",
+      "line": 2823
+    },
+    {
+      "part": 20,
+      "title": "DATA STORAGE, LIVE-CAPTURE INTEGRITY AND DISASTER RECOVERY LAW",
+      "line": 2901
+    },
+    {
+      "part": 21,
+      "title": "READ-ONLY COMPANY AI LAW AND ROLE-INTELLIGENCE REQUIREMENTS",
+      "line": 2929
+    },
+    {
+      "part": 22,
+      "title": "FINAL END-TO-END ACCEPTANCE",
+      "line": 2995
+    }
+  ],
+  "rules": [
+    {
+      "id": "19.6.1",
+      "kind": "RULE",
+      "text": "Savings Achieved is an actual outcome only. It is recorded only after a verified payment has been allocated and posted.",
+      "line": 2,
+      "part": 0
+    },
+    {
+      "id": "2.1.1",
+      "kind": "RULE",
+      "text": "One company URL serves every Head Office login. There is no separate URL per Head Office role and no \"Head Office portal\" to generate.",
+      "line": 183,
+      "part": 2
+    },
+    {
+      "id": "2.3.1",
+      "kind": "RULE",
+      "text": "The company slug is fixed when the company is created, is unique platform-wide, and is derived from the company name (lowercase, punctuation stripped). The company's own optional domain is pointed at the same application and never changes the internal slug.",
+      "line": 261,
+      "part": 2
+    },
+    {
+      "id": "2.3.2",
+      "kind": "RULE",
+      "text": "A branch slug is derived from the branch name at creation, deduplicated inside the company (for example ikirun, then ikirun2). The slug is cosmetic: routing and permissions always use the immutable branch id, so renaming a branch never breaks permissions.",
+      "line": 262,
+      "part": 2
+    },
+    {
+      "id": "2.3.3",
+      "kind": "RULE",
+      "text": "Branch URLs never grant Head Office access, and the company URL never grants branch-worker access, unless the person's own credentials say so.",
+      "line": 263,
+      "part": 2
+    },
+    {
+      "id": "2.4.1",
+      "kind": "RULE",
+      "text": "After a credential pair is accepted at a company or branch URL, the system resolves company, branch (if any), worker, role(s) and permissions by itself, then opens the correct portal directly.",
+      "line": 266,
+      "part": 2
+    },
+    {
+      "id": "2.4.2",
+      "kind": "RULE",
+      "text": "A person holding more than one role at the same context gets a role lens switch inside the portal (\"Viewing as ...\"), never a second login and never a second URL.",
+      "line": 270,
+      "part": 2
+    },
+    {
+      "id": "2.4.3",
+      "kind": "RULE",
+      "text": "The wrong password never reveals which field was wrong, whether the user exists, or which company exists.",
+      "line": 271,
+      "part": 2
+    },
+    {
+      "id": "3.2.1",
+      "kind": "RULE",
+      "text": "The Platform Owner portal is a complete product, not a stub: every one of the following must exist, work, and be reachable in at most two clicks from the portal dashboard.",
+      "line": 298,
+      "part": 3
+    },
+    {
+      "id": "3.3.1",
+      "kind": "RULE",
+      "text": "Creating a company requires exactly the following, in a guided multi-step flow.",
+      "line": 354,
+      "part": 3
+    },
+    {
+      "id": "3.3.2",
+      "kind": "RULE",
+      "text": "The wizard shows a live branding preview throughout, exactly as the company will see it, using the same theme mechanism the real portal will use.",
+      "line": 407,
+      "part": 3
+    },
+    {
+      "id": "3.3.3",
+      "kind": "RULE",
+      "text": "The wizard may be saved as a draft before creation is completed; a draft company sits in \"In setup\" status and cannot be logged into. Once the Platform Owner completes Create Company successfully, the company is provisioned and becomes live immediately, appears in the Companies workspace, and is ready for the Platform Owner to open and manage. A completed company must never remain unnecessarily in \"In setup\".",
+      "line": 408,
+      "part": 3
+    },
+    {
+      "id": "3.4.1",
+      "kind": "RULE",
+      "text": "On Create Company the system generates, in one atomic operation:",
+      "line": 410,
+      "part": 3
+    },
+    {
+      "id": "3.4.2",
+      "kind": "RULE",
+      "text": "The system must never generate a \"Head Office portal\". There is nothing to generate: the MD Board is the Head Office. No code, route, record, navigation group or term named \"Head Office portal\" may exist. Head Office is a scope, not a portal.",
+      "line": 421,
+      "part": 3
+    },
+    {
+      "id": "3.4.3",
+      "kind": "RULE",
+      "text": "Each generated password is displayed once, only to the creating actor (you, or the MD, or HR, or the Branch Workplace). It is never emailed or texted automatically, and it is never retrievable afterwards in plain text by anybody, including you.",
+      "line": 425,
+      "part": 3
+    },
+    {
+      "id": "3.5.1",
+      "kind": "RULE",
+      "text": "Inside a company, everything is branded as that company. The company's name and logo appear on: the login screen, the browser title, the sidebar, page headers, the PDF page header of every report and receipt, notification emails the company sends, the customer portal, and error pages a company user can see. All worker roles use the same login screen structure and authentication experience; the authenticated role determines the destination workspace after successful authentication. The design does not create a different login design for each role.",
+      "line": 427,
+      "part": 3
+    },
+    {
+      "id": "3.5.2",
+      "kind": "RULE",
+      "text": "The platform's own name never appears inside a company's workspace, except in a legally-required \"powered by\" line if the owner enables one. The default is: the company is the product the user is using.",
+      "line": 428,
+      "part": 3
+    },
+    {
+      "id": "3.5.3",
+      "kind": "RULE",
+      "text": "The platform's name, owner identity and platform records appear only in the Platform Owner portal and in platform audit records no company can see.",
+      "line": 430,
+      "part": 3
+    },
+    {
+      "id": "3.6.1",
+      "kind": "RULE",
+      "text": "The Platform Owner can: create, activate, suspend and reactivate companies; configure and preview company branding and the platform default theme; see structural and aggregate data about a company (branch names, codes and URLs, staff counts by role category, setup status, storage usage, login recency); configure the platform role catalogue ceiling, global settings and platform configuration; view and export the platform audit trail and platform activity; publish announcements; monitor platform health; and open a support access session only when it has been separately authorised.",
+      "line": 432,
+      "part": 3
+    },
+    {
+      "id": "3.6.4",
+      "kind": "RULE",
+      "text": "Every company listed in the Platform Owner Companies workspace has its own Company Detail workspace. Opening a company opens the management context for that exact company only. The existing company-management controls remain company-specific, including activation, suspension, reactivation, branding, users/roles overview, branches overview, setup status and activity. The company detail workspace must also expose that company's AI Provider / Model configuration.",
+      "line": 434,
+      "part": 3
+    },
+    {
+      "id": "3.6.5",
+      "kind": "RULE",
+      "text": "The Platform Owner may configure the AI provider and model for the exact company being viewed. The selected AI provider and selected model belong only to that company and are persisted against that company. Selecting or changing Company A's AI configuration must never change Company B, C, D or any other company's configuration.",
+      "line": 435,
+      "part": 3
+    },
+    {
+      "id": "3.6.6",
+      "kind": "RULE",
+      "text": "The Platform Owner Companies workspace must support correct company search, filtering, sorting, pagination and opening of the selected company. Every search result and every opened company detail must resolve to the exact company record represented by the result; no stale, mixed, guessed or cross-company result is permitted.",
+      "line": 436,
+      "part": 3
+    },
+    {
+      "id": "3.6.7",
+      "kind": "RULE",
+      "text": "The AI Provider / Model configuration in the company detail workspace is separate from payment-provider configuration. Payment providers remain governed by the branch/provider rules elsewhere in this Vision. This AI configuration determines which AI provider/model the selected company uses for its company AI capability.",
+      "line": 437,
+      "part": 3
+    },
+    {
+      "id": "3.6.2",
+      "kind": "RULE",
+      "text": "The Platform Owner cannot, by default: read any company's customers, loans, payments, savings, ledger, accounting or reconciliation data; read any individual worker's performance figures; edit, reverse or act on any company financial record; read a company's own internal audit trail; or sign into a company portal as a company user.",
+      "line": 441,
+      "part": 3
+    },
+    {
+      "id": "3.6.3",
+      "kind": "RULE",
+      "text": "Support access, when needed, is its own pathway: it requires an explicit request naming the company and a reason, it is time-bound and expires automatically, every action taken inside it is written to both the platform audit trail and the company's own audit trail, and it renders with a persistent banner naming the company and the session expiry. It is never reachable by ordinary clicking through the company detail pages.",
+      "line": 442,
+      "part": 3
+    },
+    {
+      "id": "3.7.1",
+      "kind": "RULE",
+      "text": "Every platform-level action is written to the platform audit trail with: actor, timestamp in server time, action type, the company it concerns, before value, after value, session and IP metadata, and reason where the action type requires it (suspension, support access, role catalogue changes).",
+      "line": 446,
+      "part": 3
+    },
+    {
+      "id": "3.8.1",
+      "kind": "RULE",
+      "text": "Nexora is a multi-tenant platform and must be architected to operate many companies concurrently. Company A, B, C, D, E and further companies may have users, branches, searches, reports, notifications, provider operations, loan workflows and other work executing at the same time. One company's workload must not require unrelated companies to wait unnecessarily.",
+      "line": 448,
+      "part": 3
+    },
+    {
+      "id": "3.8.2",
+      "kind": "RULE",
+      "text": "Company isolation is also an execution boundary. Every asynchronous job, queued operation, provider request, webhook processing task, notification task, report task and other background execution context must retain and enforce the relevant company_id and branch_id where applicable. Execution must resolve the correct tenant and scope before reading secrets, data or configuration.",
+      "line": 449,
+      "part": 3
+    },
+    {
+      "id": "3.8.3",
+      "kind": "RULE",
+      "text": "The platform must support concurrent operations without serialising unrelated companies through one global worker, one global provider session, one global lock or one shared mutable tenant context. Where asynchronous execution is appropriate, jobs/workers/queues must permit independent company operations to proceed concurrently while respecting database consistency, provider limits and resource limits.",
+      "line": 450,
+      "part": 3
+    },
+    {
+      "id": "3.8.4",
+      "kind": "RULE",
+      "text": "A slow, failed, rate-limited or unavailable provider for Company A must not corrupt, misroute or unnecessarily block unrelated provider operations for Company B, C, D or other companies. Provider-specific retries, backoff, rate limits and failure states must remain scoped to the affected operation/provider/company.",
+      "line": 451,
+      "part": 3
+    },
+    {
+      "id": "3.8.5",
+      "kind": "RULE",
+      "text": "Concurrent execution must be safe under simultaneous requests. Operations that can be retried or delivered more than once must be idempotent where required. Database transactions, uniqueness constraints, locking and state transitions must prevent duplicate financial records, duplicate virtual accounts, duplicate webhook effects and other race-condition corruption.",
+      "line": 452,
+      "part": 3
+    },
+    {
+      "id": "3.8.6",
+      "kind": "RULE",
+      "text": "Platform capacity must scale with increasing companies, users, branches and simultaneous operations through the execution architecture rather than by changing business rules or creating a separate application for each company. The system must support horizontal/background execution scaling, bounded resource use, queue backpressure where needed, observability and graceful failure without cross-tenant contamination.",
+      "line": 453,
+      "part": 3
+    },
+    {
+      "id": "3.8.7",
+      "kind": "RULE",
+      "text": "The virtual-account creation flow is a mandatory concurrency example. If seven C.O.s from seven different companies/branches disburse loans at the same time, Nexora must be able to process the seven operations independently: resolve each company and branch, select that branch's configured payment provider, retrieve only that company's/branch's credentials, determine the provider's required customer details, send the correct request to the correct provider, receive the provider response, and persist the returned virtual account against the correct customer and loan.",
+      "line": 454,
+      "part": 3
+    },
+    {
+      "id": "3.8.8",
+      "kind": "RULE",
+      "text": "Concurrent virtual-account creation must preserve all existing loan/disbursement atomicity and provider rules. A failure, timeout or retry in one operation must not cause another company's virtual account, loan, customer, provider credentials or financial records to be attached to the wrong tenant.",
+      "line": 455,
+      "part": 3
+    },
+    {
+      "id": "3.7.2",
+      "kind": "RULE",
+      "text": "Platform audit entries are append-only. There is no edit and no delete action anywhere in the portal.",
+      "line": 457,
+      "part": 3
+    },
+    {
+      "id": "3.7.3",
+      "kind": "RULE",
+      "text": "The Platform Owner is notified of: new company created, company stalled in setup beyond a threshold, company suspended or reactivated, platform health threshold breaches, webhook pipeline health breaches, and every support access session opened or closed.",
+      "line": 458,
+      "part": 3
+    },
+    {
+      "id": "4.1.1",
+      "kind": "RULE",
+      "text": "The MD is the Head Office. The company stretches and expands from the MD's workplace; the roles of the company originate there. Therefore the workspace generated for a company is the MD Board, and the MD Board is big — it contains every company-level capability — which is exactly why it is organised, not dumped.",
+      "line": 462,
+      "part": 4
+    },
+    {
+      "id": "4.1.2",
+      "kind": "RULE",
+      "text": "The MD Board never shows every page at once. Pages are hidden under clicks: the MD sees grouped, meaningful entry points, and clicking one opens the specific workspace. Nothing is buried so deep that it cannot be found, and nothing is sprayed across the home screen so that it cannot be read.",
+      "line": 463,
+      "part": 4
+    },
+    {
+      "id": "4.2.1",
+      "kind": "RULE",
+      "text": "When the MD logs in for the first time with the credentials the owner generated, the system must force, in this exact order, with no way to skip, postpone or bypass:",
+      "line": 468,
+      "part": 4
+    },
+    {
+      "id": "4.2.2",
+      "kind": "RULE",
+      "text": "Until steps 1 to 4 are all complete, the MD can reach nothing — not the dashboard, not a branch, not a worker, not a setting, not a report. The only reachable surfaces are the ritual screens themselves and a sign-out action. This is enforced at the API layer, not merely by hiding menu items.",
+      "line": 494,
+      "part": 4
+    },
+    {
+      "id": "4.2.3",
+      "kind": "RULE",
+      "text": "Every security and account-state transition is audit-logged: credential issued, credential consumed, password changed, authenticator set up, authenticator verified, authenticator frozen, authenticator removed, profile completed, account suspended, account reactivated, portfolio put on hold, portfolio transferred, login succeeded, login failed, and lockout triggered. There is no exception to this rule anywhere in the product.",
+      "line": 498,
+      "part": 4
+    },
+    {
+      "id": "4.3.1",
+      "kind": "RULE",
+      "text": "The MD Board is organised into these groups. The home screen shows the groups; clicking a group opens its workspace; each workspace contains its own arranged sub-pages.",
+      "line": 500,
+      "part": 4
+    },
+    {
+      "id": "4.3.2",
+      "kind": "RULE",
+      "text": "Clicking a branch row inside Branches opens the Branch Workplace inside the MD's own session — no logout, no second password — with a persistent context bar naming the branch being viewed and a return action.",
+      "line": 549,
+      "part": 4
+    },
+    {
+      "id": "4.3.3",
+      "kind": "RULE",
+      "text": "Every group is reachable from the MD Board home in one click; every sub-page is reachable from its group in at most one more click. Deeper objects (a specific customer, a specific payment) are reachable by search or by drill-down, not by adding fixed menu items.",
+      "line": 550,
+      "part": 4
+    },
+    {
+      "id": "4.4.1",
+      "kind": "RULE",
+      "text": "Because the MD has unlimited authority over his own company, he must see all of the company's financial reality, arranged — not rough. The command view must present, each as its own clearly labelled block:",
+      "line": 552,
+      "part": 4
+    },
+    {
+      "id": "4.4.2",
+      "kind": "RULE",
+      "text": "Every figure in this view comes from the one shared performance engine (Part 11). No screen may compute its own version of expected, realised, outstanding, overdue or collection rate.",
+      "line": 577,
+      "part": 4
+    },
+    {
+      "id": "4.4.3",
+      "kind": "RULE",
+      "text": "All figures are read-only. There is no edit, no override and no manual entry control anywhere in the command view, for the MD or for anyone.",
+      "line": 578,
+      "part": 4
+    },
+    {
+      "id": "4.5.1",
+      "kind": "RULE",
+      "text": "Roles come from the MD's workplace. When the MD chooses to create a worker — from the People group, or from inside a branch — the system must never dump every role in the company into one list. It must first ask which world the worker belongs to, and only then list roles:",
+      "line": 580,
+      "part": 4
+    },
+    {
+      "id": "4.5.2",
+      "kind": "RULE",
+      "text": "The MD is not required to create every worker himself. The MD decides how far his own workload goes:",
+      "line": 596,
+      "part": 4
+    },
+    {
+      "id": "4.5.3",
+      "kind": "RULE",
+      "text": "Every worker the MD creates is created the same way, with the same credential law (Part 5) and the same mandatory first-login ritual. There is no shortcut, no \"trusted\" account and no exemption — including for the Deputy MD.",
+      "line": 601,
+      "part": 4
+    },
+    {
+      "id": "4.5.4",
+      "kind": "RULE",
+      "text": "Creating a worker requires: role world, role, branch (for branch roles), full name, phone number, passport, day and month of birth (never the year — the year is not collected, not stored, and not derivable from any field), and the scope of the role. On save, the system generates the username, the initial password, the worker ID and the one-time credential panel.",
+      "line": 602,
+      "part": 4
+    },
+    {
+      "id": "4.6.1",
+      "kind": "RULE",
+      "text": "Inside his own company the MD has the highest organisational authority: every branch, every worker, every customer, every loan, every payment, every report, every setting, every role assignment, every approval, every reversal authorisation and every audit record is within his authorised visibility/control scope. This organisational authority never permits direct mutation of immutable financial truth, audit history or original evidence. Where a financial correction is required, the MD uses the controlled reversal/correction workflow defined in Part 5.6 and Part 11.4.",
+      "line": 604,
+      "part": 4
+    },
+    {
+      "id": "4.6.2",
+      "kind": "RULE",
+      "text": "The MD's limits are only these, and they are absolute:",
+      "line": 605,
+      "part": 4
+    },
+    {
+      "id": "4.6.3",
+      "kind": "RULE",
+      "text": "Where the MD's authority is required to authorise something done by someone else — specifically provider changes made by non-MD users (Part 8.5) — the authorisation arrives as a queue item in the MD's Approvals group, with approve and reject actions, both requiring the MD's authenticated session, and both audit-logged.",
+      "line": 611,
+      "part": 4
+    },
+    {
+      "id": "4.7.1",
+      "kind": "RULE",
+      "text": "The MD is notified of: a provider change awaiting his authorisation; a high-value loan application awaiting final approval; a branch falling below target; an overdue or default spike; unallocated money waiting beyond the configured threshold; a reconciliation exception; a provider or webhook failure; a worker frozen, suspended or whose portfolio was held or transferred; a worker who has not completed their credential ritual within the configured window; and any high-value reversal.",
+      "line": 613,
+      "part": 4
+    },
+    {
+      "id": "5.1.1",
+      "kind": "RULE",
+      "text": "The username of every worker is the worker's full name, exactly as captured, in normal spelling and spacing.",
+      "line": 690,
+      "part": 5
+    },
+    {
+      "id": "5.1.2",
+      "kind": "RULE",
+      "text": "The username is the software's output, not a field a human invents. Nobody types a username. The creating person types the name once, and the software derives the username from it.",
+      "line": 700,
+      "part": 5
+    },
+    {
+      "id": "5.1.3",
+      "kind": "RULE",
+      "text": "Spaces are allowed, capitalisation is preserved as captured, and neither the phone number nor the email is ever used as a login identity.",
+      "line": 701,
+      "part": 5
+    },
+    {
+      "id": "5.1.4",
+      "kind": "RULE",
+      "text": "Uniqueness is enforced inside the company (and inside the platform for the Platform Owner). A full name must be unique as a login identity inside a company. If a proposed worker name already exists, the creation flow must stop and require the authorised creator to correct the person's full name before the account is created. The software must never append a suffix, silently alter the full-name username, or create two accounts that authenticate with the same username and initial password. The one thing that may never happen is a generated credential that does not log in.",
+      "line": 702,
+      "part": 5
+    },
+    {
+      "id": "5.2.1",
+      "kind": "RULE",
+      "text": "The initial password of every worker is the at-sign followed by the first name, with the first letter capitalised — for example @Cornelius for Cornelius Adedeji Victor.",
+      "line": 704,
+      "part": 5
+    },
+    {
+      "id": "5.2.2",
+      "kind": "RULE",
+      "text": "The initial password must genuinely authenticate. The generation routine and the authentication routine must be the same code path, so that a generated password cannot fail to work. It is stored only as a hash, and the one-time panel is produced from the generated value before hashing.",
+      "line": 705,
+      "part": 5
+    },
+    {
+      "id": "5.2.3",
+      "kind": "RULE",
+      "text": "The initial password is a one-time credential, not a password:",
+      "line": 706,
+      "part": 5
+    },
+    {
+      "id": "5.2.4",
+      "kind": "RULE",
+      "text": "The same law applies to the MD, to the Platform Owner, to Head Office roles, to branch roles, to Custom Roles and to Customer Portal access: full name as username, at-sign plus first name as the initial password.",
+      "line": 714,
+      "part": 5
+    },
+    {
+      "id": "5.3.1",
+      "kind": "RULE",
+      "text": "Every worker account, in every role, in every company, must complete the following before it can do anything at all:",
+      "line": 716,
+      "part": 5
+    },
+    {
+      "id": "5.3.2",
+      "kind": "RULE",
+      "text": "The authenticator becomes the factor that authorises future sensitive actions: password changes, authenticator removal or re-setup, credential re-issuance, portfolio hold and portfolio transfer, provider changes, and high-value reversals.",
+      "line": 721,
+      "part": 5
+    },
+    {
+      "id": "5.3.3",
+      "kind": "RULE",
+      "text": "Until the ritual completes, the account can reach nothing except the ritual screens and sign-out, and every attempt to reach anything else is refused and audit-logged. This applies identically to the MD, the GM, the HR Manager, the Branch Manager, a Collection Officer, and any Custom Role holder.",
+      "line": 722,
+      "part": 5
+    },
+    {
+      "id": "5.3.4",
+      "kind": "RULE",
+      "text": "No worker may ever be marked \"exempt\" from the ritual, no customer-facing or temporary account bypasses it, and no configuration option may disable it.",
+      "line": 723,
+      "part": 5
+    },
+    {
+      "id": "5.4.1",
+      "kind": "RULE",
+      "text": "Every transition between these states is audit-logged with actor, reason, timestamp, and the before and after state.",
+      "line": 767,
+      "part": 5
+    },
+    {
+      "id": "5.5.1",
+      "kind": "RULE",
+      "text": "Every role is independent. A role is defined by: its purpose, its portal, its own pages, its own dashboard blocks, its own powers, its own restrictions, its own notifications, and its own performance scope. No role shares another role's component tree, and no role is described as \"the same as X but smaller\".",
+      "line": 769,
+      "part": 5
+    },
+    {
+      "id": "5.5.2",
+      "kind": "RULE",
+      "text": "Concretely, this means:",
+      "line": 770,
+      "part": 5
+    },
+    {
+      "id": "5.5.3",
+      "kind": "RULE",
+      "text": "Where two roles legitimately need the same capability (for example, both the Auditor and the MIS Officer need the company performance view), the capability is a shared service that both roles are granted read access to — never a copy-pasted screen, and never a silent permission handover from one role to another.",
+      "line": 774,
+      "part": 5
+    },
+    {
+      "id": "5.5.4",
+      "kind": "RULE",
+      "text": "Effective permissions for a person holding more than one role are the union of the grants of all currently active assignments, each evaluated at its own scope. There is no \"highest role wins\" and no silent downgrade.",
+      "line": 775,
+      "part": 5
+    },
+    {
+      "id": "5.5.5",
+      "kind": "RULE",
+      "text": "A restriction attached to one role does not cancel an action separately granted by another active assignment of the same person; restrictions are evaluated per assignment, and every action records which role assignment was used to perform it.",
+      "line": 776,
+      "part": 5
+    },
+    {
+      "id": "5.6.1",
+      "kind": "RULE",
+      "text": "No role can create, edit, delete or adjust a payment, a repayment allocation, a savings figure, a loan balance, a ledger line, an accounting entry or a virtual account. There is no exception for the MD, the Platform Owner, Finance, the Auditor or support access.",
+      "line": 778,
+      "part": 5
+    },
+    {
+      "id": "5.6.2",
+      "kind": "RULE",
+      "text": "Money enters the system in exactly one way: a verified provider webhook, processed by the payment pipeline, allocated by the C.O. Payment Allocation workflow, written to the ledger, and reflected into performance and accounting. The verification and recording stages of this chain are automatic; C.O. allocation is a required human action.",
+      "line": 779,
+      "part": 5
+    },
+    {
+      "id": "5.6.3",
+      "kind": "RULE",
+      "text": "When a financial correction is required, the system uses a controlled reversal/correction workflow that creates a new linked, audit-logged record and leaves the original untouched forever. Finance may investigate, reconcile and prepare a correction request, but Finance does not edit or directly post a financial correction. Approval authority for a financial reversal/correction is restricted to the MD, GM and authorised Auditor according to the company's configured control policy. The posting service creates the new financial record after required approval; no person edits the original.",
+      "line": 780,
+      "part": 5
+    },
+    {
+      "id": "5.6.4",
+      "kind": "RULE",
+      "text": "The Auditor, the MD and the Platform Owner (inside an authorised support session) can read everything, but reading never becomes writing. No screen anywhere contains a control that edits money.",
+      "line": 781,
+      "part": 5
+    },
+    {
+      "id": "5.7.1",
+      "kind": "RULE",
+      "text": "The flow, in order:",
+      "line": 783,
+      "part": 5
+    },
+    {
+      "id": "5.7.2",
+      "kind": "RULE",
+      "text": "Fields captured at creation:",
+      "line": 793,
+      "part": 5
+    },
+    {
+      "id": "5.7.3",
+      "kind": "RULE",
+      "text": "Generated on save:",
+      "line": 834,
+      "part": 5
+    },
+    {
+      "id": "5.7.4",
+      "kind": "RULE",
+      "text": "No worker ever receives a sign-up link. There is no self-registration screen anywhere in the product.",
+      "line": 839,
+      "part": 5
+    },
+    {
+      "id": "5.8.1",
+      "kind": "RULE",
+      "text": "On every worker account, in the account settings area, there are two controls. These controls are visible only to HR and the MD. They are not visible to the worker when he views his own profile, not visible to a Branch Manager, not visible to Finance and not visible to the Auditor (who may read the resulting records but cannot operate the controls).",
+      "line": 842,
+      "part": 5
+    },
+    {
+      "id": "5.8.2",
+      "kind": "RULE",
+      "text": "Option one: Keep Portfolio On Hold. What it does, in order:",
+      "line": 843,
+      "part": 5
+    },
+    {
+      "id": "5.8.3",
+      "kind": "RULE",
+      "text": "Option two: Change Worker On This Portfolio. What it does, in order:",
+      "line": 850,
+      "part": 5
+    },
+    {
+      "id": "5.8.4",
+      "kind": "RULE",
+      "text": "The portfolio belongs to the seat, not to the person. Transfers preserve the full history: the new worker sees what was received before he arrived, and the audit trail preserves exactly which worker was responsible for which period.",
+      "line": 858,
+      "part": 5
+    },
+    {
+      "id": "5.8.5",
+      "kind": "RULE",
+      "text": "The previous worker's record is never deleted. It becomes historical, frozen or terminated, with role assignments end-dated, so every loan, payment, allocation and approval he ever touched remains attributable forever.",
+      "line": 859,
+      "part": 5
+    },
+    {
+      "id": "5.8.6",
+      "kind": "RULE",
+      "text": "Neither option may delete, mutate, renumber, re-date or tidy up any financial record, customer record or audit entry.",
+      "line": 860,
+      "part": 5
+    },
+    {
+      "id": "5.9.1",
+      "kind": "RULE",
+      "text": "HR has unlimited authority over worker records, and it is deliberately wide, because HR owns the workforce:",
+      "line": 862,
+      "part": 5
+    },
+    {
+      "id": "5.9.2",
+      "kind": "RULE",
+      "text": "When the company wants a new person to take over an existing portfolio, HR does not overwrite the former worker's identity. HR starts the Change Worker On This Portfolio flow, creates a separate worker identity for the new person, and assigns the existing portfolio/seat to that new worker. The former worker remains permanently retained as a historical, frozen/terminated identity with end-dated assignments. The portfolio, customers, groups and financial history remain intact; only the active portfolio-holder assignment changes. Fresh credentials are generated from the new worker's name.",
+      "line": 886,
+      "part": 5
+    },
+    {
+      "id": "5.9.3",
+      "kind": "RULE",
+      "text": "Every HR action in this section is audit-logged with actor, reason, before and after values and timestamp, and the MD is notified of holds and transfers.",
+      "line": 887,
+      "part": 5
+    },
+    {
+      "id": "5.10.1",
+      "kind": "RULE",
+      "text": "Each of the following must produce an audit entry, without exception, in every company: credential issued; credential consumed by password change; credential expired; password changed; password change denied; authenticator set up; authenticator verified; authenticator frozen; authenticator removed; profile completed; profile edited; passport replaced; worker created; worker edited; role assignment created, changed or ended; worker suspended, reactivated or terminated; portfolio put on hold; portfolio hold released; portfolio transferred; login succeeded; login failed; lockout triggered; and credential re-issued.",
+      "line": 889,
+      "part": 5
+    },
+    {
+      "id": "5.10.2",
+      "kind": "RULE",
+      "text": "Security audit entries are immutable, are never editable anywhere in the product, and are readable by the MD, by HR for people events, by the Auditor, and by the Platform Owner only through the authorised support path.",
+      "line": 890,
+      "part": 5
+    },
+    {
+      "id": "6.1.1",
+      "kind": "RULE",
+      "text": "Company roles are organised into two worlds, and the difference is scope, portal and seat count. This distinction must be visible in the product, in the role picker, in the People workspace, in reporting and in permissions.",
+      "line": 894,
+      "part": 6
+    },
+    {
+      "id": "6.2.1",
+      "kind": "RULE",
+      "text": "The company's built-in Head Office roles are the following, each with its own portal, its own pages and its own powers (Part 12 specifies each one):",
+      "line": 920,
+      "part": 6
+    },
+    {
+      "id": "6.3.1",
+      "kind": "RULE",
+      "text": "Creation rights follow the MD, then HR, then the Branch Workplace:",
+      "line": 1022,
+      "part": 6
+    },
+    {
+      "id": "6.3.2",
+      "kind": "RULE",
+      "text": "The MD and HR can always create credentials for another worker. Anyone else's creation right is explicitly configured and audited, and no creation ever skips the credential law or the ritual.",
+      "line": 1041,
+      "part": 6
+    },
+    {
+      "id": "6.4.1",
+      "kind": "RULE",
+      "text": "HR's workplace answers two questions: who works here and how are they doing, and what does the customer book look like — because HR must know which workers are performing, and which customers are not being collected from. HR therefore has two workspaces:",
+      "line": 1043,
+      "part": 6
+    },
+    {
+      "id": "6.4.2",
+      "kind": "RULE",
+      "text": "HR is notified, and the responsible Collection Officer is notified at the same time, when:",
+      "line": 1074,
+      "part": 6
+    },
+    {
+      "id": "6.4.3",
+      "kind": "RULE",
+      "text": "HR can act on a worker (freeze, hold, transfer, reassignment) but can never act on money, customer financial records, allocations or accounting.",
+      "line": 1080,
+      "part": 6
+    },
+    {
+      "id": "6.5.1",
+      "kind": "RULE",
+      "text": "The Internal Auditor and Audit Officers have unlimited read access to everything in the company: every branch, worker, customer, loan, payment, allocation, ledger line, accounting entry, reversal, exception, audit entry and performance figure. They inspect any worker's book without asking anyone.",
+      "line": 1082,
+      "part": 6
+    },
+    {
+      "id": "6.5.2",
+      "kind": "RULE",
+      "text": "The Auditor cannot edit anything: not a transaction, not a customer, not a setting, not a role, not a branch. Reading never becomes writing, and no auditor screen contains a mutating action.",
+      "line": 1083,
+      "part": 6
+    },
+    {
+      "id": "6.5.3",
+      "kind": "RULE",
+      "text": "Nobody can edit a transaction. This is absolute and applies to every role in every company, including the MD, Finance and the Platform Owner. The only financial correction in the product is a reversal, which creates a new linked record and never alters the original.",
+      "line": 1084,
+      "part": 6
+    },
+    {
+      "id": "6.5.4",
+      "kind": "RULE",
+      "text": "The Auditor's drill-down chain is complete, from company level to the smallest record:",
+      "line": 1085,
+      "part": 6
+    },
+    {
+      "id": "6.5.5",
+      "kind": "RULE",
+      "text": "The Auditor is notified of: reversals, reconciliation exceptions, unallocated money beyond a threshold, provider or webhook failures, and records whose financial history shows an inconsistency.",
+      "line": 1089,
+      "part": 6
+    },
+    {
+      "id": "6.6.1",
+      "kind": "RULE",
+      "text": "Finance owns the truth of money, not the control of money. The Finance Manager, Accountant, Assistant Accountant and Cash and Bank Reconciliation Officer work inside these powers:",
+      "line": 1091,
+      "part": 6
+    },
+    {
+      "id": "6.6.2",
+      "kind": "RULE",
+      "text": "Finance can add or change a branch's provider together with the GM, the MD and the Deputy MD. No other role can add, edit or change a provider (Part 8.5).",
+      "line": 1110,
+      "part": 6
+    },
+    {
+      "id": "7.1.1",
+      "kind": "RULE",
+      "text": "These three things must never be confused, in the code, in the database, in the navigation, or in conversation:",
+      "line": 1115,
+      "part": 7
+    },
+    {
+      "id": "7.1.2",
+      "kind": "RULE",
+      "text": "Logging in at the branch URL never opens the Branch Workplace. It opens the worker's own portal, according to the credentials used. The Branch Workplace is reached only from an authorised Head Office account.",
+      "line": 1136,
+      "part": 7
+    },
+    {
+      "id": "7.2.1",
+      "kind": "RULE",
+      "text": "Access to Branch Workplaces is granted by role, and it is granted only to Head Office roles that genuinely inspect branches. The following roles can see branches, create branches, enter branch workplaces and drill into branch workers and their books:",
+      "line": 1139,
+      "part": 7
+    },
+    {
+      "id": "7.2.2",
+      "kind": "RULE",
+      "text": "Roles not on that list do not see the branch page at all. Even though they are Head Office workers, the branch options (check branches, create branches, enter branch workplaces) do not appear on their screens, and their APIs are refused.",
+      "line": 1200,
+      "part": 7
+    },
+    {
+      "id": "7.2.3",
+      "kind": "RULE",
+      "text": "Entering a Branch Workplace creates an audit entry naming the user, the branch, the time, and the role assignment used. Leaving it is logged as well.",
+      "line": 1201,
+      "part": 7
+    },
+    {
+      "id": "7.2.4",
+      "kind": "RULE",
+      "text": "A person's own access is complete for what their role needs. Do not, for example, give HR every Finance page merely because HR can enter branches, and do not deny HR the worker-performance view merely because performance lives near money. Access is granted by role duty, no more and no less.",
+      "line": 1202,
+      "part": 7
+    },
+    {
+      "id": "7.3.1",
+      "kind": "RULE",
+      "text": "The Branch Workplace belongs to exactly one branch. It has nothing to do with any other branch's workplace. Its contents are:",
+      "line": 1204,
+      "part": 7
+    },
+    {
+      "id": "7.3.2",
+      "kind": "RULE",
+      "text": "A Branch Workplace is not a \"do the work\" console for a worker. A worker's own payment allocations, customer registrations and applications are done in his own portal, not in the Branch Workplace. The Branch Workplace is where the branch is created, staffed, configured and inspected.",
+      "line": 1235,
+      "part": 7
+    },
+    {
+      "id": "7.4.1",
+      "kind": "RULE",
+      "text": "A branch is created only by a role with branch-creation rights: the MD, HR, the GM or Assistant GM, the Operations Manager or Assistant, and the Head Office Administrator, from their own portal. Branch Managers cannot create branches.",
+      "line": 1237,
+      "part": 7
+    },
+    {
+      "id": "7.4.2",
+      "kind": "RULE",
+      "text": "Branch creation fields:",
+      "line": 1238,
+      "part": 7
+    },
+    {
+      "id": "7.4.3",
+      "kind": "RULE",
+      "text": "On save the system generates, atomically and race-condition safely:",
+      "line": 1265,
+      "part": 7
+    },
+    {
+      "id": "7.4.4",
+      "kind": "RULE",
+      "text": "A branch's URL and code are permanent. Renaming a branch may change its label, but not its code, its id, or its permission binding.",
+      "line": 1270,
+      "part": 7
+    },
+    {
+      "id": "7.5.1",
+      "kind": "RULE",
+      "text": "Branch workers are created in the Branch Workplace, by an authorised Head Office role (typically HR, the GM, or the Operations Manager), or by the Branch Manager inside his own branch if the company has allowed it.",
+      "line": 1272,
+      "part": 7
+    },
+    {
+      "id": "7.5.2",
+      "kind": "RULE",
+      "text": "The creation follows the same law as every other worker (Part 5): role chosen from the branch world, details captured, username = full name, initial password = at-sign plus first name, one-time credential panel shown, and the mandatory Credential Ritual on first login at the branch URL.",
+      "line": 1273,
+      "part": 7
+    },
+    {
+      "id": "7.5.3",
+      "kind": "RULE",
+      "text": "The credential panel for a branch worker states the branch URL plainly, because that is where he logs in.",
+      "line": 1274,
+      "part": 7
+    },
+    {
+      "id": "7.5.4",
+      "kind": "RULE",
+      "text": "A branch worker's login at the branch URL never opens the Branch Workplace, even for the Branch Manager. The Branch Manager's powers live in his own portal.",
+      "line": 1275,
+      "part": 7
+    },
+    {
+      "id": "7.6.1",
+      "kind": "RULE",
+      "text": "Inside a Branch Workplace, clicking a worker opens that worker's full book. The authorised viewer sees, for the selected period:",
+      "line": 1278,
+      "part": 7
+    },
+    {
+      "id": "7.6.2",
+      "kind": "RULE",
+      "text": "The viewer can repeat this for any worker in the branch, one after another, as quickly as he can click.",
+      "line": 1315,
+      "part": 7
+    },
+    {
+      "id": "7.6.3",
+      "kind": "RULE",
+      "text": "The worker is not told. The viewing does not notify the worker, does not mark his records, does not appear in his portal, and does not change anything he sees. Only the internal audit trail records who inspected which worker and when.",
+      "line": 1316,
+      "part": 7
+    },
+    {
+      "id": "7.6.4",
+      "kind": "RULE",
+      "text": "Read-only applies to nearly all viewers: inspecting never grants the right to edit a worker's records, his customers or his money. HR additionally has the account controls of Part 5.8 (freeze, hold, transfer) from the worker's record, because those are HR's own duties.",
+      "line": 1319,
+      "part": 7
+    },
+    {
+      "id": "7.6.5",
+      "kind": "RULE",
+      "text": "A worker can always see his own book — his customers, his expected, his realised, his performance — in his own portal. He simply cannot see anyone else's, and nobody else's access to his is announced to him.",
+      "line": 1320,
+      "part": 7
+    },
+    {
+      "id": "7.7.1",
+      "kind": "RULE",
+      "text": "Each branch has a provider configuration page inside its Branch Workplace. It is where the branch's payment provider is added, edited, tested, deactivated or replaced, and where its webhook status is visible.",
+      "line": 1322,
+      "part": 7
+    },
+    {
+      "id": "7.7.2",
+      "kind": "RULE",
+      "text": "Only these roles may add, edit, remove or change a branch's provider: MD, Deputy MD, GM, and Finance (Finance Manager, Accountant, Assistant Accountant, Cash and Bank Reconciliation Officer). The MD's own additions take effect immediately. Additions by the Deputy MD, GM or Finance require the MD's authorisation before they become active (Part 8.5).",
+      "line": 1323,
+      "part": 7
+    },
+    {
+      "id": "7.7.3",
+      "kind": "RULE",
+      "text": "Every other role — including the Auditor, HR, the Operations Manager, the Branch Manager and the Collection Officer — cannot add, edit, remove or change a provider. They may view provider status (the Auditor and MIS for assurance, IT for technical health) but never mutate it.",
+      "line": 1324,
+      "part": 7
+    },
+    {
+      "id": "7.7.4",
+      "kind": "RULE",
+      "text": "The provider's webhook for that branch is bound automatically by the system to that branch the moment the provider is activated. Nobody types a webhook URL, and nobody chooses an endpoint (Part 8.6).",
+      "line": 1325,
+      "part": 7
+    },
+    {
+      "id": "7.8.1",
+      "kind": "RULE",
+      "text": "The branch money view is the branch's own financial reality, and it is what makes Head Office supervision real:",
+      "line": 1327,
+      "part": 7
+    },
+    {
+      "id": "7.8.2",
+      "kind": "RULE",
+      "text": "Every figure is real, computed from the payment pipeline and the repayment schedules. No branch screen may show a placeholder or a sample figure.",
+      "line": 1358,
+      "part": 7
+    },
+    {
+      "id": "7.9.1",
+      "kind": "RULE",
+      "text": "A branch has four states: In setup, Active, Suspended, Closed.",
+      "line": 1360,
+      "part": 7
+    },
+    {
+      "id": "7.9.2",
+      "kind": "RULE",
+      "text": "Suspending a branch blocks branch-worker logins but deletes nothing, does not stop money already in flight, and does not alter records. It is reversible.",
+      "line": 1361,
+      "part": 7
+    },
+    {
+      "id": "7.9.3",
+      "kind": "RULE",
+      "text": "Closing a branch means: no new customers, no new loans and no new workers; existing loans and customers continue to be collected and reported; the branch code and URL remain reserved forever; and its records remain fully auditable. No branch is ever deleted.",
+      "line": 1362,
+      "part": 7
+    },
+    {
+      "id": "7.9.4",
+      "kind": "RULE",
+      "text": "Every branch state change is audit-logged with actor, reason and timestamp, and notifies the MD.",
+      "line": 1363,
+      "part": 7
+    },
+    {
+      "id": "8.1.1",
+      "kind": "RULE",
+      "text": "None of that is hard-coded into screens. The provider registry (8.3) stores, per provider, exactly which fields it needs, how the person obtains each field, how each field is validated, how the connection is tested, how the webhook is secured, and what the provider can and cannot do. The screen is then generated from the registry.",
+      "line": 1409,
+      "part": 8
+    },
+    {
+      "id": "8.1.2",
+      "kind": "RULE",
+      "text": "The registry must ship with Monnify, Flutterwave, Paystack, Squad, OPay and PalmPay pre-configured, plus a \"generic or manual provider\" entry for a company using something not listed, so no company is ever blocked.",
+      "line": 1410,
+      "part": 8
+    },
+    {
+      "id": "8.1.3",
+      "kind": "RULE",
+      "text": "Because customer-level KYC requirements differ — some providers require a BVN or NIN to create a customer's virtual account — the customer record must hold the KYC data a provider requires, and the provider's requirement must be checked before an attempt is made, so the failure is explained instead of discovered.",
+      "line": 1411,
+      "part": 8
+    },
+    {
+      "id": "8.2.1",
+      "kind": "RULE",
+      "text": "When a company chooses a provider on the branch's provider page, the form re-renders to that provider's own requirement set. The company must never see fields that the chosen provider does not need, and must never be missing a field the provider requires.",
+      "line": 1413,
+      "part": 8
+    },
+    {
+      "id": "8.2.2",
+      "kind": "RULE",
+      "text": "Every field on the form carries, inline and always visible on demand:",
+      "line": 1438,
+      "part": 8
+    },
+    {
+      "id": "8.2.3",
+      "kind": "RULE",
+      "text": "The builder must not invent the guidance: it must be written from each provider's own current documentation, and the registry must make it easy to update that guidance later without a code change.",
+      "line": 1443,
+      "part": 8
+    },
+    {
+      "id": "8.3.1",
+      "kind": "RULE",
+      "text": "The registry is data, not code. Per provider it stores:",
+      "line": 1445,
+      "part": 8
+    },
+    {
+      "id": "8.3.2",
+      "kind": "RULE",
+      "text": "A branch's own provider configuration record stores: the branch, the provider, the field values, the activation state, the authorisation state, the webhook endpoint the platform generated for that branch, the webhook secret reference, the last successful connection test, the last webhook received, and the health counters (successes, failures, retries).",
+      "line": 1467,
+      "part": 8
+    },
+    {
+      "id": "8.3.3",
+      "kind": "RULE",
+      "text": "Provider credentials are stored encrypted, are never returned to any screen in readable form after saving except through an explicit, audit-logged reveal that the MD may authorise, and are never included in exports, logs, error messages or support data.",
+      "line": 1468,
+      "part": 8
+    },
+    {
+      "id": "8.4.1",
+      "kind": "RULE",
+      "text": "The full flow, from the Branch Workplace:",
+      "line": 1470,
+      "part": 8
+    },
+    {
+      "id": "8.4.2",
+      "kind": "RULE",
+      "text": "Editing a provider follows the same flow, with the same authorisation rule: the MD's own edit applies immediately; anyone else's edit waits for the MD. Already-stored secrets are not re-shown; the editor replaces them only if new values are entered.",
+      "line": 1488,
+      "part": 8
+    },
+    {
+      "id": "8.4.3",
+      "kind": "RULE",
+      "text": "Removing or deactivating a provider follows the same authorisation rule, and must warn explicitly, in the confirmation, what will stop working: no new virtual accounts can be created for that branch, and existing customer accounts with that provider may stop receiving payments.",
+      "line": 1489,
+      "part": 8
+    },
+    {
+      "id": "8.4.4",
+      "kind": "RULE",
+      "text": "Adding another provider alongside an existing one is allowed where the company's plan allows it, and each provider keeps its own configuration, its own webhook binding and its own health record. The branch must always know which provider is primary for creating new virtual accounts.",
+      "line": 1490,
+      "part": 8
+    },
+    {
+      "id": "8.4.5",
+      "kind": "RULE",
+      "text": "No approval of a provider change may be given on behalf of the MD by anyone. The authorisation is performed inside the MD's own authenticated session, with his role assignment recorded.",
+      "line": 1491,
+      "part": 8
+    },
+    {
+      "id": "8.5.1",
+      "kind": "RULE",
+      "text": "The moment a provider becomes Active for a branch, the system must:",
+      "line": 1493,
+      "part": 8
+    },
+    {
+      "id": "8.5.2",
+      "kind": "RULE",
+      "text": "Nobody — not the MD, not Finance, not IT — types or chooses a webhook URL or branch binding. IT may set or rotate provider credentials when carrying out the authorised provider-credential configuration described below, but IT never chooses the webhook destination. The binding is a system fact, derived from the provider configuration of that branch.",
+      "line": 1499,
+      "part": 8
+    },
+    {
+      "id": "8.5.3",
+      "kind": "RULE",
+      "text": "Every webhook is idempotent: replaying the same event must not create a second payment. Duplicate detection uses the provider's own transaction reference.",
+      "line": 1503,
+      "part": 8
+    },
+    {
+      "id": "8.5.4",
+      "kind": "RULE",
+      "text": "Every webhook is stored raw before processing, so any disputed payment can be re-examined exactly as it arrived.",
+      "line": 1504,
+      "part": 8
+    },
+    {
+      "id": "8.5.5",
+      "kind": "RULE",
+      "text": "Failed verification, failed processing, duplicate detection and retry exhaustion all raise a reconciliation exception (Part 11.5) rather than disappearing silently.",
+      "line": 1506,
+      "part": 8
+    },
+    {
+      "id": "8.5.6",
+      "kind": "RULE",
+      "text": "The platform must never rely only on webhooks: a scheduled polling or reconciliation job must periodically confirm that every provider transaction matches a recorded payment, and must raise an exception for anything found only on the provider side.",
+      "line": 1507,
+      "part": 8
+    },
+    {
+      "id": "8.6.1",
+      "kind": "RULE",
+      "text": "None of the following may exist in the product:",
+      "line": 1509,
+      "part": 8
+    },
+    {
+      "id": "8.7.1",
+      "kind": "RULE",
+      "text": "When a branch changes provider:",
+      "line": 1520,
+      "part": 8
+    },
+    {
+      "id": "8.8.1",
+      "kind": "RULE",
+      "text": "The IT and System Administrator owns the technical provider-credential and integration duty: provider API credentials, integration settings, webhook health, webhook success rate, failures, retries, last successful webhook, last settlement, connection-test status and provider downtime. IT may enter, replace and rotate provider credentials through the provider-credential controls, but the action is always audit-logged and, where the underlying provider configuration requires MD authorisation, it remains subject to the MD authorisation rule. IT cannot enter, edit, allocate or correct money.",
+      "line": 1527,
+      "part": 8
+    },
+    {
+      "id": "8.8.2",
+      "kind": "RULE",
+      "text": "IT cannot resolve a money exception, allocate a payment, or decide what a payment should be applied to. Keeping the pipeline healthy and resolving what the pipeline surfaces are deliberately different jobs.",
+      "line": 1528,
+      "part": 8
+    },
+    {
+      "id": "9.1.1",
+      "kind": "RULE",
+      "text": "A customer is a borrower. The customer journey is: registered by a Collection Officer, taken through the lending lifecycle, disbursed, given a virtual account for repayment, and given Customer Portal access.",
+      "line": 1532,
+      "part": 9
+    },
+    {
+      "id": "9.1.2",
+      "kind": "RULE",
+      "text": "The following must not exist anywhere in the product, in any table, screen, route, role or report:",
+      "line": 1533,
+      "part": 9
+    },
+    {
+      "id": "9.1.3",
+      "kind": "RULE",
+      "text": "Savings is still part of this product, but only as an outcome of the normal loan and payment lifecycle: the repayment schedule may define a configured savings component/split where the loan product says so, the C.O. Payment Allocation workflow records the actual savings portion when a verified payment is allocated and posted, and the customer's record and portal show Savings Achieved. Savings is never a product on its own and never a reason to create a customer.",
+      "line": 1539,
+      "part": 9
+    },
+    {
+      "id": "9.1.4",
+      "kind": "RULE",
+      "text": "A customer's record is the single source of truth. A loan, its schedule, its payments, its virtual account and its portal access all hang off that one customer record. No duplicates, ever, under any flow.",
+      "line": 1541,
+      "part": 9
+    },
+    {
+      "id": "9.2.1",
+      "kind": "RULE",
+      "text": "A customer is registered by a Collection Officer (or another role with equivalent customer-creation permission) inside his own portal, at the point of meeting the customer.",
+      "line": 1543,
+      "part": 9
+    },
+    {
+      "id": "9.2.2",
+      "kind": "RULE",
+      "text": "Registration captures a complete profile. The following must all be captured, and the profile must be complete before a loan can be disbursed:",
+      "line": 1544,
+      "part": 9
+    },
+    {
+      "id": "9.2.3",
+      "kind": "RULE",
+      "text": "Editing an existing customer's profile is allowed for authorised roles (the responsible Collection Officer, the Branch Manager, Customer Service, Credit and HR-adjacent roles per permission), but no edit may remove or alter a financial record, a payment, an allocation or a captured face image. Face images are immutable: a new capture creates a new record; the old one is retained.",
+      "line": 1587,
+      "part": 9
+    },
+    {
+      "id": "9.2.4",
+      "kind": "RULE",
+      "text": "Every customer profile change is audit-logged with before and after values and the actor.",
+      "line": 1588,
+      "part": 9
+    },
+    {
+      "id": "9.3.1",
+      "kind": "RULE",
+      "text": "Customers are organised into branch-level groups, created and managed by Collection Officers (or a role with equivalent scope). A group is a convenience wrapper for field work: it groups the Collection Officer's customers for collection rounds, reporting and monitoring.",
+      "line": 1590,
+      "part": 9
+    },
+    {
+      "id": "9.3.2",
+      "kind": "RULE",
+      "text": "A group never owns money. Every loan, schedule, payment, allocation and savings figure belongs to the individual customer. A group has no balance of its own and no ledger of its own, and closing or renaming a group never changes a member's records.",
+      "line": 1591,
+      "part": 9
+    },
+    {
+      "id": "9.3.3",
+      "kind": "RULE",
+      "text": "A customer belongs to exactly one branch, and may belong to a group within that branch.",
+      "line": 1592,
+      "part": 9
+    },
+    {
+      "id": "9.4.1",
+      "kind": "RULE",
+      "text": "When a customer applies for a loan, the applicant's face is captured live, from the camera inside the application itself. There is no passport-number field, no passport-photo upload, and no \"choose a file from the phone\" action anywhere in the loan application.",
+      "line": 1595,
+      "part": 9
+    },
+    {
+      "id": "9.4.2",
+      "kind": "RULE",
+      "text": "The following are prohibited in the loan application and in the guarantor step, without exception:",
+      "line": 1596,
+      "part": 9
+    },
+    {
+      "id": "9.4.3",
+      "kind": "RULE",
+      "text": "The capture must record, with the image: the timestamp from the server, the device identifier, the geo-coordinates where available, and the identity of the logged-in worker performing the application. The image is stored against that specific application, and its hash is recorded.",
+      "line": 1603,
+      "part": 9
+    },
+    {
+      "id": "9.4.4",
+      "kind": "RULE",
+      "text": "The capture must be checked before it is accepted: a face must actually be present, the image must not be blank or blurred beyond use, and a liveness check must be applied so that a photograph of a photograph is rejected. If the check fails, the application cannot proceed, and the failure is explained to the worker.",
+      "line": 1604,
+      "part": 9
+    },
+    {
+      "id": "9.4.5",
+      "kind": "RULE",
+      "text": "The system must detect attempted reuse: if the captured face matches a face already captured for a different customer, the application is flagged, the capture is recorded, and the responsible worker's manager is notified. This is the mechanism that makes \"applying on behalf of someone who is not there\" difficult and visible.",
+      "line": 1605,
+      "part": 9
+    },
+    {
+      "id": "9.4.6",
+      "kind": "RULE",
+      "text": "The same law applies to the guarantor, with the same rules: live capture, no uploads, liveness check, metadata recorded, and a guarantor who is not present cannot be added.",
+      "line": 1606,
+      "part": 9
+    },
+    {
+      "id": "9.4.7",
+      "kind": "RULE",
+      "text": "Face images are never editable, never replaceable by an upload, and are retained with the application permanently for audit. A re-application means a new capture.",
+      "line": 1607,
+      "part": 9
+    },
+    {
+      "id": "9.4.8",
+      "kind": "RULE",
+      "text": "The customer's registration photograph follows the same live-capture rule, so the customer's record and the application face are both real captures of a person who was physically present.",
+      "line": 1608,
+      "part": 9
+    },
+    {
+      "id": "9.5.1",
+      "kind": "RULE",
+      "text": "The virtual account (VA) is generated at loan disbursement — not at customer registration, not at loan application, not at loan approval.",
+      "line": 1610,
+      "part": 9
+    },
+    {
+      "id": "9.5.2",
+      "kind": "RULE",
+      "text": "There is no rule that every registered customer receives a permanent virtual account at onboarding, and there is no requirement that a registered customer must have a virtual account before receiving a loan. The another version of that rule is withdrawn, must not be implemented, and must not be preserved alongside this one (Part 19 lists the removal).",
+      "line": 1625,
+      "part": 9
+    },
+    {
+      "id": "9.5.3",
+      "kind": "RULE",
+      "text": "A customer cannot be disbursed without a working virtual account: if the provider call fails at disbursement, the disbursement is held in a clear, visible \"virtual account pending\" state, the branch and Finance are notified, and the system retries. The customer record is never rolled back or duplicated because of a provider outage.",
+      "line": 1626,
+      "part": 9
+    },
+    {
+      "id": "9.5.4",
+      "kind": "RULE",
+      "text": "One customer, one current virtual account. If the provider must replace it, the old account's status becomes Replaced, it is never deleted, and the customer's current payment destination remains unambiguous.",
+      "line": 1627,
+      "part": 9
+    },
+    {
+      "id": "9.5.5",
+      "kind": "RULE",
+      "text": "The virtual account record stores: company, branch, customer, provider, bank name, account name, account number, provider reference, creation timestamp, status (pending, active, replaced, closed), and the disbursement that created it.",
+      "line": 1628,
+      "part": 9
+    },
+    {
+      "id": "9.6.1",
+      "kind": "RULE",
+      "text": "Customer Portal access is generated in the same step as the virtual account, at disbursement completion — not at registration, and not before the customer has a real loan and a real account to pay into.",
+      "line": 1630,
+      "part": 9
+    },
+    {
+      "id": "9.6.2",
+      "kind": "RULE",
+      "text": "Generating access produces:",
+      "line": 1631,
+      "part": 9
+    },
+    {
+      "id": "9.6.3",
+      "kind": "RULE",
+      "text": "The customer logs in and completes the same credential ritual required of workers: change password, and set up and verify an authenticator where the company requires it for customers.",
+      "line": 1636,
+      "part": 9
+    },
+    {
+      "id": "9.6.4",
+      "kind": "RULE",
+      "text": "Authenticator requirement for customers: on by default, because the customer's portal shows real money and real balances. The MD may switch it off for his company where his customer base genuinely cannot support an authenticator application, and the choice is recorded and audit-logged when changed. Changing the password is never optional for anybody, customer or worker.",
+      "line": 1637,
+      "part": 9
+    },
+    {
+      "id": "9.6.5",
+      "kind": "RULE",
+      "text": "Customer access is never a \"share the account with the officer\" arrangement: the customer's credentials belong to the customer, and no worker ever logs in as a customer.",
+      "line": 1638,
+      "part": 9
+    },
+    {
+      "id": "9.7.1",
+      "kind": "RULE",
+      "text": "The Customer Portal shows the customer's actual records, and nothing else. It contains, according to the customer's real data:",
+      "line": 1640,
+      "part": 9
+    },
+    {
+      "id": "9.7.2",
+      "kind": "RULE",
+      "text": "The portal is read-only except for the payments the customer makes to the provided account and any messages or profile updates the company allows. The customer never edits a payment, a balance or a schedule.",
+      "line": 1680,
+      "part": 9
+    },
+    {
+      "id": "9.8.1",
+      "kind": "RULE",
+      "text": "There are no fake records, no fake balances, no fake payment history, no sample customers, no demonstration amounts and no placeholder tiles in any live company or customer view. A screen with nothing to show says so honestly.",
+      "line": 1682,
+      "part": 9
+    },
+    {
+      "id": "9.8.2",
+      "kind": "RULE",
+      "text": "A customer's portal is not the place for marketing figures. It shows the customer's own numbers, or it shows an empty state.",
+      "line": 1683,
+      "part": 9
+    },
+    {
+      "id": "9.9.1",
+      "kind": "RULE",
+      "text": "The system must raise notifications for: payment received (to the customer and to the responsible worker), payment due soon, payment missed, overdue thresholds crossed, money received but awaiting allocation, and a customer's group falling silent.",
+      "line": 1685,
+      "part": 9
+    },
+    {
+      "id": "9.9.2",
+      "kind": "RULE",
+      "text": "Where a customer's payment was received but not allocated in time, or a customer has not paid for a full window, the notification goes to both the responsible worker (usually the Collection Officer) and HR, because HR judges performance (Part 6.4.2).",
+      "line": 1686,
+      "part": 9
+    },
+    {
+      "id": "10.2.1",
+      "kind": "RULE",
+      "text": "The application captures: the loan product, the requested amount, the requested cycle, the purpose, the applicant's live-captured face, the guarantor's live-captured face, the guarantor's details, and any documents the company's product configuration requires.",
+      "line": 1711,
+      "part": 10
+    },
+    {
+      "id": "10.2.2",
+      "kind": "RULE",
+      "text": "There is no passport-number field and no passport photograph upload in the application. The face capture is the identification.",
+      "line": 1712,
+      "part": 10
+    },
+    {
+      "id": "10.2.3",
+      "kind": "RULE",
+      "text": "The application records which worker submitted it, from which device, at which location, and at what time, so that a fraudulent application can always be traced to the person who submitted it.",
+      "line": 1713,
+      "part": 10
+    },
+    {
+      "id": "10.2.4",
+      "kind": "RULE",
+      "text": "An application cannot proceed to review without a successful face capture and a successful guarantor capture.",
+      "line": 1714,
+      "part": 10
+    },
+    {
+      "id": "10.3.1",
+      "kind": "RULE",
+      "text": "The company defines one or more approval chain templates, each an ordered list of roles (not people) that an application must pass through. A loan product is attached to a chain, so different products can use different routes.",
+      "line": 1716,
+      "part": 10
+    },
+    {
+      "id": "10.3.2",
+      "kind": "RULE",
+      "text": "At each stage, only a holder of that stage's role, at the correct scope, can move the application forward. A Branch Manager of another branch cannot act on it.",
+      "line": 1717,
+      "part": 10
+    },
+    {
+      "id": "10.3.3",
+      "kind": "RULE",
+      "text": "Every stage transition is audit-logged: actor, role assignment used, previous status, new status, timestamp, and the reason where required. Rejection always requires a reason.",
+      "line": 1718,
+      "part": 10
+    },
+    {
+      "id": "10.3.4",
+      "kind": "RULE",
+      "text": "A rejection returns the application to a defined previous status (back to the applicant, or back one stage) as configured, never into a dead end.",
+      "line": 1719,
+      "part": 10
+    },
+    {
+      "id": "10.3.5",
+      "kind": "RULE",
+      "text": "The MD holds the final say where the chain says so, and the default chain for a company that changes nothing ends at the MD.",
+      "line": 1720,
+      "part": 10
+    },
+    {
+      "id": "10.4.1",
+      "kind": "RULE",
+      "text": "Disbursement happens only after the full chain approves, and only when: the customer's profile is complete, the face captures exist, the virtual account is created successfully, and the repayment schedule has been generated.",
+      "line": 1722,
+      "part": 10
+    },
+    {
+      "id": "10.4.2",
+      "kind": "RULE",
+      "text": "Disbursement generates, atomically: the virtual account record, the customer portal access, the complete repayment schedule, the ledger, and the audit entries. If any part fails, the disbursement is held in a visible pending state with a clear explanation, and is never half-completed.",
+      "line": 1723,
+      "part": 10
+    },
+    {
+      "id": "10.4.3",
+      "kind": "RULE",
+      "text": "Disbursement authority is the end of the configured approval chain, so a company may allow branch-level disbursement or keep it at Head Office. What may never change is the no-cash rule and the no-manual-entry rule.",
+      "line": 1724,
+      "part": 10
+    },
+    {
+      "id": "10.5.1",
+      "kind": "RULE",
+      "text": "Every payment arrives by bank transfer to the customer's virtual account, reaches the system as a verified provider webhook, is identified by the virtual account, is allocated by the C.O. Payment Allocation workflow, is written to the digital collection ledger, updates performance, updates accounting, and notifies the customer and the responsible worker. Verification and recording are automatic; allocation is not automatic and must be completed manually by the C.O.",
+      "line": 1726,
+      "part": 10
+    },
+    {
+      "id": "10.5.2",
+      "kind": "RULE",
+      "text": "The repayment schedule is generated once, in full, at disbursement: one row per due date, each carrying the expected repayment and the configured savings component/split for that schedule date, per the product's split.",
+      "line": 1727,
+      "part": 10
+    },
+    {
+      "id": "10.5.3",
+      "kind": "RULE",
+      "text": "The C.O. Payment Allocation workflow applies the permitted allocation rules. The C.O. chooses the allocation between loan repayment and savings, and Nexora validates that the total allocation equals the exact Verified Payment amount. Under-allocation, over-allocation, residuals, silent rounding, roll-forward and automatic correction are rejected.",
+      "line": 1728,
+      "part": 10
+    },
+    {
+      "id": "10.5.4",
+      "kind": "RULE",
+      "text": "The ledger's actual amounts are written only by the pipeline. No human writes a ledger figure, ever.",
+      "line": 1734,
+      "part": 10
+    },
+    {
+      "id": "10.5.5",
+      "kind": "RULE",
+      "text": "A provider transaction that has been received and verified at the provider/integration level but cannot yet be matched or made eligible for C.O. allocation — for example, an unmatchable reference, a customer with no active loan, a duplicate, or a partial amount the company's rules do not resolve — is placed in the appropriate awaiting-allocation or reconciliation-exception state, with a visible reason and an owner. It is not treated as an eligible C.O. allocation item until internal eligibility succeeds. It is never silently dropped, never guessed at, and never force-fitted to a random loan.",
+      "line": 1735,
+      "part": 10
+    },
+    {
+      "id": "10.5.6",
+      "kind": "RULE",
+      "text": "Money held while a portfolio is on hold (Part 5.8.2) sits in the same awaiting-allocation state until the portfolio is taken over, and remains visible to Head Office throughout.",
+      "line": 1737,
+      "part": 10
+    },
+    {
+      "id": "10.6.1",
+      "kind": "RULE",
+      "text": "Overdue begins when a scheduled amount passes its due date and the company's grace rule. Default begins when the company's default rule is crossed. Both are computed by the performance engine, never by a human.",
+      "line": 1739,
+      "part": 10
+    },
+    {
+      "id": "10.6.2",
+      "kind": "RULE",
+      "text": "Overdue cases escalate: the responsible worker, then the Branch Manager, then recovery, then credit, then the MD, according to thresholds and the company's configuration.",
+      "line": 1740,
+      "part": 10
+    },
+    {
+      "id": "10.6.3",
+      "kind": "RULE",
+      "text": "Restructuring and write-off are configured processes with their own approval chain; they create new records and never edit the original loan history.",
+      "line": 1741,
+      "part": 10
+    },
+    {
+      "id": "10.7.1",
+      "kind": "RULE",
+      "text": "Savings appears in this product in exactly these ways, and no others:",
+      "line": 1743,
+      "part": 10
+    },
+    {
+      "id": "10.7.2",
+      "kind": "RULE",
+      "text": "There is no savings account product, no savings-only customer, no deposit-taking flow independent of a loan, and no savings-related role. If a company wants to record a saving, it is recorded as part of a customer's normal loan-and-payment lifecycle.",
+      "line": 1748,
+      "part": 10
+    },
+    {
+      "id": "10.8.1",
+      "kind": "RULE",
+      "text": "The following must not exist: a manual repayment or collection entry; a cash collection record; a \"record what the customer paid me\" screen; an offline payment entry that is later typed in; a loan application without a live face capture; a loan approval by a person outside the configured chain; a disbursement without a virtual account; a second customer record created for a loan; and any flow that advances a loan using a figure a human typed.",
+      "line": 1750,
+      "part": 10
+    },
+    {
+      "id": "10.9.1",
+      "kind": "RULE",
+      "text": "Every link in this chain is a real relationship in the data, not a report-time guess:",
+      "line": 1752,
+      "part": 10
+    },
+    {
+      "id": "11.1.1",
+      "kind": "RULE",
+      "text": "Every dashboard, report and API response in Nexora must use these exact definitions. No page, role or module may define its own version of a calculation.",
+      "line": 1760,
+      "part": 11
+    },
+    {
+      "id": "11.1.2",
+      "kind": "RULE",
+      "text": "These words mean the same thing whether the figure is for one Collection Officer, one group, one branch or the whole company. The words never change meaning depending on which screen is showing them.",
+      "line": 1794,
+      "part": 11
+    },
+    {
+      "id": "11.2.1",
+      "kind": "RULE",
+      "text": "There is exactly one performance engine in Nexora. Every screen that shows expected, realised, outstanding, overdue, collection rate, savings figures or customer counts reads from it. No screen computes its own.",
+      "line": 1796,
+      "part": 11
+    },
+    {
+      "id": "11.2.2",
+      "kind": "RULE",
+      "text": "At every level the same figures are calculated with the same definitions, and the totals must reconcile downwards:",
+      "line": 1798,
+      "part": 11
+    },
+    {
+      "id": "11.2.3",
+      "kind": "RULE",
+      "text": "Figures update the moment a verified payment clears the pipeline. A payment received at 2:14pm appears in the responsible worker's figures, his branch's figures and the company's figures immediately, not the next day.",
+      "line": 1803,
+      "part": 11
+    },
+    {
+      "id": "11.2.4",
+      "kind": "RULE",
+      "text": "Because everything derives from the pipeline and the schedules, and because no manual collection entry exists anywhere, no figure in the product can be distorted by a typed number.",
+      "line": 1804,
+      "part": 11
+    },
+    {
+      "id": "11.3.1",
+      "kind": "RULE",
+      "text": "Performance visibility is a shared capability granted by scope and permission, and the difference between roles is scope and permission, never a separate calculation. The matrix:",
+      "line": 1806,
+      "part": 11
+    },
+    {
+      "id": "11.3.2",
+      "kind": "RULE",
+      "text": "Performance visibility is always read-only. It never grants a write permission over the underlying data, for any role, at any level, including the MD.",
+      "line": 1933,
+      "part": 11
+    },
+    {
+      "id": "11.4.1",
+      "kind": "RULE",
+      "text": "There is no manual payment-creation entry in Nexora. A C.O. may enter allocation values only for an already-verified payment whose received amount is locked by the system.",
+      "line": 1935,
+      "part": 11
+    },
+    {
+      "id": "11.4.2",
+      "kind": "RULE",
+      "text": "There is no edit control over money anywhere in the product: not on a payment, an allocation, a balance, a ledger line, an accounting entry or a virtual account.",
+      "line": 1936,
+      "part": 11
+    },
+    {
+      "id": "11.4.3",
+      "kind": "RULE",
+      "text": "Financial corrections use a controlled reversal/correction workflow that creates new linked audited records and leaves the original record permanently intact. The only roles that may approve a financial reversal/correction are MD, GM and authorised Auditor, subject to the company's configured control policy. Finance may investigate and prepare the request but cannot approve or post it. Once all required approvals exist, the system—not a person editing the original—creates the new reversal/correction record.",
+      "line": 1937,
+      "part": 11
+    },
+    {
+      "id": "11.5.1",
+      "kind": "RULE",
+      "text": "Reconciliation is a standing module, not a report. It holds a live, resolvable list of: unallocated payments, unmatched payments, payments found on the provider side but missing internally, duplicate webhooks, reversed transactions, failed webhook processing and incomplete disbursements.",
+      "line": 1939,
+      "part": 11
+    },
+    {
+      "id": "11.5.2",
+      "kind": "RULE",
+      "text": "Each exception has an owner, an age, a reason, a status and a resolution note. Nothing is closed without a note.",
+      "line": 1940,
+      "part": 11
+    },
+    {
+      "id": "11.5.3",
+      "kind": "RULE",
+      "text": "The exception queue is worked by authorised Finance users for reconciliation and resolution preparation, watched by Auditors and visible to MD/GM. Finance cannot edit financial truth or approve/post a reversal unless the person is separately an MD, GM or authorised Auditor under the control model.",
+      "line": 1941,
+      "part": 11
+    },
+    {
+      "id": "11.6.1",
+      "kind": "RULE",
+      "text": "Accounting statements are generated automatically from the verified pipeline and the ledger: general ledger, cash book, cash flow, income and financial position. The terms \"cash book\" and \"cash flow\" are standard accounting terms only; Nexora has no physical cash handling anywhere.",
+      "line": 1943,
+      "part": 11
+    },
+    {
+      "id": "11.6.2",
+      "kind": "RULE",
+      "text": "The reporting system produces exportable reports, filterable by period, branch, role and worker, drawing exclusively on the same verified data, with branch performance, worker performance and collection officer performance as defined report types.",
+      "line": 1944,
+      "part": 11
+    },
+    {
+      "id": "11.6.3",
+      "kind": "RULE",
+      "text": "No report may contain a figure that cannot be traced back to a payment, a schedule or an audit entry.",
+      "line": 1945,
+      "part": 11
+    },
+    {
+      "id": "12.0.1",
+      "kind": "RULE",
+      "text": "Every role below is its own workspace with its own pages, its own powers and its own restrictions. No role is a copy of another, and no role defers to another role's screens.",
+      "line": 1949,
+      "part": 12
+    },
+    {
+      "id": "12.0.2",
+      "kind": "RULE",
+      "text": "Each entry states: purpose; portal and the groups that open by click; what the role can do; what the role cannot do; its Branch Workplace access; and its colour touchpoints (which elements take the company's chosen colour in that role's screens, per Part 13).",
+      "line": 1950,
+      "part": 12
+    },
+    {
+      "id": "12.0.3",
+      "kind": "RULE",
+      "text": "Every role's workspace follows the same layout law: a landing summary with the role's vital numbers, then named groups that open on click, then the role's own pages. Nothing is shown all at once, and nothing needed is missing.",
+      "line": 1951,
+      "part": 12
+    },
+    {
+      "id": "12.0.4",
+      "kind": "RULE",
+      "text": "Every role's own dashboard must be complete and arranged: for every role, the summary blocks, the groups and the pages listed below are mandatory, not optional.",
+      "line": 1952,
+      "part": 12
+    },
+    {
+      "id": "12.27.1",
+      "kind": "RULE",
+      "text": "The Collection Officer's dashboard is a full dashboard, not a stripped page: it contains the Today summary, the awaiting-allocation queue, the overdue list, his groups, his recent payments, his performance trend, and his notifications. Each of these is a click, not a wall of everything.",
+      "line": 2152,
+      "part": 12
+    },
+    {
+      "id": "13.1.1",
+      "kind": "RULE",
+      "text": "The company's colour is a highlighter, not a background wash. It is applied to a small, defined set of elements — the things a user must look at to act, or to know where they are — and it is deliberately absent from everything else.",
+      "line": 2186,
+      "part": 13
+    },
+    {
+      "id": "13.1.2",
+      "kind": "RULE",
+      "text": "Backgrounds, surfaces, cards, tables and paragraphs are neutral and layered, and they never change when a company colour is chosen. Only the defined accent tokens change.",
+      "line": 2188,
+      "part": 13
+    },
+    {
+      "id": "13.2.1",
+      "kind": "RULE",
+      "text": "Because these values are fixed, the same page keeps the same structure and readability in every company; only the accent changes. This is also what makes the product look beautiful in any brand: the neutral base does the work, and the company colour supplies the emphasis.",
+      "line": 2222,
+      "part": 13
+    },
+    {
+      "id": "13.3.1",
+      "kind": "RULE",
+      "text": "Everything read at length — paragraphs, table cells, numbers, descriptions, help text and field labels — stays neutral in every role and on every screen. Text is never turned into the company colour for decoration.",
+      "line": 2298,
+      "part": 13
+    },
+    {
+      "id": "13.4.1",
+      "kind": "RULE",
+      "text": "With no company chosen, the product's accent is black (a near-black charcoal): text and buttons are black, exactly as you specified. The moment a company is created with a colour, every token in 13.3 takes that colour for that company's users only.",
+      "line": 2300,
+      "part": 13
+    },
+    {
+      "id": "13.4.2",
+      "kind": "RULE",
+      "text": "The Platform Owner's own portal uses green, because green is your approved platform colour, and it follows the same token pattern as a company colour. The Platform Owner's portal is never switched to a company's colour, and a company's portal is never shown green because the platform is green.",
+      "line": 2301,
+      "part": 13
+    },
+    {
+      "id": "13.4.3",
+      "kind": "RULE",
+      "text": "Because the accent is a themed token rather than a hard-coded value, changing the company colour in branding settings changes every listed element at once, in every role, with no per-screen work. Two companies with different colours must render the same component tree with different accents, and no component may contain a company colour.",
+      "line": 2302,
+      "part": 13
+    },
+    {
+      "id": "13.5.1",
+      "kind": "RULE",
+      "text": "The system computes the correct label colour for anything sitting on the accent colour: if the company's colour is light, the label is near-black; if it is dark, the label is white. This is automatic, per company, and must never be assumed.",
+      "line": 2304,
+      "part": 13
+    },
+    {
+      "id": "13.5.2",
+      "kind": "RULE",
+      "text": "The branding screen warns, without blocking, when a chosen colour would make text hard to read, and suggests a shade of the same colour that passes contrast.",
+      "line": 2305,
+      "part": 13
+    },
+    {
+      "id": "13.5.3",
+      "kind": "RULE",
+      "text": "The accent is never the only signal of meaning: a status is a status because of its words and icon, with colour supporting it and never replacing it.",
+      "line": 2306,
+      "part": 13
+    },
+    {
+      "id": "13.6.1",
+      "kind": "RULE",
+      "text": "The company logo appears on the login screen, the sidebar or header, the customer portal, notification emails, exported reports, receipts and statements, and the browser tab. It never appears inside another company's workspace, and never inside the Platform Owner's portal.",
+      "line": 2308,
+      "part": 13
+    },
+    {
+      "id": "13.6.2",
+      "kind": "RULE",
+      "text": "The logo is uploaded as an image, validated for format and size, and shown at a consistent size without distortion. A company without a logo shows its name in a styled placeholder rather than a broken image.",
+      "line": 2309,
+      "part": 13
+    },
+    {
+      "id": "13.6.3",
+      "kind": "RULE",
+      "text": "The logo never replaces the company name in body text. Both exist: the logo for recognition, the name for clarity.",
+      "line": 2310,
+      "part": 13
+    },
+    {
+      "id": "13.7.1",
+      "kind": "RULE",
+      "text": "Every screen a company's users see carries the company's name, not the platform's: login, headers, footers, empty states, error pages the company's users can read, emails and exports.",
+      "line": 2312,
+      "part": 13
+    },
+    {
+      "id": "13.7.2",
+      "kind": "RULE",
+      "text": "The platform's name appears only in the Platform Owner portal and in platform audit records, or in an optional, owner-enabled \"powered by\" line.",
+      "line": 2313,
+      "part": 13
+    },
+    {
+      "id": "13.8.1",
+      "kind": "RULE",
+      "text": "None of the following may appear anywhere: a hard-coded company colour inside a component; a page whose background is the company colour; body text or paragraphs in the company colour; the company colour used for a semantic state it would contradict; a company's logo or colour inside another company's workspace; the platform's brand inside a company's workspace; a colour-coded element with no text alternative; and any themed element that does not come from the theme record.",
+      "line": 2315,
+      "part": 13
+    },
+    {
+      "id": "13.9.1",
+      "kind": "RULE",
+      "text": "Every role's workspace, the Branch Workplace, the customer portal and the Platform Owner portal use the same token law. Concretely:",
+      "line": 2317,
+      "part": 13
+    },
+    {
+      "id": "13.9.2",
+      "kind": "RULE",
+      "text": "A role is never given a different visual language because of its seniority. The MD, the Auditor, the Collection Officer and the customer all use the same design system; what differs is their information, not their styling.",
+      "line": 2346,
+      "part": 13
+    },
+    {
+      "id": "14.1.1",
+      "kind": "RULE",
+      "text": "Every account authenticates with a username and password, and every account must additionally hold a verified authenticator where the role or policy requires it. Authenticator verification is mandatory for every worker account (all roles, all companies), the MD, the Platform Owner, and any account performing a sensitive action: password change, authenticator change, credential re-issue, portfolio hold, portfolio transfer, provider change, or a high-value reversal.",
+      "line": 2350,
+      "part": 14
+    },
+    {
+      "id": "14.2.1",
+      "kind": "RULE",
+      "text": "An authenticator is bound to an account only after a successful live verification. Setup alone never counts.",
+      "line": 2352,
+      "part": 14
+    },
+    {
+      "id": "14.2.2",
+      "kind": "RULE",
+      "text": "HR (or the MD) can freeze an account's authenticator. The moment it is frozen it stops working immediately, along with the password, and the account cannot log in from anywhere outside the company (Part 5.8).",
+      "line": 2353,
+      "part": 14
+    },
+    {
+      "id": "14.2.3",
+      "kind": "RULE",
+      "text": "HR (or the MD) can remove an authenticator as part of a hold or a transfer. Removal is audit-logged, and the account cannot become usable again without a fresh, documented credential issue and a fresh ritual.",
+      "line": 2354,
+      "part": 14
+    },
+    {
+      "id": "14.2.4",
+      "kind": "RULE",
+      "text": "No user can remove or re-set another person's authenticator, and no user can remove their own authenticator without going through the password-plus-authenticator verification path.",
+      "line": 2355,
+      "part": 14
+    },
+    {
+      "id": "14.3.1",
+      "kind": "RULE",
+      "text": "Every audit entry carries: the user, the role assignment used, the company, the branch where applicable, the server timestamp, the action, the previous value, the new value, the reason where the action requires one, the transaction reference where the action concerns money, and the device and IP metadata where available.",
+      "line": 2357,
+      "part": 14
+    },
+    {
+      "id": "14.3.2",
+      "kind": "RULE",
+      "text": "Audit entries are append-only. There is no edit and no delete action anywhere, for anyone, including the Platform Owner.",
+      "line": 2358,
+      "part": 14
+    },
+    {
+      "id": "14.3.3",
+      "kind": "RULE",
+      "text": "Security and account-state transitions are audited as a distinct, always-on class (Part 5.10): credential issue, consumption, expiry, password change, authenticator setup, verification, freeze, removal, profile completion, worker create and edit, passport replacement, role assignment changes, suspension, reactivation, termination, portfolio hold, hold release, portfolio transfer, login success, login failure and lockout.",
+      "line": 2359,
+      "part": 14
+    },
+    {
+      "id": "14.4.1",
+      "kind": "RULE",
+      "text": "Sessions expire after the company's configured idle timeout, and sensitive actions require re-verification with the authenticator.",
+      "line": 2361,
+      "part": 14
+    },
+    {
+      "id": "14.4.2",
+      "kind": "RULE",
+      "text": "Repeated failed logins lock the account for a cool-down period, and the lockout is audit-logged and notified to HR and the MD for worker accounts.",
+      "line": 2362,
+      "part": 14
+    },
+    {
+      "id": "14.4.3",
+      "kind": "RULE",
+      "text": "Suspending a company, suspending a branch, freezing a worker or transferring a portfolio invalidates the affected sessions immediately.",
+      "line": 2363,
+      "part": 14
+    },
+    {
+      "id": "14.5.1",
+      "kind": "RULE",
+      "text": "Provider credentials, webhook secrets and authenticator seeds are encrypted at rest, are never logged, never exported, never displayed after saving except through an explicit authorised reveal, and never included in support data.",
+      "line": 2365,
+      "part": 14
+    },
+    {
+      "id": "14.5.2",
+      "kind": "RULE",
+      "text": "A company's secrets are inaccessible to every other company, and company-side pages never expose platform secrets.",
+      "line": 2366,
+      "part": 14
+    },
+    {
+      "id": "16.0.1",
+      "kind": "RULE",
+      "text": "The build proceeds in the order below, and the order is not negotiable:",
+      "line": 2471,
+      "part": 16
+    },
+    {
+      "id": "16.0.2",
+      "kind": "RULE",
+      "text": "No UI design deliverable, mock-up or style guide may be produced before Stage 13 (the Vision Audit) has passed.",
+      "line": 2477,
+      "part": 16
+    },
+    {
+      "id": "16.1.1",
+      "kind": "RULE",
+      "text": "A stage is not \"done\" because its screens exist. It is done when its definition of done is met and its proofs pass. A stage may not be marked done with a known gap; the gap either closes or the stage stays open.",
+      "line": 2551,
+      "part": 16
+    },
+    {
+      "id": "16.2.1",
+      "kind": "RULE",
+      "text": "The Vision Audit is a required stage with a required output. It is not a review conversation; it is an inspection with findings and closures. It has six passes, run in this order:",
+      "line": 2553,
+      "part": 16
+    },
+    {
+      "id": "16.2.2",
+      "kind": "RULE",
+      "text": "Each finding is written as: rule reference, what was found, what should have been found, the fix, and the re-test result. A finding is closed only by a passing re-test.",
+      "line": 2582,
+      "part": 16
+    },
+    {
+      "id": "16.2.3",
+      "kind": "RULE",
+      "text": "The audit is re-run in full if a fix touches tenancy, credentials, providers, the payment pipeline or money visibility.",
+      "line": 2583,
+      "part": 16
+    },
+    {
+      "id": "16.2.4",
+      "kind": "RULE",
+      "text": "The audit report is itself a deliverable. \"I checked and it all works\" is not a deliverable; the report is.",
+      "line": 2585,
+      "part": 16
+    },
+    {
+      "id": "16.3.1",
+      "kind": "RULE",
+      "text": "These are the minimum end-to-end tests. Each must pass on a clean environment before the product is called complete.",
+      "line": 2588,
+      "part": 16
+    },
+    {
+      "id": "16.3.2",
+      "kind": "RULE",
+      "text": "Any test that fails is a defect. Defects are fixed and the affected tests re-run before the next stage.",
+      "line": 2676,
+      "part": 16
+    },
+    {
+      "id": "16.4.1",
+      "kind": "RULE",
+      "text": "If a rule in this document has to change, the change is written down with its reason, dated, and added to Part 19; the affected rules are edited in place rather than duplicated. No rule may exist in two contradictory versions anywhere in the product or in the documents.",
+      "line": 2678,
+      "part": 16
+    },
+    {
+      "id": "17.1.1",
+      "kind": "RULE",
+      "text": "The front-end design is not produced by the builder. It is produced by a different chat, working only from a document the builder writes. That document is named exactly:",
+      "line": 2682,
+      "part": 17
+    },
+    {
+      "id": "17.1.2",
+      "kind": "RULE",
+      "text": "It is written for a design team or design chat that has never seen the backend, this document's rule numbering, or the database. It must therefore be self-contained: it explains the product, then explains every screen, state and colour rule, and it explains why as well as what, so the designer fully understands what he is designing.",
+      "line": 2684,
+      "part": 17
+    },
+    {
+      "id": "17.2.1",
+      "kind": "RULE",
+      "text": "It is written only after the backend is complete (Stages 0 to 12) and only after the Vision Audit (Stage 13) has passed. Writing it earlier is prohibited, because the instructions must describe real, working behaviour, not intention.",
+      "line": 2686,
+      "part": 17
+    },
+    {
+      "id": "17.2.2",
+      "kind": "RULE",
+      "text": "When it is written, it is written from the built backend and this vision together, so that every field, every state, every permission and every error it describes actually exists.",
+      "line": 2687,
+      "part": 17
+    },
+    {
+      "id": "17.3.1",
+      "kind": "RULE",
+      "text": "The document must contain, at minimum:",
+      "line": 2689,
+      "part": 17
+    },
+    {
+      "id": "17.3.2",
+      "kind": "RULE",
+      "text": "The document must not say \"design the roles\" or \"design the dashboards\" as a single instruction. Each role is written out separately, in its own section, with its own screens and its own contents, until all roles are done.",
+      "line": 2738,
+      "part": 17
+    },
+    {
+      "id": "17.3.3",
+      "kind": "RULE",
+      "text": "Every colour rule is written with examples: \"when the company chooses blue, these elements become blue: the primary button, the active navigation item, the active tab underline, the focus ring, the links, the progress bar, the avatar ring, the first chart series, the report header rule\". When the company chooses green, the same list applies to green.",
+      "line": 2739,
+      "part": 17
+    },
+    {
+      "id": "17.3.4",
+      "kind": "RULE",
+      "text": "Where the design needs a decision this vision does not make (spacing, radii, exact type sizes, icon set), the instructions must say so explicitly and offer a recommended default, so the designer is not left guessing and is not inventing product behaviour.",
+      "line": 2740,
+      "part": 17
+    },
+    {
+      "id": "17.4.1",
+      "kind": "RULE",
+      "text": "A designer reading only this document must be able to produce a complete, coherent interface without asking a question about what something is for. If a screen is not described, the document is incomplete.",
+      "line": 2742,
+      "part": 17
+    },
+    {
+      "id": "17.4.2",
+      "kind": "RULE",
+      "text": "The instructions must be beautiful in their own right: clear structure, plain language, no unexplained jargon, and consistent naming with the built product so the designer's output maps one-to-one onto real pages.",
+      "line": 2743,
+      "part": 17
+    },
+    {
+      "id": "19.1.1",
+      "kind": "RULE",
+      "text": "Collection Officers create and manage groups within their authorised branch scope. A group may contain two, three, or any larger number of members; there is no fixed member limit.",
+      "line": 2825,
+      "part": 19
+    },
+    {
+      "id": "19.1.2",
+      "kind": "RULE",
+      "text": "Group creation requires Group Name, Group Number, Group Address and Date Created. The group name is chosen by the C.O. and is not limited to a predefined naming list.",
+      "line": 2826,
+      "part": 19
+    },
+    {
+      "id": "19.1.3",
+      "kind": "RULE",
+      "text": "After creation, the group exposes Add Member. Each member is saved individually before the C.O. adds the next member.",
+      "line": 2827,
+      "part": 19
+    },
+    {
+      "id": "19.1.4",
+      "kind": "RULE",
+      "text": "Member registration requires Full Name, Father/Husband, Marital Status selected from configured options, Phone Number and Group Role selected from Leader, Secretary, Treasurer, Chief Whip or Member. Role is selected, not free-typed.",
+      "line": 2828,
+      "part": 19
+    },
+    {
+      "id": "19.1.5",
+      "kind": "RULE",
+      "text": "Group roles are organisational roles. A group does not own money, a loan, a savings balance or a ledger; all financial truth remains attached to the individual customer and loan records.",
+      "line": 2829,
+      "part": 19
+    },
+    {
+      "id": "19.2.1",
+      "kind": "RULE",
+      "text": "On the customer page, Apply for Loan is available only when the customer has no active loan. A customer with an active loan must not be offered a new normal loan-application action through this flow.",
+      "line": 2831,
+      "part": 19
+    },
+    {
+      "id": "19.2.2",
+      "kind": "RULE",
+      "text": "The customer page always shows the customer's current loan-cycle state where applicable. A returning customer is identified from actual prior loan records, and previous loan history remains available to authorised reviewers.",
+      "line": 2832,
+      "part": 19
+    },
+    {
+      "id": "19.2.3",
+      "kind": "RULE",
+      "text": "A new application for a customer with completed prior loans creates a new loan record and loan cycle; it never creates a duplicate customer.",
+      "line": 2833,
+      "part": 19
+    },
+    {
+      "id": "19.3.1",
+      "kind": "RULE",
+      "text": "The first loan-term choice is repayment mode: Weekly or Daily. This selection is a functional mode, not a display label. It controls schedule generation, due dates, expected repayment calculations, overdue logic, notifications, performance calculations and relevant reports.",
+      "line": 2835,
+      "part": 19
+    },
+    {
+      "id": "19.3.2",
+      "kind": "RULE",
+      "text": "For Weekly mode, the C.O. selects the applicable repayment weekday and enters the loan amount, interest percentage, repayment amount and repayment period in weeks. The system generates the resulting schedule.",
+      "line": 2836,
+      "part": 19
+    },
+    {
+      "id": "19.3.3",
+      "kind": "RULE",
+      "text": "For Daily mode, the C.O. enters the configured daily repayment terms. The system generates the daily schedule and applies the same mathematical integrity controls.",
+      "line": 2837,
+      "part": 19
+    },
+    {
+      "id": "19.3.4",
+      "kind": "RULE",
+      "text": "The C.O. enters the interest percentage, not the calculated overall repayment amount. Nexora calculates interest and overall contractual repayment from the actual configured loan terms.",
+      "line": 2838,
+      "part": 19
+    },
+    {
+      "id": "19.3.5",
+      "kind": "RULE",
+      "text": "If principal is ₦100,000 and interest is 20%, Nexora calculates ₦20,000 interest and ₦120,000 overall contractual repayment. The example is illustrative only and is never hard-coded.",
+      "line": 2839,
+      "part": 19
+    },
+    {
+      "id": "19.3.6",
+      "kind": "RULE",
+      "text": "If weekly repayment is ₦5,000 for 24 weeks, Nexora calculates ₦120,000 and compares it with the calculated overall contractual repayment. If the totals match, the stage is valid. If they do not match, the application is flagged NOT TALLY and cannot proceed.",
+      "line": 2840,
+      "part": 19
+    },
+    {
+      "id": "19.3.7",
+      "kind": "RULE",
+      "text": "The same exact-total rule applies to Daily loans: repayment amount multiplied by the configured number of repayment periods must reconcile exactly with the calculated contractual repayment, subject to explicitly documented product rules. No silent rounding, residual or correction is permitted.",
+      "line": 2841,
+      "part": 19
+    },
+    {
+      "id": "19.3.8",
+      "kind": "RULE",
+      "text": "Where a monthly-equivalent duration is displayed, the software derives it from the configured repayment period; the C.O. does not manually calculate or type a misleading month duration.",
+      "line": 2842,
+      "part": 19
+    },
+    {
+      "id": "19.4.1",
+      "kind": "RULE",
+      "text": "The application captures the required customer information, including Next of Kin, Occupation, House Address, Street, Direction to Locate the House, Child Name where applicable, Local/Area Known-As Name, Shop Address, Average Daily Income and Average Monthly Income.",
+      "line": 2844,
+      "part": 19
+    },
+    {
+      "id": "19.4.2",
+      "kind": "RULE",
+      "text": "Customer information must be saved before the application proceeds to the next stage.",
+      "line": 2845,
+      "part": 19
+    },
+    {
+      "id": "19.4.3",
+      "kind": "RULE",
+      "text": "The guarantor is a first-class application party with its own required information and evidence. The system must not treat the guarantor as a single text field or a decorative attachment.",
+      "line": 2846,
+      "part": 19
+    },
+    {
+      "id": "19.5.1",
+      "kind": "RULE",
+      "text": "Customer and guarantor face captures are live camera captures. Gallery uploads, arbitrary image uploads, skipped captures and reuse of an unrelated prior capture are prohibited for the live-face requirement.",
+      "line": 2848,
+      "part": 19
+    },
+    {
+      "id": "19.5.2",
+      "kind": "RULE",
+      "text": "The face capture must pass configured quality controls including sufficient brightness, clarity, face presence and liveness. If the image is too dark, unclear, unusable or fails the configured liveness/quality checks, Nexora rejects it and requires another capture.",
+      "line": 2849,
+      "part": 19
+    },
+    {
+      "id": "19.5.3",
+      "kind": "RULE",
+      "text": "Live capture is not limited to one image. The workflow must support Add Capture wherever additional evidence is useful or required. Every accepted capture is an independent immutable evidence record.",
+      "line": 2850,
+      "part": 19
+    },
+    {
+      "id": "19.5.4",
+      "kind": "RULE",
+      "text": "Each capture records the application, customer/guarantor identity, capture type, timestamp, capturing worker, device information where available, location where available, file metadata and integrity hash.",
+      "line": 2851,
+      "part": 19
+    },
+    {
+      "id": "19.6.1",
+      "kind": "RULE",
+      "text": "A loan application is a persistent state machine. Leaving the application never deletes the application or silently resets its stage.",
+      "line": 2853,
+      "part": 19
+    },
+    {
+      "id": "19.6.2",
+      "kind": "RULE",
+      "text": "Before Next is enabled for a stage, that stage must be successfully saved to the server. The application records the last successfully saved stage and its state.",
+      "line": 2854,
+      "part": 19
+    },
+    {
+      "id": "19.6.3",
+      "kind": "RULE",
+      "text": "Draft data should be auto-saved where technically appropriate, but the authoritative stage checkpoint is the successful server-side save. If the network fails before server confirmation, the UI must not claim that the stage is saved.",
+      "line": 2855,
+      "part": 19
+    },
+    {
+      "id": "19.6.4",
+      "kind": "RULE",
+      "text": "When the C.O. returns later, the application opens at the last saved/resumable stage. Customer and guarantor stages may be completed at different times and locations.",
+      "line": 2856,
+      "part": 19
+    },
+    {
+      "id": "19.6.5",
+      "kind": "RULE",
+      "text": "A failed or interrupted upload must be represented as Pending/Failed rather than falsely marked Saved. A protected local retry mechanism may retain an encrypted pending capture until successful server upload, subject to device security and retention policy.",
+      "line": 2857,
+      "part": 19
+    },
+    {
+      "id": "19.7.1",
+      "kind": "RULE",
+      "text": "After face stages, the workflow captures the customer government ID live and saves it, then captures the guarantor government ID live and saves it.",
+      "line": 2859,
+      "part": 19
+    },
+    {
+      "id": "19.7.2",
+      "kind": "RULE",
+      "text": "The customer application name and government-ID name must pass the configured identity-matching rule. A mismatch is immediately flagged and cannot silently pass as a match. The same applies to the guarantor.",
+      "line": 2860,
+      "part": 19
+    },
+    {
+      "id": "19.7.3",
+      "kind": "RULE",
+      "text": "House live capture is the front view of the house. Customer house capture comes first, followed by guarantor house capture. Multiple house captures are permitted for each party.",
+      "line": 2861,
+      "part": 19
+    },
+    {
+      "id": "19.7.4",
+      "kind": "RULE",
+      "text": "Each house capture is saved as a separate evidence record and may include additional views required to establish the location or property context.",
+      "line": 2862,
+      "part": 19
+    },
+    {
+      "id": "19.8.1",
+      "kind": "RULE",
+      "text": "Business live capture follows house capture: customer business first, guarantor business second. Multiple captures are permitted for each party.",
+      "line": 2864,
+      "part": 19
+    },
+    {
+      "id": "19.8.2",
+      "kind": "RULE",
+      "text": "The system must not assume one business image is sufficient. Each additional accepted capture is separately stored and traceable.",
+      "line": 2865,
+      "part": 19
+    },
+    {
+      "id": "19.9.1",
+      "kind": "RULE",
+      "text": "After the required live evidence stages, the application records the Overall Loan Fee Paid and any other configured loan-related fee fields. These fees are separate from principal and calculated interest.",
+      "line": 2867,
+      "part": 19
+    },
+    {
+      "id": "19.9.2",
+      "kind": "RULE",
+      "text": "Customer bank details required for disbursement include Bank Name, Bank Account Number and Name on Account.",
+      "line": 2869,
+      "part": 19
+    },
+    {
+      "id": "19.9.3",
+      "kind": "RULE",
+      "text": "The bank account name must correspond with the customer application identity and government-ID identity according to the configured matching rule. A mismatch is immediately flagged and must not silently proceed.",
+      "line": 2870,
+      "part": 19
+    },
+    {
+      "id": "19.10.1",
+      "kind": "RULE",
+      "text": "Loan-form live capture supports multiple captures/pages. The C.O. can capture, save and Add Capture until all required form evidence is complete.",
+      "line": 2872,
+      "part": 19
+    },
+    {
+      "id": "19.10.2",
+      "kind": "RULE",
+      "text": "Default-form live capture follows the same multi-capture, save-before-next principle.",
+      "line": 2873,
+      "part": 19
+    },
+    {
+      "id": "19.11.1",
+      "kind": "RULE",
+      "text": "Before submission, Nexora presents a complete application preview containing the customer, guarantor, group, loan cycle, Daily/Weekly mode, loan terms, calculated repayment, schedule, fees, bank details, identity validation status and all captured evidence.",
+      "line": 2875,
+      "part": 19
+    },
+    {
+      "id": "19.11.2",
+      "kind": "RULE",
+      "text": "The C.O. submits only after required stages and validations pass. Submission changes the application into the configured approval workflow; it does not delete the draft history.",
+      "line": 2876,
+      "part": 19
+    },
+    {
+      "id": "19.12.1",
+      "kind": "RULE",
+      "text": "At company creation/configuration, the company selects its loan-disbursement approval chain and the roles that participate. The platform must support different valid chains without requiring a new frontend design for each role.",
+      "line": 2878,
+      "part": 19
+    },
+    {
+      "id": "19.12.2",
+      "kind": "RULE",
+      "text": "The configured chain may include C.O., Branch Manager, Area Manager, Auditor roles, HR or other authorised roles, followed by the final disbursement authority, subject to the company configuration and role authority model. The platform must not hard-code one universal sequence.",
+      "line": 2879,
+      "part": 19
+    },
+    {
+      "id": "19.12.3",
+      "kind": "RULE",
+      "text": "If an intermediate configured role is unavailable for the relevant branch/area, Nexora resolves the workflow to the next applicable configured stage. It must not stop a loan merely because a branch has no Branch Manager or the relevant state has no Area Manager. A stage explicitly marked Mandatory/Non-Skippable by the company's approval configuration cannot be bypassed merely because its assignee is unavailable. If an Auditor or other final pre-disbursement approval stage is configured as mandatory, that stage must be resolved by an authorised assignee or an explicit company-authorised reassignment path before disbursement can proceed.",
+      "line": 2880,
+      "part": 19
+    },
+    {
+      "id": "19.12.4",
+      "kind": "RULE",
+      "text": "Each approval role receives a dedicated approval workspace automatically when that role is selected in the company workflow. The existing role dashboard does not need to be redesigned manually for every possible workflow combination.",
+      "line": 2881,
+      "part": 19
+    },
+    {
+      "id": "19.12.5",
+      "kind": "RULE",
+      "text": "The approval workspace shows action-required counts. One waiting approval produces 1 Action Required; two produce 2 Actions Required; and so on. Notifications appear as pop-ups and in the in-app notification centre.",
+      "line": 2882,
+      "part": 19
+    },
+    {
+      "id": "19.12.6",
+      "kind": "RULE",
+      "text": "Opening an approval item must open a persistent review workspace, not a destructive temporary popup. Closing/back navigation never deletes the underlying application. The item remains pending until a real workflow action changes its state.",
+      "line": 2883,
+      "part": 19
+    },
+    {
+      "id": "19.12.7",
+      "kind": "RULE",
+      "text": "Every approver can preview the full authorised application package, including customer/guarantor details, group, loan cycle, previous loan history, repayment history, savings balance where an actual balance exists, evidence captures, bank/identity checks, fees, schedule and all other relevant submitted records.",
+      "line": 2884,
+      "part": 19
+    },
+    {
+      "id": "19.12.8",
+      "kind": "RULE",
+      "text": "Approval can be Approve or Decline, with Decline requiring a reason. If the configured workflow supports Return for Information, that is a separate auditable state and is not disguised as rejection.",
+      "line": 2885,
+      "part": 19
+    },
+    {
+      "id": "19.12.9",
+      "kind": "RULE",
+      "text": "Chief Auditor and other configured auditors may receive an approval stage concurrently where the company workflow defines an auditor approval group. Their actions remain individually attributable and auditable.",
+      "line": 2886,
+      "part": 19
+    },
+    {
+      "id": "19.13.1",
+      "kind": "RULE",
+      "text": "The final disbursement authority receives the same complete review context before the Disburse action becomes available.",
+      "line": 2888,
+      "part": 19
+    },
+    {
+      "id": "19.13.2",
+      "kind": "RULE",
+      "text": "Disbursement is available only after all required approval stages have completed and all technical prerequisites have succeeded.",
+      "line": 2889,
+      "part": 19
+    },
+    {
+      "id": "19.13.3",
+      "kind": "RULE",
+      "text": "Clicking Disburse triggers the real backend disbursement workflow, including applicable Virtual Account creation, repayment schedule creation, customer portal/access creation, loan activation, financial/accounting records and audit records. The UI must never simulate successful disbursement.",
+      "line": 2890,
+      "part": 19
+    },
+    {
+      "id": "19.13.4",
+      "kind": "RULE",
+      "text": "The responsible C.O. is mandatorily notified when the loan is approved, declined, returned for information or disbursed, according to the actual state transition.",
+      "line": 2891,
+      "part": 19
+    },
+    {
+      "id": "19.14.1",
+      "kind": "RULE",
+      "text": "Once disbursed, the customer page shows the active loan, loan cycle, repayment mode, schedule, actual payments, outstanding balance, overdue state and actual posted savings where applicable.",
+      "line": 2893,
+      "part": 19
+    },
+    {
+      "id": "19.14.2",
+      "kind": "RULE",
+      "text": "A completed loan remains permanently in the customer history. If the customer later has no active loan, Apply for Loan becomes available and a new loan cycle is created without creating a new customer record.",
+      "line": 2894,
+      "part": 19
+    },
+    {
+      "id": "19.14.3",
+      "kind": "RULE",
+      "text": "Existing savings is calculated from actual posted savings records and is never typed by the C.O. If the customer has an actual savings balance, authorised approval users may see it in the new application. If no savings balance exists, the application does not fabricate one.",
+      "line": 2895,
+      "part": 19
+    },
+    {
+      "id": "19.14.4",
+      "kind": "RULE",
+      "text": "Where the loan terms include a configured savings component, actual savings increases only when a verified payment is allocated to savings and posted. A scheduled savings component is not Savings Achieved until an actual verified payment is allocated and posted.",
+      "line": 2896,
+      "part": 19
+    },
+    {
+      "id": "19.15.1",
+      "kind": "RULE",
+      "text": "The C.O. dashboard must make the group an operational collection unit. Each group shows its members and each member's current loan, loan cycle, repayment schedule, expected repayment, actual posted repayment, remaining balance, savings achieved and overdue position where applicable.",
+      "line": 2898,
+      "part": 19
+    },
+    {
+      "id": "19.15.2",
+      "kind": "RULE",
+      "text": "The system must update balances immediately after an approved payment allocation is posted. Loan balance decreases by the posted loan-repayment allocation; savings balance increases by the posted savings allocation.",
+      "line": 2899,
+      "part": 19
+    },
+    {
+      "id": "19.15.3",
+      "kind": "RULE",
+      "text": "Group and customer views may resemble the operational usefulness of the provided weekly loan ledger, but every displayed number must come from real Nexora records and the single calculation engine. Spreadsheet formulas must not be copied as hidden manual logic.",
+      "line": 2900,
+      "part": 19
+    },
+    {
+      "id": "20.1.1",
+      "kind": "RULE",
+      "text": "PostgreSQL (or the selected authoritative relational database) stores the authoritative business, financial, workflow, identity metadata, audit and relationship records. Large images/documents are stored in encrypted object storage with immutable object identity and database metadata linking each object to its record.",
+      "line": 2903,
+      "part": 20
+    },
+    {
+      "id": "20.1.2",
+      "kind": "RULE",
+      "text": "Each evidence object stores at minimum company_id, branch_id, customer_id, loan_application_id where applicable, party (customer/guarantor), capture type, capture sequence, storage object reference, file hash, file size, MIME type, captured_by, captured_at, device metadata where available, location where available and verification status.",
+      "line": 2904,
+      "part": 20
+    },
+    {
+      "id": "20.1.3",
+      "kind": "RULE",
+      "text": "Evidence is never silently overwritten. A new capture creates a new immutable evidence record; the previous record remains available to authorised audit/review users.",
+      "line": 2905,
+      "part": 20
+    },
+    {
+      "id": "20.2.1",
+      "kind": "RULE",
+      "text": "The client must never display Saved until the server has durably accepted the data/object and returned a successful authoritative save response.",
+      "line": 2907,
+      "part": 20
+    },
+    {
+      "id": "20.2.2",
+      "kind": "RULE",
+      "text": "Failed, interrupted or pending uploads must have explicit states. The system must not convert a client-side capture into a financial or evidence record until the server confirms persistence.",
+      "line": 2908,
+      "part": 20
+    },
+    {
+      "id": "20.2.3",
+      "kind": "RULE",
+      "text": "Where offline capture is supported, pending captures must be protected locally and retried safely; duplicate uploads are prevented by idempotency and content/object identifiers. A pending local item is never treated as a completed server record.",
+      "line": 2909,
+      "part": 20
+    },
+    {
+      "id": "20.3.1",
+      "kind": "RULE",
+      "text": "Payments, allocations, disbursements, loan balances, savings postings, accounting entries, approval decisions, provider transactions and audit events are not destructively deleted or rewritten through ordinary application operations.",
+      "line": 2911,
+      "part": 20
+    },
+    {
+      "id": "20.3.2",
+      "kind": "RULE",
+      "text": "Corrections use reversal/authorized-correction records that reference the original record. The original historical record remains intact.",
+      "line": 2912,
+      "part": 20
+    },
+    {
+      "id": "20.3.3",
+      "kind": "RULE",
+      "text": "No administrator, MD, Finance user, Accountant, IT user or developer-facing maintenance path may be used to silently rewrite financial history.",
+      "line": 2913,
+      "part": 20
+    },
+    {
+      "id": "20.4.1",
+      "kind": "RULE",
+      "text": "Production PostgreSQL must have encrypted continuous transaction/WAL backup capability and point-in-time recovery appropriate to the agreed production RPO.",
+      "line": 2915,
+      "part": 20
+    },
+    {
+      "id": "20.4.2",
+      "kind": "RULE",
+      "text": "Scheduled full database backups must be encrypted and stored separately from the primary database infrastructure.",
+      "line": 2916,
+      "part": 20
+    },
+    {
+      "id": "20.4.3",
+      "kind": "RULE",
+      "text": "Evidence/object storage must have its own encrypted backup/replication strategy. A database-only backup is not considered a complete Nexora backup.",
+      "line": 2917,
+      "part": 20
+    },
+    {
+      "id": "20.4.4",
+      "kind": "RULE",
+      "text": "At least one protected backup copy must be isolated from ordinary application credentials and protected with appropriate retention/immutability controls against accidental deletion and destructive incidents.",
+      "line": 2918,
+      "part": 20
+    },
+    {
+      "id": "20.4.5",
+      "kind": "RULE",
+      "text": "Backup retention, geographic placement and data residency must be configurable according to the production infrastructure and applicable legal/company requirements.",
+      "line": 2919,
+      "part": 20
+    },
+    {
+      "id": "20.5.1",
+      "kind": "RULE",
+      "text": "Nexora must define an RPO and RTO before production launch. These are engineering acceptance criteria, not informal aspirations.",
+      "line": 2921,
+      "part": 20
+    },
+    {
+      "id": "20.5.2",
+      "kind": "RULE",
+      "text": "Backups must be periodically restored into a controlled recovery environment. A backup that has never been successfully restored is not treated as proven disaster recovery.",
+      "line": 2922,
+      "part": 20
+    },
+    {
+      "id": "20.5.3",
+      "kind": "RULE",
+      "text": "Recovery testing must verify companies, branches, customers, groups, loans, loan cycles, schedules, payments, allocations, savings, accounting, approvals, audit records, provider transactions and evidence-object integrity.",
+      "line": 2923,
+      "part": 20
+    },
+    {
+      "id": "20.5.4",
+      "kind": "RULE",
+      "text": "Evidence hashes must be checked during recovery so corruption or mismatch is detected rather than silently accepted.",
+      "line": 2924,
+      "part": 20
+    },
+    {
+      "id": "20.6.1",
+      "kind": "RULE",
+      "text": "After a restore or major incident, Nexora runs consistency checks across the authoritative database and evidence storage before declaring the environment recovered.",
+      "line": 2926,
+      "part": 20
+    },
+    {
+      "id": "20.6.2",
+      "kind": "RULE",
+      "text": "Payment allocation must reconcile exactly: verified payment = loan allocation + savings allocation. Loan and savings balances must reconcile from actual posted records. Provider transactions must reconcile to Nexora payment records.",
+      "line": 2927,
+      "part": 20
+    },
+    {
+      "id": "20.6.3",
+      "kind": "RULE",
+      "text": "Any unreconciled item becomes an explicit exception requiring investigation. Nexora must never invent a balance or silently adjust money to make totals appear correct.",
+      "line": 2928,
+      "part": 20
+    },
+    {
+      "id": "21.1.1",
+      "kind": "RULE",
+      "text": "Each company may have an AI assistant inside its Nexora environment. The AI operates under the authenticated user identity, company tenant, branch scope, role and permissions of that user.",
+      "line": 2931,
+      "part": 21
+    },
+    {
+      "id": "21.1.2",
+      "kind": "RULE",
+      "text": "Company A AI cannot retrieve, infer from or expose Company B data. Tenant isolation is enforced by the data-access layer before information is supplied to the AI context.",
+      "line": 2932,
+      "part": 21
+    },
+    {
+      "id": "21.1.3",
+      "kind": "RULE",
+      "text": "The AI is read-only. It cannot edit customer records, loan terms, payments, allocations, balances, accounting, approvals, salaries, provider configuration or any other authoritative record.",
+      "line": 2933,
+      "part": 21
+    },
+    {
+      "id": "21.1.4",
+      "kind": "RULE",
+      "text": "AI answers about company data must be grounded in actual authorised Nexora records. If the required data is unavailable, ambiguous or outside the user's permission, the AI must say so rather than invent an answer.",
+      "line": 2934,
+      "part": 21
+    },
+    {
+      "id": "21.1.5",
+      "kind": "RULE",
+      "text": "AI-generated letters and notifications must be based on actual performance/financial records and documented company rules. The AI may draft communication, but the underlying financial system remains authoritative.",
+      "line": 2935,
+      "part": 21
+    },
+    {
+      "id": "21.1.6",
+      "kind": "RULE",
+      "text": "Nexora's company AI capability must use OpenCode as the real provider/model integration and execution layer. This is a real backend integration, not a mock, UI-only selector, simulated response system or hard-coded provider catalogue.",
+      "line": 2937,
+      "part": 21
+    },
+    {
+      "id": "21.1.7",
+      "kind": "RULE",
+      "text": "Nexora must not hard-code a fixed list of AI providers or provider models. OpenCode is the source for the dynamic provider/model catalogue used by Nexora. The application must obtain the currently available provider catalogue through the real OpenCode integration and must obtain the latest available models from the selected provider through that real integration.",
+      "line": 2938,
+      "part": 21
+    },
+    {
+      "id": "21.1.8",
+      "kind": "RULE",
+      "text": "OpenCode must be properly installed and available to the platform's execution architecture. The integration must use real OpenCode capability and real provider/model execution. Fake OpenCode responses, fake provider availability, fake model availability and placeholder provider implementations are prohibited.",
+      "line": 2939,
+      "part": 21
+    },
+    {
+      "id": "21.1.9",
+      "kind": "RULE",
+      "text": "When the Platform Owner selects an AI provider and model for a company, that exact provider/model becomes the selected AI configuration for that company. The configuration must be persisted and must flow into the real backend AI execution path. The company AI must not silently use a different provider or model.",
+      "line": 2940,
+      "part": 21
+    },
+    {
+      "id": "21.1.10",
+      "kind": "RULE",
+      "text": "Provider/model configuration is company-scoped. Company A may use one provider/model while Company B uses another. A provider/model selection, API key, verification state, execution request, response or error for one company must never be used for or exposed to another company.",
+      "line": 2941,
+      "part": 21
+    },
+    {
+      "id": "21.1.11",
+      "kind": "RULE",
+      "text": "Provider/API credentials used for company AI are handled securely. Secrets must be encrypted at rest where persisted, masked in the interface, excluded from logs, excluded from ordinary API responses and excluded from error messages. The exact storage/handling mechanism must preserve the existing security and secret-isolation laws of this Vision.",
+      "line": 2942,
+      "part": 21
+    },
+    {
+      "id": "21.1.12",
+      "kind": "RULE",
+      "text": "Verify is a real verification. It must verify the entered provider, API key and selected model through the real OpenCode/provider integration rather than merely checking that fields are populated. A successful verification may only be shown after a real successful verification. A failed verification must report the real failure and must not mark the configuration as working.",
+      "line": 2943,
+      "part": 21
+    },
+    {
+      "id": "21.1.13",
+      "kind": "RULE",
+      "text": "A company's currently active AI configuration must not be replaced by an unverified provider/model configuration. A new provider/model becomes active only after successful real verification and explicit completion of the Done/save action. Until then, the previously active verified configuration remains the active configuration, unless the user explicitly removes/disables it through an authorized flow.",
+      "line": 2944,
+      "part": 21
+    },
+    {
+      "id": "21.1.14",
+      "kind": "RULE",
+      "text": "If a selected provider/model becomes unavailable, unsupported or fails during execution, Nexora must surface the actual failure and use the appropriate failure/recovery mechanism. It must never substitute a fake response or silently switch to an unrelated provider/model.",
+      "line": 2945,
+      "part": 21
+    },
+    {
+      "id": "21.1.15",
+      "kind": "RULE",
+      "text": "The rest of Nexora must communicate with the AI capability through a clean OpenCode integration boundary. OpenCode is the actual provider/model integration and execution layer used now. Nexora must not create separate provider-specific AI integrations that bypass OpenCode where OpenCode provides the required provider/model capability. Provider-specific assumptions must not be scattered through the application; provider/model discovery, connection handling and execution must remain behind the OpenCode integration boundary so the implementation can be replaced later without rewriting the product.",
+      "line": 2946,
+      "part": 21
+    },
+    {
+      "id": "21.2.1",
+      "kind": "RULE",
+      "text": "The following AI MODEL interface is mandatory and must not be redesigned, renamed, reordered, expanded with competing provider/model selectors, or reduced. The labels and explanatory text below are exact:",
+      "line": 2948,
+      "part": 21
+    },
+    {
+      "id": "21.2.2",
+      "kind": "RULE",
+      "text": "FREE MODELS appear at the top of the interface. The free-model list is dynamic and must be populated from the models that OpenCode currently reports as genuinely available as free models. The model names shown in this Vision (including Space Bunny Free, MiMo-V2.6-Flash Free, Muse Spark 1.3 Free, Ling 3.0 Flash Fin Free, Nemotron 3.5 Lightning Free, Muse Spark 1.2 Free, Nemotron 3 Ultra Free and Big Pickle) are examples of the intended presentation only; they are not a fixed catalogue and must never be treated as permanently required models. If availability changes, the interface must reflect the current real OpenCode availability. A model must never be shown as available merely because its example name appears in this Vision.",
+      "line": 2972,
+      "part": 21
+    },
+    {
+      "id": "21.2.3",
+      "kind": "RULE",
+      "text": "The Provider dropdown dynamically uses the real provider catalogue supplied through OpenCode. Providers must not be hard-coded into the frontend.",
+      "line": 2973,
+      "part": 21
+    },
+    {
+      "id": "21.2.4",
+      "kind": "RULE",
+      "text": "After a provider is selected, the Model dropdown dynamically obtains the latest models available from that provider through the real integration. The model dropdown must not contain a permanently hard-coded provider model list. If a previously selected model is no longer returned as available, the application must show the real unavailable state and must not silently substitute another model.",
+      "line": 2974,
+      "part": 21
+    },
+    {
+      "id": "21.2.5",
+      "kind": "RULE",
+      "text": "The API Key field is masked by default. The exact explanatory text must remain: \"This key is stored locally and only used to make API requests from this application.\" In this Vision, \"stored locally\" means stored within Nexora's application-controlled secure secret storage for the configured company and used only for that company's AI requests; it does not mean browser localStorage, plaintext client storage, a shared/global credential store, or storage accessible to another company.",
+      "line": 2975,
+      "part": 21
+    },
+    {
+      "id": "21.2.6",
+      "kind": "RULE",
+      "text": "The exact model explanatory text must remain: \"The application automatically fetches the latest available models from the selected provider.\"",
+      "line": 2976,
+      "part": 21
+    },
+    {
+      "id": "21.2.7",
+      "kind": "RULE",
+      "text": "Verify and Done remain on the same row, with Verify on the left and Done on the right. Verify performs the real verification defined by Rule 21.1.12. Done saves/accepts the verified configuration and closes the panel.",
+      "line": 2977,
+      "part": 21
+    },
+    {
+      "id": "21.2.8",
+      "kind": "RULE",
+      "text": "The selected provider and model from this exact interface must flow into the actual company backend AI execution system. The interface must never be disconnected from execution.",
+      "line": 2978,
+      "part": 21
+    },
+    {
+      "id": "21.2.9",
+      "kind": "RULE",
+      "text": "The company's selected provider, selected model, verification state and secure credential reference must be persisted against that exact company and must survive normal page reloads and application/server restarts. They must not exist only in browser/session state.",
+      "line": 2979,
+      "part": 21
+    },
+    {
+      "id": "21.2.10",
+      "kind": "RULE",
+      "text": "If the interface reports a provider/model as connected and selected, the backend must actually be capable of using that provider/model. If verification succeeds, a real verification must have occurred. If a model is displayed as available, it must originate from the actual provider/model discovery system.",
+      "line": 2980,
+      "part": 21
+    },
+    {
+      "id": "21.3.1",
+      "kind": "RULE",
+      "text": "Company AI requests must resolve the company from the authenticated request and use that company's persisted AI configuration. A request made inside Company A must never resolve Company B's provider/model configuration.",
+      "line": 2982,
+      "part": 21
+    },
+    {
+      "id": "21.3.2",
+      "kind": "RULE",
+      "text": "Company search through AI must be grounded in the exact authorised company data available to that user. \"Search\" does not permit cross-company discovery. If a company user asks about customers, loans, payments, reports, workers, branches or other company information, the AI context must be constructed only from records the authenticated user is authorised to access.",
+      "line": 2983,
+      "part": 21
+    },
+    {
+      "id": "21.3.3",
+      "kind": "RULE",
+      "text": "AI execution must use the same multi-company concurrency and isolation principles in Part 3.8. Simultaneous AI requests from many companies must be independently scoped and must not share mutable tenant context, secrets, prompts containing another company's data or provider/model selection.",
+      "line": 2984,
+      "part": 21
+    },
+    {
+      "id": "21.3.4",
+      "kind": "RULE",
+      "text": "AI execution must not become a single global bottleneck that unnecessarily serialises unrelated company requests. The execution architecture must support concurrent requests, bounded resource use, provider-specific rate limits, retries/backoff where appropriate, cancellation/timeouts and failure isolation while preserving tenant and role boundaries.",
+      "line": 2985,
+      "part": 21
+    },
+    {
+      "id": "21.3.5",
+      "kind": "RULE",
+      "text": "AI does not replace Nexora's normal backend execution. Financial operations, provider API calls, virtual-account creation, payment verification, payment allocation, accounting and other authoritative business operations remain deterministic backend/provider-integration operations governed by their respective Parts. AI is not permitted to perform those authoritative writes.",
+      "line": 2986,
+      "part": 21
+    },
+    {
+      "id": "21.4.1",
+      "kind": "RULE",
+      "text": "Each role dashboard must be designed from the role's actual responsibility, authority, work objects, exceptions, approvals, reports and required decisions, not by copying another role's dashboard.",
+      "line": 2990,
+      "part": 21
+    },
+    {
+      "id": "21.4.2",
+      "kind": "RULE",
+      "text": "Auditors require deep search, financial traceability, accounting/audit views and exception investigation tools within their permissions. They must be able to trace figures back to source records.",
+      "line": 2991,
+      "part": 21
+    },
+    {
+      "id": "21.4.3",
+      "kind": "RULE",
+      "text": "Branch Workplace must expose the authorised branch's actual work: C.O.s, groups, collection performance, amount expected for a selected day, amount realised for completed days, amount realised yet for the current day, exceptions, trends and branch-level financial/operational status, with historical date search.",
+      "line": 2992,
+      "part": 21
+    },
+    {
+      "id": "21.4.4",
+      "kind": "RULE",
+      "text": "Performance comparisons and any branch ranking displayed to authorised roles must be based on explicitly documented actual-data metrics and configured company rules. The platform must not fabricate rankings or use an unexplained composite score.",
+      "line": 2993,
+      "part": 21
+    },
+    {
+      "id": "21.4.5",
+      "kind": "RULE",
+      "text": "Performance-versus-salary monitoring remains configurable. Where thresholds are configured, Nexora may generate explanatory notifications/letters to the C.O., Branch Manager, Area Manager and HR as applicable. Such alerts do not themselves change compensation or employment status.",
+      "line": 2994,
+      "part": 21
+    }
+  ],
+  "prohibitions": []
+}

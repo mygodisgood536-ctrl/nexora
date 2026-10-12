@@ -128,7 +128,6 @@ async function waitForRecovery(url: string, deadlineMs: number): Promise<boolean
 export async function runRestoreDrill(options: DrillOptions): Promise<DrillResult> {
   const { keys, policy, baseBackupId, pgBin, workRoot, port } = options;
   const primary = siteById(policy, policy.primarySiteId);
-  const startedAt = Date.now();
 
   const recoveryRoot = join(workRoot, "recovery-cluster");
   const archiveRoot = join(workRoot, "archive-cache");
@@ -337,10 +336,10 @@ async function reconcileRecordTypes(
 async function verifyRecoveredEvidence(
   recoveryUrl: string,
   workRoot: string,
-  policy: BackupPolicy,
-  primaryRoot: string,
-  backupId: string,
-  keys: BackupKeys
+  _policy: BackupPolicy,
+  _primaryRoot: string,
+  _backupId: string,
+  _keys: BackupKeys
 ): Promise<{ checked: number; matched: number; mismatched: number; missing: number }> {
   const client = new pg.Client({ connectionString: recoveryUrl.replace(/\/[^/]*$/, "/nexora_test") });
   await client.connect().catch(() => undefined);

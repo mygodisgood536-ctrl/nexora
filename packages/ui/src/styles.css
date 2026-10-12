@@ -1,0 +1,1158 @@
+/* =============================================================================
+   Nexora design system - Part 13 (the colour, logo and visual law)
+
+   RULE 13.1.1 / 13.1.2 - the company colour is a highlighter, not a background
+   wash. Everything read at length is neutral; only the accent tokens below take
+   the company colour. RULE 13.4.1 - with no company chosen the accent is black.
+   RULE 13.4.2 - the Platform Owner portal is green, scoped under `.nxp` and
+   never leaking into a company workspace (or the reverse).
+
+   This file is the single source of the non-changeable layer (13.2) and the
+   accent token table (13.3). No component in any app contains a colour.
+   ========================================================================== */
+
+:root {
+  /* --- 13.2 non-changeable layer: surfaces and text --------------------- */
+  --nx-bg-app: #f4f5f7;
+  --nx-bg-app-deep: #ecedf1;
+  --nx-surface: #ffffff;
+  --nx-surface-alt: #fafbfc;
+  --nx-surface-sunken: #f6f7f9;
+  --nx-text: #16181d;
+  --nx-text-secondary: #5b616e;
+  --nx-text-muted: #868e9c;
+  --nx-text-inverse: #ffffff;
+  --nx-border: #e3e6ea;
+  --nx-border-strong: #ccd1d9;
+  --nx-divider: #eceef1;
+
+  /* --- semantic colours (13.2: never branded) --------------------------- */
+  --nx-success: #17754a;
+  --nx-success-bg: #e7f5ee;
+  --nx-success-border: #b9e3cd;
+  --nx-warning: #8a6100;
+  --nx-warning-bg: #fdf3dd;
+  --nx-warning-border: #f2ddb0;
+  --nx-danger: #b3261e;
+  --nx-danger-bg: #fdecea;
+  --nx-danger-border: #f5c6c2;
+  --nx-info: #1857a4;
+  --nx-info-bg: #e9f1fb;
+  --nx-info-border: #c4d8f4;
+  --nx-neutral-bg: #eef0f3;
+  --nx-neutral-border: #dde1e6;
+
+  /* --- chart series (13.2: first series is accent, rest neutral) -------- */
+  --nx-chart-1: var(--nx-color-accent);
+  --nx-chart-2: #7b8494;
+  --nx-chart-3: #aab2bf;
+  --nx-chart-4: #c7ccd5;
+  --nx-chart-5: #586074;
+  --nx-chart-6: #8f97a6;
+  --nx-chart-grid: #e7e9ed;
+
+  /* --- 13.3 accent token table (takes the company colour) --------------- */
+  --nx-color-accent: #111111;          /* 13.4.1 default = near-black */
+  --nx-color-accent-strong: #000000;   /* hover / pressed */
+  --nx-color-accent-soft: #f1f1f1;     /* tinted fills (selected row, chips) */
+  --nx-color-on-accent: #ffffff;       /* 13.5.1 computed label colour */
+  --nx-color-accent-ring: rgb(17 17 17 / 0.28);
+  --nx-color-accent-tint: rgb(17 17 17 / 0.07);
+
+  /* --- type scale (Poppins, RULE 17.3.4 recommended default) ------------ */
+  --nx-font-sans: "Poppins", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --nx-font-mono: "SFMono-Regular", ui-monospace, "Cascadia Mono", Consolas, monospace;
+  --nx-text-xs: 0.75rem;
+  --nx-text-sm: 0.8125rem;
+  --nx-text-md: 0.875rem;
+  --nx-text-base: 0.9375rem;
+  --nx-text-lg: 1.0625rem;
+  --nx-text-xl: 1.25rem;
+  --nx-text-2xl: 1.5rem;
+  --nx-text-3xl: 1.875rem;
+
+  /* --- spacing scale ---------------------------------------------------- */
+  --nx-space-1: 4px;
+  --nx-space-2: 8px;
+  --nx-space-3: 12px;
+  --nx-space-4: 16px;
+  --nx-space-5: 20px;
+  --nx-space-6: 24px;
+  --nx-space-8: 32px;
+  --nx-space-10: 40px;
+  --nx-space-12: 48px;
+  --nx-space-16: 64px;
+
+  /* --- radii ------------------------------------------------------------ */
+  --nx-radius-sm: 6px;
+  --nx-radius: 10px;
+  --nx-radius-lg: 14px;
+  --nx-radius-pill: 999px;
+
+  /* --- depth (13.2: depth comes from borders and soft shadows) ---------- */
+  --nx-shadow-xs: 0 1px 2px rgb(16 18 24 / 0.05);
+  --nx-shadow-sm: 0 1px 3px rgb(16 18 24 / 0.07), 0 1px 2px rgb(16 18 24 / 0.04);
+  --nx-shadow: 0 4px 14px rgb(16 18 24 / 0.07), 0 1px 3px rgb(16 18 24 / 0.05);
+  --nx-shadow-lg: 0 16px 40px rgb(16 18 24 / 0.14);
+  --nx-shadow-card: var(--nx-shadow-sm);
+
+  /* --- motion ----------------------------------------------------------- */
+  --nx-ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --nx-fast: 120ms;
+  --nx-slow: 220ms;
+
+  /* --- layout ----------------------------------------------------------- */
+  --nx-sidebar-w: 264px;
+  --nx-sidebar-w-collapsed: 68px;
+  --nx-header-h: 60px;
+}
+
+/* 13.4.2 - the Platform Owner portal: same token pattern, green, its own
+   identity, never switched to a company colour. */
+.nxp {
+  --nx-color-accent: #0f7b4f;
+  --nx-color-accent-strong: #0a5f3c;
+  --nx-color-accent-soft: #e8f5ee;
+  --nx-color-on-accent: #ffffff;
+  --nx-color-accent-ring: rgb(15 123 79 / 0.3);
+  --nx-color-accent-tint: rgb(15 123 79 / 0.08);
+  --nx-chart-1: var(--nx-color-accent);
+  --nx-brand-identity: "Nexora Platform";
+}
+
+/* ==========================================================================
+   Base
+   ========================================================================== */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: var(--nx-font-sans);
+  font-size: var(--nx-text-base);
+  line-height: 1.55;
+  color: var(--nx-text);
+  background: var(--nx-bg-app);
+  background-image: radial-gradient(circle at 100% 0%, rgb(255 255 255 / 0.75), transparent 46%);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+h1, h2, h3, h4, h5 {
+  margin: 0;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--nx-text);
+}
+
+h1 { font-size: var(--nx-text-2xl); line-height: 1.25; }
+h2 { font-size: var(--nx-text-xl); }
+h3 { font-size: var(--nx-text-lg); }
+h4 { font-size: var(--nx-text-base); }
+
+p { margin: 0; }
+
+a {
+  color: var(--nx-color-accent);
+  text-decoration: none;
+}
+a:hover { text-decoration: underline; }
+
+button, input, select, textarea {
+  font: inherit;
+  color: inherit;
+}
+
+img { max-width: 100%; }
+
+::selection {
+  background: var(--nx-color-accent-tint);
+}
+
+/* Focus ring - 13.3: the accent takes the focused control's ring. */
+:focus-visible {
+  outline: 2px solid var(--nx-color-accent);
+  outline-offset: 2px;
+  border-radius: var(--nx-radius-sm);
+}
+
+/* Scrollbars stay neutral. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--nx-border-strong) transparent;
+}
+
+.nx-sr-only {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ==========================================================================
+   App frame
+   ========================================================================== */
+
+.nx-app {
+  display: grid;
+  grid-template-columns: var(--nx-sidebar-w) minmax(0, 1fr);
+  min-height: 100vh;
+}
+
+.nx-app--collapsed { --nx-sidebar-w: var(--nx-sidebar-w-collapsed); }
+
+@media (max-width: 960px) {
+  .nx-app { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* --- sidebar ------------------------------------------------------------ */
+
+.nx-sidebar {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--nx-surface);
+  border-right: 1px solid var(--nx-border);
+  overflow: hidden;
+  z-index: 30;
+}
+
+.nx-sidebar__brand {
+  display: flex;
+  align-items: center;
+  gap: var(--nx-space-3);
+  padding: var(--nx-space-4) var(--nx-space-4);
+  border-bottom: 1px solid var(--nx-divider);
+  min-height: var(--nx-header-h);
+  border-top: 3px solid var(--nx-color-accent); /* 13.3 header accent */
+}
+
+.nx-sidebar__logo {
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  font-size: var(--nx-text-md);
+  color: var(--nx-color-on-accent);
+  background: var(--nx-color-accent);
+  flex: none;
+  object-fit: contain;
+}
+
+.nx-sidebar__brand-name {
+  font-weight: 600;
+  font-size: var(--nx-text-base);
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.nx-sidebar__brand-sub {
+  font-size: var(--nx-text-xs);
+  color: var(--nx-text-muted);
+  white-space: nowrap;
+}
+
+.nx-sidebar__scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--nx-space-3) var(--nx-space-3) var(--nx-space-8);
+}
+
+.nx-sidebar__footer {
+  border-top: 1px solid var(--nx-divider);
+  padding: var(--nx-space-3);
+  display: flex;
+  align-items: center;
+  gap: var(--nx-space-3);
+}
+
+.nx-navgroup { margin-bottom: var(--nx-space-4); }
+
+.nx-navgroup__title {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--nx-text-muted);
+  padding: 0 var(--nx-space-3) var(--nx-space-2);
+}
+
+.nx-navitem {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--nx-space-3);
+  width: 100%;
+  padding: 8px var(--nx-space-3);
+  border: 0;
+  border-radius: var(--nx-radius-sm);
+  background: transparent;
+  color: var(--nx-text-secondary);
+  font-size: var(--nx-text-md);
+  cursor: pointer;
+  text-align: left;
+  transition: background var(--nx-fast) var(--nx-ease), color var(--nx-fast) var(--nx-ease);
+}
+
+.nx-navitem:hover {
+  background: var(--nx-surface-sunken);
+  color: var(--nx-text);
+  text-decoration: none;
+}
+
+/* 13.3 - the active navigation item and its indicator bar take the accent. */
+.nx-navitem.is-active {
+  background: var(--nx-color-accent-soft);
+  color: var(--nx-color-accent);
+  font-weight: 600;
+}
+
+.nx-navitem.is-active::before {
+  content: "";
+  position: absolute;
+  left: -12px;
+  top: 6px;
+  bottom: 6px;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: var(--nx-color-accent);
+}
+
+.nx-navitem__icon { flex: none; display: grid; place-items: center; }
+.nx-navitem__badge { margin-left: auto; }
+
+/* --- header ------------------------------------------------------------- */
+
+.nx-content { display: flex; flex-direction: column; min-width: 0; }
+
+.nx-header {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: var(--nx-space-3);
+  min-height: var(--nx-header-h);
+  padding: var(--nx-space-2) var(--nx-space-6);
+  background: rgb(255 255 255 / 0.86);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--nx-border);
+  border-top: 3px solid var(--nx-color-accent);
+}
+
+.nx-header__spacer { flex: 1; }
+
+.nx-main {
+  flex: 1;
+  padding: var(--nx-space-6);
+  max-width: 1440px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+@media (max-width: 960px) {
+  .nx-main { padding: var(--nx-space-4); }
+}
+
+/* ==========================================================================
+   Typography helpers
+   ========================================================================== */
+
+.nx-h1 { font-size: var(--nx-text-2xl); font-weight: 600; letter-spacing: -0.015em; }
+.nx-h2 { font-size: var(--nx-text-xl); font-weight: 600; }
+.nx-h3 { font-size: var(--nx-text-lg); font-weight: 600; }
+.nx-eyebrow {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--nx-text-muted);
+}
+.nx-muted { color: var(--nx-text-secondary); }
+.nx-faint { color: var(--nx-text-muted); }
+.nx-mono { font-family: var(--nx-font-mono); font-variant-numeric: tabular-nums; }
+.nx-num { font-variant-numeric: tabular-nums; }
+.nx-link { color: var(--nx-color-accent); font-weight: 500; cursor: pointer; background: none; border: 0; padding: 0; }
+.nx-link:hover { text-decoration: underline; }
+
+/* ==========================================================================
+   Layout helpers
+   ========================================================================== */
+
+.nx-stack { display: flex; flex-direction: column; gap: var(--nx-space-4); }
+.nx-stack--sm { gap: var(--nx-space-2); }
+.nx-stack--lg { gap: var(--nx-space-6); }
+.nx-row { display: flex; align-items: center; gap: var(--nx-space-3); }
+.nx-row--wrap { flex-wrap: wrap; }
+.nx-row--between { justify-content: space-between; }
+.nx-row--end { justify-content: flex-end; }
+.nx-grow { flex: 1; min-width: 0; }
+.nx-grid { display: grid; gap: var(--nx-space-4); }
+.nx-grid--2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.nx-grid--3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.nx-grid--4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+@media (max-width: 1200px) { .nx-grid--4 { grid-template-columns: repeat(2, minmax(0, 1fr)); } .nx-grid--3 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 760px)  { .nx-grid--2, .nx-grid--3, .nx-grid--4 { grid-template-columns: minmax(0, 1fr); } }
+
+/* ==========================================================================
+   Surfaces
+   ========================================================================== */
+
+.nx-card {
+  background: var(--nx-surface);
+  border: 1px solid var(--nx-border);
+  border-radius: var(--nx-radius);
+  box-shadow: var(--nx-shadow-xs);
+}
+
+.nx-card--pad { padding: var(--nx-space-5); }
+.nx-card--raised { box-shadow: var(--nx-shadow); }
+
+.nx-card__head {
+  display: flex;
+  align-items: center;
+  gap: var(--nx-space-3);
+  padding: var(--nx-space-4) var(--nx-space-5);
+  border-bottom: 1px solid var(--nx-divider);
+}
+
+.nx-card__title { font-size: var(--nx-text-base); font-weight: 600; }
+.nx-card__body { padding: var(--nx-space-5); }
+.nx-card__body--flush { padding: 0; }
+.nx-card__foot {
+  padding: var(--nx-space-3) var(--nx-space-5);
+  border-top: 1px solid var(--nx-divider);
+  display: flex;
+  gap: var(--nx-space-3);
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.nx-page-head {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--nx-space-4);
+  margin-bottom: var(--nx-space-5);
+  flex-wrap: wrap;
+}
+
+.nx-page-head__actions { margin-left: auto; display: flex; gap: var(--nx-space-2); flex-wrap: wrap; }
+
+/* Stat tiles - the landing summary blocks of RULE 12.0.3. */
+.nx-stat {
+  background: var(--nx-surface);
+  border: 1px solid var(--nx-border);
+  border-radius: var(--nx-radius);
+  padding: var(--nx-space-4) var(--nx-space-5);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  box-shadow: var(--nx-shadow-xs);
+  min-width: 0;
+}
+
+.nx-stat__label {
+  font-size: var(--nx-text-xs);
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--nx-text-muted);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.nx-stat__value {
+  font-size: var(--nx-text-2xl);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.15;
+}
+
+.nx-stat__hint { font-size: var(--nx-text-xs); color: var(--nx-text-secondary); }
+
+.nx-stat--accent .nx-stat__value { color: var(--nx-color-accent); }
+
+/* ==========================================================================
+   Buttons (13.3 - primary/secondary emphasis take the accent)
+   ========================================================================== */
+
+.nx-btn {
+  --btn-bg: var(--nx-surface);
+  --btn-fg: var(--nx-text);
+  --btn-bd: var(--nx-border-strong);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--nx-space-2);
+  padding: 8px 16px;
+  min-height: 36px;
+  border-radius: var(--nx-radius-sm);
+  border: 1px solid var(--btn-bd);
+  background: var(--btn-bg);
+  color: var(--btn-fg);
+  font-size: var(--nx-text-md);
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background var(--nx-fast) var(--nx-ease), border-color var(--nx-fast) var(--nx-ease),
+    box-shadow var(--nx-fast) var(--nx-ease), transform var(--nx-fast) var(--nx-ease);
+  text-decoration: none;
+}
+
+.nx-btn:hover:not(:disabled) { background: var(--nx-surface-alt); text-decoration: none; }
+.nx-btn:active:not(:disabled) { transform: translateY(1px); }
+.nx-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+
+.nx-btn--primary {
+  background: var(--nx-color-accent);
+  border-color: var(--nx-color-accent);
+  color: var(--nx-color-on-accent);
+  box-shadow: var(--nx-shadow-xs);
+}
+.nx-btn--primary:hover:not(:disabled) { background: var(--nx-color-accent-strong); border-color: var(--nx-color-accent-strong); }
+
+/* Secondary emphasis: outline of the accent (13.3 row 2). */
+.nx-btn--secondary {
+  background: var(--nx-surface);
+  border-color: var(--nx-color-accent);
+  color: var(--nx-color-accent);
+}
+.nx-btn--secondary:hover:not(:disabled) { background: var(--nx-color-accent-soft); }
+
+.nx-btn--ghost {
+  background: transparent;
+  border-color: transparent;
+  color: var(--nx-text-secondary);
+}
+.nx-btn--ghost:hover:not(:disabled) { background: var(--nx-surface-sunken); color: var(--nx-text); }
+
+.nx-btn--danger {
+  background: var(--nx-danger);
+  border-color: var(--nx-danger);
+  color: #fff;
+}
+.nx-btn--danger:hover:not(:disabled) { filter: brightness(0.92); background: var(--nx-danger); }
+
+.nx-btn--sm { min-height: 30px; padding: 4px 10px; font-size: var(--nx-text-sm); }
+.nx-btn--lg { min-height: 44px; padding: 10px 22px; font-size: var(--nx-text-base); }
+.nx-btn--block { width: 100%; }
+.nx-btn--icon { padding: 6px; min-width: 34px; min-height: 34px; }
+
+/* ==========================================================================
+   Forms
+   ========================================================================== */
+
+.nx-field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+
+.nx-label {
+  font-size: var(--nx-text-sm);
+  font-weight: 500;
+  color: var(--nx-text-secondary);
+}
+
+.nx-label__req { color: var(--nx-danger); margin-left: 3px; }
+
+.nx-hint { font-size: var(--nx-text-xs); color: var(--nx-text-muted); }
+.nx-error-text { font-size: var(--nx-text-xs); color: var(--nx-danger); font-weight: 500; }
+
+.nx-input,
+.nx-select,
+.nx-textarea {
+  width: 100%;
+  padding: 8px 12px;
+  min-height: 38px;
+  border: 1px solid var(--nx-border-strong);
+  border-radius: var(--nx-radius-sm);
+  background: var(--nx-surface);
+  color: var(--nx-text);
+  font-size: var(--nx-text-md);
+  transition: border-color var(--nx-fast) var(--nx-ease), box-shadow var(--nx-fast) var(--nx-ease);
+}
+
+.nx-input::placeholder, .nx-textarea::placeholder { color: var(--nx-text-muted); }
+
+/* 13.3 - input focus border and focus ring take the accent. */
+.nx-input:focus,
+.nx-select:focus,
+.nx-textarea:focus {
+  outline: none;
+  border-color: var(--nx-color-accent);
+  box-shadow: 0 0 0 3px var(--nx-color-accent-ring);
+}
+
+.nx-input:disabled, .nx-select:disabled, .nx-textarea:disabled {
+  background: var(--nx-surface-sunken);
+  color: var(--nx-text-muted);
+  cursor: not-allowed;
+}
+
+.nx-input[aria-invalid="true"], .nx-select[aria-invalid="true"] { border-color: var(--nx-danger); }
+
+.nx-textarea { min-height: 96px; resize: vertical; }
+
+.nx-select {
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%235b616e' d='M6 8.5 2 4h8z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  padding-right: 30px;
+}
+
+.nx-search { position: relative; display: flex; align-items: center; }
+.nx-search__icon { position: absolute; left: 10px; color: var(--nx-text-muted); display: grid; pointer-events: none; }
+.nx-search .nx-input { padding-left: 32px; }
+
+/* 13.3 - selected-state controls take the accent. */
+.nx-check {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: var(--nx-space-2);
+  cursor: pointer;
+  font-size: var(--nx-text-md);
+  color: var(--nx-text);
+}
+.nx-check input { accent-color: var(--nx-color-accent); width: 16px; height: 16px; margin-top: 2px; }
+
+.nx-switch { position: relative; display: inline-flex; align-items: center; gap: var(--nx-space-2); cursor: pointer; }
+.nx-switch input { position: absolute; opacity: 0; inset: 0; cursor: pointer; }
+.nx-switch__track {
+  width: 38px; height: 22px;
+  border-radius: var(--nx-radius-pill);
+  background: var(--nx-border-strong);
+  transition: background var(--nx-fast) var(--nx-ease);
+  position: relative;
+  flex: none;
+}
+.nx-switch__track::after {
+  content: "";
+  position: absolute;
+  top: 3px; left: 3px;
+  width: 16px; height: 16px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: var(--nx-shadow-xs);
+  transition: transform var(--nx-fast) var(--nx-ease);
+}
+.nx-switch input:checked + .nx-switch__track { background: var(--nx-color-accent); }
+.nx-switch input:checked + .nx-switch__track::after { transform: translateX(16px); }
+.nx-switch input:focus-visible + .nx-switch__track { outline: 2px solid var(--nx-color-accent); outline-offset: 2px; }
+
+/* ==========================================================================
+   Badges, chips, status (13.5.3 - words first, colour supports)
+   ========================================================================== */
+
+.nx-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 9px;
+  border-radius: var(--nx-radius-pill);
+  font-size: var(--nx-text-xs);
+  font-weight: 500;
+  border: 1px solid transparent;
+  white-space: nowrap;
+  line-height: 1.5;
+}
+
+.nx-badge--neutral { background: var(--nx-neutral-bg); color: var(--nx-text-secondary); border-color: var(--nx-neutral-border); }
+.nx-badge--accent  { background: var(--nx-color-accent-soft); color: var(--nx-color-accent); border-color: transparent; }
+.nx-badge--success { background: var(--nx-success-bg); color: var(--nx-success); border-color: var(--nx-success-border); }
+.nx-badge--warning { background: var(--nx-warning-bg); color: var(--nx-warning); border-color: var(--nx-warning-border); }
+.nx-badge--danger  { background: var(--nx-danger-bg); color: var(--nx-danger); border-color: var(--nx-danger-border); }
+.nx-badge--info    { background: var(--nx-info-bg); color: var(--nx-info); border-color: var(--nx-info-border); }
+
+.nx-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+  flex: none;
+}
+
+/* 13.3 - badge and notification dot take the accent. */
+.nx-count {
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: var(--nx-radius-pill);
+  background: var(--nx-color-accent);
+  color: var(--nx-color-on-accent);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  display: inline-grid;
+  place-items: center;
+  line-height: 1;
+}
+
+/* ==========================================================================
+   Tabs (13.3 - active tab underline takes the accent)
+   ========================================================================== */
+
+.nx-tabs {
+  display: flex;
+  gap: var(--nx-space-1);
+  border-bottom: 1px solid var(--nx-divider);
+  overflow-x: auto;
+}
+
+.nx-tab {
+  position: relative;
+  padding: 9px 14px;
+  border: 0;
+  background: transparent;
+  color: var(--nx-text-secondary);
+  font-size: var(--nx-text-md);
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  border-radius: var(--nx-radius-sm) var(--nx-radius-sm) 0 0;
+}
+
+.nx-tab:hover { color: var(--nx-text); background: var(--nx-surface-sunken); }
+
+.nx-tab.is-active { color: var(--nx-color-accent); font-weight: 600; }
+
+.nx-tab.is-active::after {
+  content: "";
+  position: absolute;
+  left: 8px; right: 8px; bottom: -1px;
+  height: 2px;
+  border-radius: 2px 2px 0 0;
+  background: var(--nx-color-accent);
+}
+
+/* ==========================================================================
+   Tables
+   ========================================================================== */
+
+.nx-table-wrap {
+  overflow-x: auto;
+  border-radius: var(--nx-radius);
+}
+
+.nx-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--nx-text-md);
+}
+
+.nx-table th {
+  text-align: left;
+  font-size: var(--nx-text-xs);
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--nx-text-muted);
+  background: var(--nx-surface-alt);
+  padding: 10px var(--nx-space-4);
+  border-bottom: 1px solid var(--nx-border);
+  white-space: nowrap;
+}
+
+.nx-table td {
+  padding: 11px var(--nx-space-4);
+  border-bottom: 1px solid var(--nx-divider);
+  color: var(--nx-text);
+  vertical-align: middle;
+}
+
+.nx-table tbody tr:last-child td { border-bottom: 0; }
+
+.nx-table tbody tr { transition: background var(--nx-fast) var(--nx-ease); }
+.nx-table tbody tr:hover { background: var(--nx-surface-alt); }
+
+/* 13.3 - the selected row gets a light tint of the accent. */
+.nx-table tbody tr.is-selected { background: var(--nx-color-accent-tint); }
+
+.nx-table td.nx-num, .nx-table th.nx-num { text-align: right; font-variant-numeric: tabular-nums; }
+.nx-table--clickable tbody tr { cursor: pointer; }
+
+.nx-pagination {
+  display: flex;
+  align-items: center;
+  gap: var(--nx-space-3);
+  padding: var(--nx-space-3) var(--nx-space-4);
+  border-top: 1px solid var(--nx-divider);
+  font-size: var(--nx-text-sm);
+  color: var(--nx-text-secondary);
+  flex-wrap: wrap;
+}
+
+/* ==========================================================================
+   Progress (13.3 - progress indicator takes the accent)
+   ========================================================================== */
+
+.nx-progress {
+  height: 8px;
+  border-radius: var(--nx-radius-pill);
+  background: var(--nx-neutral-bg);
+  overflow: hidden;
+}
+
+.nx-progress__bar {
+  height: 100%;
+  border-radius: inherit;
+  background: var(--nx-color-accent);
+  transition: width var(--nx-slow) var(--nx-ease);
+}
+
+.nx-progress--success .nx-progress__bar { background: var(--nx-success); }
+.nx-progress--warning .nx-progress__bar { background: var(--nx-warning); }
+.nx-progress--danger .nx-progress__bar { background: var(--nx-danger); }
+
+/* ==========================================================================
+   Avatar (13.3 - avatar ring/initial background take the accent)
+   ========================================================================== */
+
+.nx-avatar {
+  width: 34px; height: 34px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: var(--nx-text-sm);
+  font-weight: 600;
+  background: var(--nx-color-accent-soft);
+  color: var(--nx-color-accent);
+  border: 2px solid var(--nx-color-accent);
+  flex: none;
+  overflow: hidden;
+  object-fit: cover;
+}
+
+.nx-avatar--sm { width: 28px; height: 28px; font-size: var(--nx-text-xs); }
+.nx-avatar--lg { width: 46px; height: 46px; font-size: var(--nx-text-base); }
+
+/* ==========================================================================
+   Breadcrumbs / context bar (Branch Workplace, RULE 7.x)
+   ========================================================================== */
+
+.nx-breadcrumbs {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--nx-text-sm);
+  color: var(--nx-text-muted);
+  flex-wrap: wrap;
+}
+
+.nx-breadcrumbs a, .nx-breadcrumbs button {
+  color: var(--nx-text-secondary);
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  font-size: var(--nx-text-sm);
+}
+.nx-breadcrumbs a:hover, .nx-breadcrumbs button:hover { color: var(--nx-color-accent); }
+.nx-breadcrumbs__sep { color: var(--nx-border-strong); }
+.nx-breadcrumbs [aria-current="page"] { color: var(--nx-text); font-weight: 500; }
+
+.nx-contextbar {
+  display: flex;
+  align-items: center;
+  gap: var(--nx-space-3);
+  padding: var(--nx-space-3) var(--nx-space-6);
+  background: var(--nx-surface);
+  border-bottom: 1px solid var(--nx-border);
+  border-left: 3px solid var(--nx-color-accent);
+  flex-wrap: wrap;
+}
+
+/* ==========================================================================
+   States: loading, empty, error (RULE 17.3.1 section 8)
+   ========================================================================== */
+
+.nx-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: var(--nx-space-3);
+  padding: var(--nx-space-10) var(--nx-space-6);
+  color: var(--nx-text-secondary);
+}
+
+.nx-empty__icon {
+  width: 56px; height: 56px;
+  border-radius: 16px;
+  display: grid;
+  place-items: center;
+  background: var(--nx-color-accent-soft);
+  color: var(--nx-color-accent);
+}
+
+.nx-empty__title { font-weight: 600; color: var(--nx-text); font-size: var(--nx-text-base); }
+.nx-empty__text { font-size: var(--nx-text-md); max-width: 46ch; }
+
+.nx-errorstate {
+  display: flex;
+  gap: var(--nx-space-3);
+  padding: var(--nx-space-4);
+  border: 1px solid var(--nx-danger-border);
+  background: var(--nx-danger-bg);
+  border-radius: var(--nx-radius);
+  color: var(--nx-danger);
+  font-size: var(--nx-text-md);
+  align-items: flex-start;
+}
+
+.nx-permission {
+  display: flex;
+  flex-direction: column;
+  gap: var(--nx-space-3);
+  align-items: flex-start;
+  padding: var(--nx-space-8);
+  border: 1px dashed var(--nx-border-strong);
+  border-radius: var(--nx-radius);
+  background: var(--nx-surface);
+}
+
+.nx-skeleton {
+  background: linear-gradient(90deg, var(--nx-surface-sunken) 25%, #eceef2 37%, var(--nx-surface-sunken) 63%);
+  background-size: 400% 100%;
+  animation: nx-shimmer 1.3s ease-in-out infinite;
+  border-radius: var(--nx-radius-sm);
+}
+
+@keyframes nx-shimmer {
+  0% { background-position: 100% 50%; }
+  100% { background-position: 0 50%; }
+}
+
+.nx-spinner {
+  width: 18px; height: 18px;
+  border: 2px solid var(--nx-border-strong);
+  border-top-color: var(--nx-color-accent);
+  border-radius: 50%;
+  animation: nx-spin 0.7s linear infinite;
+  flex: none;
+}
+
+@keyframes nx-spin { to { transform: rotate(360deg); } }
+
+.nx-loading-row {
+  display: flex;
+  align-items: center;
+  gap: var(--nx-space-3);
+  color: var(--nx-text-secondary);
+  font-size: var(--nx-text-md);
+  padding: var(--nx-space-6);
+  justify-content: center;
+}
+
+/* ==========================================================================
+   Modal / drawer / toast
+   ========================================================================== */
+
+.nx-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgb(15 17 23 / 0.42);
+  backdrop-filter: blur(2px);
+  display: grid;
+  place-items: center;
+  padding: var(--nx-space-6);
+  z-index: 90;
+  animation: nx-fade var(--nx-fast) var(--nx-ease);
+}
+
+@keyframes nx-fade { from { opacity: 0; } }
+
+.nx-modal {
+  background: var(--nx-surface);
+  border-radius: var(--nx-radius-lg);
+  box-shadow: var(--nx-shadow-lg);
+  width: min(620px, 100%);
+  max-height: 88vh;
+  display: flex;
+  flex-direction: column;
+  animation: nx-pop var(--nx-slow) var(--nx-ease);
+  border-top: 3px solid var(--nx-color-accent);
+}
+
+.nx-modal--wide { width: min(920px, 100%); }
+
+@keyframes nx-pop {
+  from { opacity: 0; transform: translateY(8px) scale(0.985); }
+}
+
+.nx-modal__head {
+  display: flex;
+  align-items: center;
+  gap: var(--nx-space-3);
+  padding: var(--nx-space-4) var(--nx-space-5);
+  border-bottom: 1px solid var(--nx-divider);
+}
+
+.nx-modal__body { padding: var(--nx-space-5); overflow-y: auto; }
+.nx-modal__foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--nx-space-2);
+  padding: var(--nx-space-4) var(--nx-space-5);
+  border-top: 1px solid var(--nx-divider);
+}
+
+.nx-drawer-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgb(15 17 23 / 0.34);
+  z-index: 90;
+  animation: nx-fade var(--nx-fast) var(--nx-ease);
+}
+
+.nx-drawer {
+  position: fixed;
+  top: 0; right: 0; bottom: 0;
+  width: min(560px, 100%);
+  background: var(--nx-surface);
+  box-shadow: var(--nx-shadow-lg);
+  z-index: 91;
+  display: flex;
+  flex-direction: column;
+  animation: nx-slide var(--nx-slow) var(--nx-ease);
+  border-left: 3px solid var(--nx-color-accent);
+}
+
+@keyframes nx-slide { from { transform: translateX(24px); opacity: 0.6; } }
+
+.nx-toast-wrap {
+  position: fixed;
+  right: var(--nx-space-5);
+  bottom: var(--nx-space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--nx-space-2);
+  z-index: 120;
+  max-width: min(420px, calc(100vw - 40px));
+}
+
+.nx-toast {
+  display: flex;
+  gap: var(--nx-space-3);
+  align-items: flex-start;
+  padding: var(--nx-space-3) var(--nx-space-4);
+  border-radius: var(--nx-radius);
+  background: var(--nx-surface);
+  border: 1px solid var(--nx-border);
+  border-left: 3px solid var(--nx-color-accent);
+  box-shadow: var(--nx-shadow);
+  font-size: var(--nx-text-md);
+  animation: nx-toast-in var(--nx-slow) var(--nx-ease);
+}
+
+@keyframes nx-toast-in { from { opacity: 0; transform: translateY(8px); } }
+
+.nx-toast--success { border-left-color: var(--nx-success); }
+.nx-toast--danger { border-left-color: var(--nx-danger); }
+.nx-toast--warning { border-left-color: var(--nx-warning); }
+.nx-toast__title { font-weight: 600; }
+.nx-toast__text { color: var(--nx-text-secondary); font-size: var(--nx-text-sm); }
+
+/* ==========================================================================
+   Menu (dropdown)
+   ========================================================================== */
+
+.nx-menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  min-width: 220px;
+  background: var(--nx-surface);
+  border: 1px solid var(--nx-border);
+  border-radius: var(--nx-radius);
+  box-shadow: var(--nx-shadow-lg);
+  padding: 6px;
+  z-index: 60;
+}
+
+.nx-menu__item {
+  display: flex;
+  align-items: center;
+  gap: var(--nx-space-2);
+  width: 100%;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: var(--nx-radius-sm);
+  background: transparent;
+  font-size: var(--nx-text-md);
+  color: var(--nx-text);
+  cursor: pointer;
+  text-align: left;
+}
+
+.nx-menu__item:hover { background: var(--nx-surface-sunken); text-decoration: none; }
+.nx-menu__sep { height: 1px; background: var(--nx-divider); margin: 5px 4px; }
+
+/* ==========================================================================
+   Key-value list, definition rows, timeline
+   ========================================================================== */
+
+.nx-kv { display: grid; grid-template-columns: minmax(140px, 34%) 1fr; gap: 10px var(--nx-space-4); font-size: var(--nx-text-md); }
+.nx-kv dt { color: var(--nx-text-muted); }
+.nx-kv dd { margin: 0; color: var(--nx-text); font-variant-numeric: tabular-nums; }
+@media (max-width: 620px) { .nx-kv { grid-template-columns: 1fr; gap: 2px; } .nx-kv dd { margin-bottom: 8px; } }
+
+.nx-timeline { display: flex; flex-direction: column; gap: var(--nx-space-3); }
+.nx-timeline__item { display: flex; gap: var(--nx-space-3); font-size: var(--nx-text-md); }
+.nx-timeline__marker {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  background: var(--nx-color-accent);
+  margin-top: 6px;
+  flex: none;
+  box-shadow: 0 0 0 3px var(--nx-color-accent-tint);
+}
+
+/* ==========================================================================
+   Misc
+   ========================================================================== */
+
+.nx-divider { height: 1px; background: var(--nx-divider); border: 0; margin: 0; }
+
+.nx-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: var(--nx-radius-pill);
+  background: var(--nx-surface-sunken);
+  border: 1px solid var(--nx-border);
+  font-size: var(--nx-text-xs);
+  color: var(--nx-text-secondary);
+}
+
+.nx-scroll-y { overflow-y: auto; }
+
+.nx-hide-mobile { display: initial; }
+@media (max-width: 760px) { .nx-hide-mobile { display: none !important; } }
+
+.nx-mobile-only { display: none; }
+@media (max-width: 760px) { .nx-mobile-only { display: initial; } }
+
+/* Print (13.3 - exported/printed documents carry the accent header rule). */
+@media print {
+  .nx-sidebar, .nx-header, .nx-page-head__actions { display: none !important; }
+  .nx-app { grid-template-columns: 1fr; }
+  body { background: #fff; }
+  .nx-card { border-color: var(--nx-border); box-shadow: none; }
+  .nx-print-brand { border-top: 3px solid var(--nx-color-accent); }
+}
