@@ -165,7 +165,7 @@ placeholder. That is intentional fail-closed behaviour — the deploy will fail 
 
 ### Project 1 — the company portal + API
 
-1. Vercel dashboard → **Add New → Project** → import `mygodisgood536-ctn/nexora`.
+1. Vercel dashboard → **Add New → Project** → import `mygodisgood536-ctrl/nexora`.
 2. Vercel will now detect the workspace instead of erroring, because `vercel.json` exists at the root.
 3. **Framework Preset:** Vercel may show "Other". That is correct — `vercel.json` supplies everything.
 4. Confirm the settings Vercel shows:
