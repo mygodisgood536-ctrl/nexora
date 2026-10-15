@@ -2,6 +2,7 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import { LoadingRow } from "@nexora/ui";
 import { LoginPage } from "./auth/LoginPage";
 import { RitualFlow } from "./auth/RitualFlow";
+import { Splash } from "./auth/Splash";
 import { useSession } from "./auth/SessionProvider";
 import { companyName, companyTheme } from "./lib/theme";
 import { Shell } from "./shell/Shell";
@@ -38,16 +39,36 @@ import { WorkplacePage } from "./pages/WorkplacePage";
 export default function App() {
   const { state } = useSession();
 
+  /* The splash sits above whatever the session resolves to, so it never gates
+     sign-in, never intercepts a route and never delays a deep link. */
   if (state.state === "booting") {
     return (
-      <main className="nx-boot">
-        <LoadingRow text="Checking your session…" />
-      </main>
+      <>
+        <main className="nx-boot">
+          <LoadingRow text="Checking your session…" />
+        </main>
+        <Splash />
+      </>
     );
   }
 
-  if (state.state === "anon") return <LoginPage theme={companyTheme()} />;
-  if (state.state === "ritual") return <RitualFlow ritual={state.ritual} company={companyName()} />;
+  if (state.state === "anon") {
+    return (
+      <>
+        <LoginPage theme={companyTheme()} />
+        <Splash />
+      </>
+    );
+  }
+
+  if (state.state === "ritual") {
+    return (
+      <>
+        <RitualFlow ritual={state.ritual} company={companyName()} />
+        <Splash />
+      </>
+    );
+  }
 
   return (
     <Shell company={companyName()}>

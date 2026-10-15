@@ -2,12 +2,17 @@ import { useState, type FormEvent } from "react";
 import { Button, Field, Input, IconLock, IconShield, useToast } from "@nexora/ui";
 import { useSession } from "./SessionProvider";
 import { ApiRequestError } from "../lib/api";
-import type { CompanyTheme } from "../lib/theme";
+import { companyLogo, type CompanyTheme } from "../lib/theme";
 
 /**
  * RULE 4.1 - one login per portal host: the company's identity is on screen
  * before anything is typed, and the form asks for the exact full name that
  * RULE 5.1.1 makes the username.
+ *
+ * The split composition (identity left, form right) follows the owner's
+ * reference site. The identity panel is a brand surface and carries the ink
+ * palette; the form panel stays on the neutral layer that RULE 13.2 fixes, so
+ * the company colour is still only a highlighter.
  */
 export function LoginPage({ theme }: { theme: CompanyTheme | null }) {
   const { login } = useSession();
@@ -18,6 +23,7 @@ export function LoginPage({ theme }: { theme: CompanyTheme | null }) {
   const [error, setError] = useState<string | null>(null);
 
   const company = theme?.company?.name ?? "This company";
+  const logo = companyLogo();
 
   async function submit(e: FormEvent) {
     e.preventDefault();
@@ -40,24 +46,38 @@ export function LoginPage({ theme }: { theme: CompanyTheme | null }) {
   return (
     <div className="nxl">
       <section className="nxl__brand">
-        <div className="nx-row" style={{ gap: 12 }}>
-          <span className="nxl__logo" aria-hidden="true">{company.slice(0, 1).toUpperCase()}</span>
-          <strong style={{ fontSize: "1.05rem" }}>{company}</strong>
+        {/* The reference's masked grid backdrop and two glow orbs. */}
+        <span className="nxl__bg nx-brand__grid" aria-hidden="true" />
+        <span className="nxl__bg nxl__bg--accent" aria-hidden="true" />
+        <span className="nxl__bg nxl__bg--teal" aria-hidden="true" />
+
+        <div className="nxl__identity">
+          <span className="nxl__logo">
+            {/* RULE 13.6.1 - the logo. RULE 13.6.2 - the name placeholder
+                stands in when there is no logo, never a broken image. */}
+            {logo ? <img src={logo} alt="" /> : company.slice(0, 1).toUpperCase()}
+          </span>
+          <strong style={{ fontSize: "1.05rem", letterSpacing: "-0.01em" }}>{company}</strong>
         </div>
-        <div className="nx-stack">
-          <h1>Sign in to your workspace.</h1>
+
+        <div className="nx-stack" style={{ gap: "var(--nx-space-4)" }}>
+          <div>
+            <p className="nxl__eyebrow">Company workspace</p>
+            <h1>Sign in to your workspace.</h1>
+          </div>
           <p>
             Your full name is your username. After signing in you will complete your credential
-            ritual once - password, authenticator, profile - before touching any record.
+            ritual once &mdash; password, authenticator, profile &mdash; before touching any record.
           </p>
           <div className="nxl__marks">
             <span className="nxl__mark"><IconShield size={14} /> Authenticator protected</span>
             <span className="nxl__mark"><IconLock size={14} /> Every action audited</span>
           </div>
         </div>
-        <div style={{ fontSize: "0.8125rem", color: "rgb(255 255 255 / 0.7)" }}>
+
+        <p style={{ fontSize: "var(--nx-text-sm)", color: "var(--nx-brand-fg-subtle)" }}>
           Powered by Nexora
-        </div>
+        </p>
       </section>
 
       <section className="nxl__form">

@@ -55,4 +55,45 @@ describe("theme token architecture", () => {
     expect(HEX_COLOR_RE.test("#2547e0ff")).toBe(false);
     expect(HEX_COLOR_RE.test("#GGGGGG")).toBe(false);
   });
+
+  it("drops a stored colour that is not strict #RRGGBB", () => {
+    // RULE 13.8.1 - a themed element may only come from the theme record, and
+    // the record is untrusted input, so a malformed value must never reach a
+    // custom property where it could close the declaration.
+    const vars = themeRowToCssVars({
+      secondary_color: "red; } body { display:none } .x {",
+      navy_color: "url(evil)",
+      primary_color: "#0a7d4b"
+    });
+    expect(Object.hasOwn(vars, "--nx-color-secondary")).toBe(false);
+    expect(Object.hasOwn(vars, "--nx-color-navy")).toBe(false);
+    expect(vars["--nx-color-primary"]).toBe("#0a7d4b");
+  });
+
+  it("quotes each family in a comma-separated font stack", () => {
+    const vars = themeRowToCssVars({ font_family: "Fraunces, Georgia" });
+    expect(vars["--nx-font-family"]).toBe(
+      '"Fraunces", "Georgia", system-ui, -apple-system, "Segoe UI", sans-serif'
+    );
+  });
+
+  it("never quotes a CSS generic family keyword", () => {
+    const vars = themeRowToCssVars({ font_family: "Inter, sans-serif" });
+    expect(vars["--nx-font-family"]).toBe(
+      '"Inter", sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif'
+    );
+  });
+
+  it("drops a font family that could escape the declaration", () => {
+    for (const bad of [
+      'Poppins"; } body { display:none } .x {',
+      'Poppins"',
+      "Poppins } .evil {",
+      "Poppins; color: red",
+      ""
+    ]) {
+      const vars = themeRowToCssVars({ font_family: bad });
+      expect(Object.hasOwn(vars, "--nx-font-family")).toBe(false);
+    }
+  });
 });

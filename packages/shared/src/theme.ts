@@ -33,6 +33,56 @@ export const THEME_VAR_MAP: Readonly<Record<string, string>> = {
 const FONT_STACK_FALLBACK = ', system-ui, -apple-system, "Segoe UI", sans-serif';
 
 /**
+ * Strict font-family grammar (Part 1 §26 `font_family`).
+ *
+ * This value is written straight into a CSS custom property, so it must not be
+ * able to close the declaration and append arbitrary rules. It permits only
+ * letters, digits, spaces, single hyphens and commas — enough for every real
+ * family name and for a comma-separated fallback stack, and nothing else.
+ * Quotes are deliberately excluded: the value is quoted per-family below, so
+ * accepting them here would produce one quoted blob and an invalid declaration.
+ */
+export const FONT_FAMILY_RE = /^[A-Za-z0-9][A-Za-z0-9 -]*(?:,[A-Za-z0-9][A-Za-z0-9 -]*)*$/;
+
+/** CSS generic family keywords, which must never be quoted. */
+const CSS_GENERIC_FAMILIES = new Set([
+  "serif",
+  "sans-serif",
+  "monospace",
+  "cursive",
+  "fantasy",
+  "system-ui",
+  "ui-serif",
+  "ui-sans-serif",
+  "ui-monospace",
+  "ui-rounded",
+  "math",
+  "emoji",
+  "fangsong",
+  "inherit",
+  "initial",
+  "unset"
+]);
+
+/**
+ * Quotes each family in a comma-separated stack and appends the product's own
+ * fallbacks, so a company that typed "Fraunces, Georgia" gets two real quoted
+ * families instead of one quoted blob. Anything failing FONT_FAMILY_RE is
+ * dropped entirely, leaving the stylesheet default in force.
+ */
+export function toFontFamilyStack(raw: string): string | null {
+  const families = raw
+    .split(",")
+    .map((f) => f.trim())
+    .filter((f) => f.length > 0);
+  if (families.length === 0 || !families.every((f) => FONT_FAMILY_RE.test(f))) return null;
+  const quoted = families.map((f) =>
+    CSS_GENERIC_FAMILIES.has(f.toLowerCase()) ? f : `"${f}"`
+  );
+  return `${quoted.join(", ")}${FONT_STACK_FALLBACK}`;
+}
+
+/**
  * Maps a stored themes row (snake_case columns) to the CSS custom properties
  * the portal styles consume. Null/absent tokens are skipped entirely so the
  * stylesheet's Nexora defaults remain in effect (fallback rule, Part 1 §26).
@@ -42,8 +92,18 @@ export function themeRowToCssVars(row: Record<string, unknown>): Record<string, 
   for (const [column, cssVar] of Object.entries(THEME_VAR_MAP)) {
     const raw = row[column];
     if (typeof raw !== "string" || raw.length === 0) continue;
-    vars[cssVar] =
-      column === "font_family" ? `"${raw.replace(/"/g, "")}"${FONT_STACK_FALLBACK}` : raw;
+    if (column === "font_family") {
+      const stack = toFontFamilyStack(raw);
+      if (stack !== null) vars[cssVar] = stack;
+      continue;
+    }
+    // RULE 13.8.1 - a themed element may only come from the theme record, and
+    // the record is untrusted input, so every colour is grammar-checked before
+    // it reaches a custom property.
+    if (column === "primary_color" || column === "secondary_color" || column === "accent_color" || column === "navy_color") {
+      if (!HEX_COLOR_RE.test(raw)) continue;
+    }
+    vars[cssVar] = raw;
   }
   // RULE 13.4.3 / 13.5.1 — the accent is the company's chosen colour (the
   // stored primary; `accent_color` is the fallback when only it is set) and

@@ -1,5 +1,10 @@
 /* Platform Owner portal specifics. The token law lives in @nexora/ui;
-   only portal-only composition lives here. */
+   only portal-only composition lives here.
+
+   RULE 13.4.2 - green is this portal's accent token (set under `.nxp` in
+   @nexora/ui), not a background wash. The sign-in brand panel therefore uses
+   the same ink brand surface as the company portal, with green reserved for the
+   marks and the focus ring, so the console reads as one product. */
 
 .nxp-login {
   min-height: 100vh;
@@ -8,30 +13,72 @@
 }
 
 .nxp-login__brand {
-  background:
-    radial-gradient(1200px 500px at 10% 0%, rgb(255 255 255 / 0.14), transparent 60%),
-    linear-gradient(150deg, #0b3d29 0%, #0f7b4f 58%, #17915f 100%);
-  color: #fff;
-  padding: clamp(32px, 6vw, 72px);
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background: var(--nx-ink);
+  color: #ffffff;
+  padding: clamp(32px, 5vw, 68px);
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  gap: 32px;
+  gap: var(--nx-space-8);
 }
 
-.nxp-login__brand h1 { color: #fff; font-size: clamp(26px, 3vw, 36px); letter-spacing: -0.02em; }
-.nxp-login__brand p { color: rgb(255 255 255 / 0.82); max-width: 46ch; }
+.nxp-login__brand > * { position: relative; z-index: 1; }
 
-.nxp-login__marks { display: flex; gap: 10px; flex-wrap: wrap; }
+/* Green glow orbs — the platform's own accent hue, the reference's technique. */
+.nxp-login__bg { position: absolute; border-radius: 9999px; filter: blur(90px); z-index: 0; pointer-events: none; }
+.nxp-login__bg--a { width: 32rem; height: 32rem; left: -10rem; top: -8rem; background: radial-gradient(circle at 50% 50%, rgb(15 123 79 / 0.5), transparent 68%); }
+.nxp-login__bg--b { width: 24rem; height: 24rem; right: -8rem; bottom: -8rem; background: radial-gradient(circle at 50% 50%, rgb(95 214 196 / 0.2), transparent 70%); }
+
+.nxp-login__identity { display: flex; align-items: center; gap: var(--nx-space-3); }
+
+.nxp-login__mark {
+  width: 44px; height: 44px;
+  border-radius: 12px;
+  display: grid; place-items: center;
+  font-family: var(--nx-font-display);
+  font-weight: 600; font-size: 0.95rem;
+  color: #ffffff;
+  flex: none; overflow: hidden;
+  background-image:
+    radial-gradient(120% 90% at 20% 0%, rgb(95 214 196 / 0.35), transparent 62%),
+    linear-gradient(150deg, #223056 0%, #131d38 52%, #0b1224 100%);
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.16);
+}
+
+.nxp-login__eyebrow {
+  font-family: var(--nx-font-mono);
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: #5fd6c4;
+  margin-bottom: var(--nx-space-4);
+}
+
+.nxp-login__brand h1 {
+  color: #ffffff;
+  font-family: var(--nx-font-display);
+  font-size: clamp(1.85rem, 3.6vw, 2.7rem);
+  line-height: 1.08;
+  letter-spacing: -0.024em;
+}
+
+.nxp-login__brand p { color: #b0bccf; max-width: 46ch; line-height: 1.7; }
+
+.nxp-login__marks { display: flex; gap: 8px; flex-wrap: wrap; }
 .nxp-login__mark {
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  padding: 6px 12px;
+  padding: 6px 13px;
   border-radius: 999px;
-  background: rgb(255 255 255 / 0.12);
-  border: 1px solid rgb(255 255 255 / 0.22);
-  font-size: 0.8125rem;
+  background: rgb(255 255 255 / 0.06);
+  border: 1px solid rgb(255 255 255 / 0.14);
+  font-size: var(--nx-text-sm);
+  color: #dbe2f0;
 }
 
 .nxp-login__form {
@@ -45,7 +92,7 @@
 
 @media (max-width: 900px) {
   .nxp-login { grid-template-columns: minmax(0, 1fr); }
-  .nxp-login__brand { min-height: 220px; }
+  .nxp-login__brand { min-height: 230px; gap: var(--nx-space-5); }
 }
 
 /* Dashboard chart (first series is the accent - RULE 13.3). */

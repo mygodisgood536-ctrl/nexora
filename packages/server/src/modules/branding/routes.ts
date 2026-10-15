@@ -45,7 +45,18 @@ themeRouter.get("/theme", (req, res, next) => {
     });
     if (!record) throw AppError.notFound("No company portal on this host");
     res.json({
-      company: { name: record.name, slug: record.slug },
+      // RULE 13.6.1 - the company logo appears on the login screen. It is read
+      // here, pre-auth, from the same theme row the colour tokens come from, so
+      // the login screen carries the full company identity and not just a hue.
+      // RULE 13.6.2 - a company without a logo gets a null url and the client
+      // renders its name in a styled placeholder, never a broken image.
+      company: {
+        name: record.name,
+        slug: record.slug,
+        logoUrl: typeof record.logo_url === "string" && record.logo_url.length > 0
+          ? record.logo_url
+          : null
+      },
       tokens: themeRowToCssVars(record)
     });
   })().catch(next);

@@ -216,7 +216,7 @@ export function CompanyDetailPage() {
     <div className="nx-stack nx-stack--lg">
       <PageHeader
         breadcrumbs={<div className="nx-row" style={{ gap: 6, fontSize: "var(--nx-text-sm)" }}>
-          <button type="button" className="nx-linkish" onClick={() => navigate("/companies")} style={{ background: "none", border: 0, padding: 0, font: "inherit", color: "var(--nx-color-accent)", cursor: "pointer" }}>Companies</button>
+          <button type="button" className="nx-link" onClick={() => navigate("/companies")}>Companies</button>
           <span className="nx-faint">/</span>
           <span>{c.name}</span>
         </div>}

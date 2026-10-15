@@ -52,7 +52,16 @@ const emptyState: WizardState = {
   codePrefix: "",
   contactEmail: "",
   planTier: "standard",
-  brand: { primaryColor: "#0f7b4f", secondaryColor: "#0b3d29", accentColor: "#0f7b4f", navyColor: "#101418", fontFamily: "Poppins" },
+  // The seeded brand. `fontFamily` names the display face the company portal
+  // will use on its brand surfaces; it must be one the product actually loads,
+  // so it tracks @nexora/ui's display stack rather than a retired font.
+  brand: {
+    primaryColor: "#0f7b4f",
+    secondaryColor: "#0b3d29",
+    accentColor: "#0f7b4f",
+    navyColor: "#101418",
+    fontFamily: "Fraunces"
+  },
   mdFullName: "",
   mdPhone: "",
   mdEmail: "",

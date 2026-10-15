@@ -1,10 +1,14 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
-import "@fontsource/poppins/400.css";
-import "@fontsource/poppins/500.css";
-import "@fontsource/poppins/600.css";
-import "@fontsource/poppins/700.css";
+
+/* The reference site's three-font system, self-hosted:
+   Fraunces for display, Inter for UI and body, JetBrains Mono for eyebrows,
+   labels and figures. Variable builds, so every weight is one file. */
+import "@fontsource-variable/inter";
+import "@fontsource-variable/fraunces/wght.css";
+import "@fontsource-variable/jetbrains-mono/wght.css";
+
 import { ToastProvider } from "@nexora/ui";
 import App from "./App";
 import { SessionProvider } from "./auth/SessionProvider";
@@ -27,7 +31,7 @@ void (async () => {
         <SessionProvider>
           {/* basename carries the tenant prefix so every route stays written as
               `/money`, `/people`, … while the address remains
-              `example.vercel.app/acme/money`. (Vision Part 1 §2.3) */}
+              `example.vercel.app/acme/money`. (Vision Part 1 A2.3) */}
           <BrowserRouter basename={ROUTER_BASENAME || undefined}>
             <App />
           </BrowserRouter>

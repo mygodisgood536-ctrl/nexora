@@ -96,15 +96,24 @@ export function LoginPage({ onSignedIn }: { onSignedIn: () => void }) {
   return (
     <div className="nxp-login">
       <section className="nxp-login__brand">
-        <div className="nx-row" style={{ gap: 12 }}>
-          <span className="nx-sidebar__logo" aria-hidden="true">N</span>
-          <strong style={{ fontSize: "1.05rem" }}>Nexora Platform</strong>
+        {/* The reference's masked grid backdrop and glow orbs. */}
+        <span className="nx-brand__grid" aria-hidden="true" />
+        <span className="nxp-login__bg nxp-login__bg--a" aria-hidden="true" />
+        <span className="nxp-login__bg nxp-login__bg--b" aria-hidden="true" />
+
+        <div className="nxp-login__identity">
+          <span className="nxp-login__mark" aria-hidden="true">NX</span>
+          <strong style={{ fontSize: "1.05rem", letterSpacing: "-0.01em" }}>Nexora Platform</strong>
         </div>
-        <div className="nx-stack">
-          <h1>The owner console for every Nexora company.</h1>
+
+        <div className="nx-stack" style={{ gap: "var(--nx-space-4)" }}>
+          <div>
+            <p className="nxp-login__eyebrow">Platform Owner</p>
+            <h1>The owner console for every Nexora company.</h1>
+          </div>
           <p>
             Create and brand companies, hand over MD credentials, watch platform health, and open
-            time-bound support access - every action append-only audited.
+            time-bound support access &mdash; every action append-only audited.
           </p>
           <div className="nxp-login__marks">
             <span className="nxp-login__mark"><IconShield size={14} /> Authenticator challenge</span>
@@ -112,9 +121,10 @@ export function LoginPage({ onSignedIn }: { onSignedIn: () => void }) {
             <span className="nxp-login__mark"><IconCheck size={14} /> Tenant-isolated by design</span>
           </div>
         </div>
-        <div style={{ fontSize: "0.8125rem", color: "rgb(255 255 255 / 0.7)" }}>
+
+        <p style={{ fontSize: "var(--nx-text-sm)", color: "var(--nx-brand-fg-subtle)" }}>
           Owner sign-in lives only on this console. Company users never reach it.
-        </div>
+        </p>
       </section>
 
       <section className="nxp-login__form">

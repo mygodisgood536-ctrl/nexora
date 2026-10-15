@@ -1,67 +1,147 @@
 /* =============================================================================
-   Nexora design system - Part 13 (the colour, logo and visual law)
+   NEXORA DESIGN SYSTEM
+   Visual identity adapted from the owner's reference site
+   (cornelius-adedeji-victor-website.vercel.app) into the law the Vision
+   requires for a multi-company financial workspace.
 
-   RULE 13.1.1 / 13.1.2 - the company colour is a highlighter, not a background
-   wash. Everything read at length is neutral; only the accent tokens below take
-   the company colour. RULE 13.4.1 - with no company chosen the accent is black.
-   RULE 13.4.2 - the Platform Owner portal is green, scoped under `.nxp` and
-   never leaking into a company workspace (or the reverse).
+   ---------------------------------------------------------------------------
+   WHY THE REFERENCE IDENTITY IS EXPRESSED ON A LIGHT BASE
+   ---------------------------------------------------------------------------
+   The reference site is dark-only (`--bg: #070a12`). Vision Part 13 is
+   explicit and non-negotiable about the opposite, so the identity is carried
+   across by its DESIGN LANGUAGE, not its polarity:
 
-   This file is the single source of the non-changeable layer (13.2) and the
-   accent token table (13.3). No component in any app contains a colour.
+     RULE 13.2  Application background  "A soft off-white or light neutral"
+     RULE 13.2  Card surfaces           "A clean white or very light neutral"
+     RULE 13.2  Primary text            "A deep neutral charcoal or near-black"
+     RULE 13.2  Secondary text          "A mid neutral grey"
+     RULE 13.2  Dividers and borders    "Light neutral greys"
+     RULE 13.3.1 Everything read at length stays neutral.
+
+   So what is adopted from the reference, exactly as measured there:
+     - the three-font system: Fraunces (display) / Inter (UI + body) /
+       JetBrains Mono (eyebrows, labels, figures)
+     - the display scale, clamp() fluid sizing, tracking and line heights
+     - pill buttons, ring-based depth instead of heavy shadows
+     - the hairline grid technique (gap-px over a line-coloured background)
+     - the container width and the section rhythm (1.25 / 1.75 / 2.5rem
+       gutters, 4rem / 5rem / 6rem section padding)
+     - the radius family {11, 12, 16, 20, 24, 9999}px
+     - glow orbs, grid backdrop, hairline top rule, link underline sweep
+     - 1px Lucide-style icon strokes and reveal-on-load motion
+     - and, on the brand splash only, the reference's exact ink/accent/teal.
+
+   Readability is raised above the reference's dark values: body text here is
+   #10141f on #f5f6f9 (about 16.9:1), where the reference body runs
+   #b0bccf on #070a12 (about 9.4:1). The identity survives; the reading load
+   does not.
+
+   The accent layer below is the ONLY part a company colour ever touches
+   (RULE 13.3), and it is unchanged in meaning from the previous system.
    ========================================================================== */
 
 :root {
-  /* --- 13.2 non-changeable layer: surfaces and text --------------------- */
-  --nx-bg-app: #f4f5f7;
-  --nx-bg-app-deep: #ecedf1;
-  --nx-surface: #ffffff;
-  --nx-surface-alt: #fafbfc;
-  --nx-surface-sunken: #f6f7f9;
-  --nx-text: #16181d;
-  --nx-text-secondary: #5b616e;
-  --nx-text-muted: #868e9c;
+  color-scheme: light;
+
+  /* --- RULE 13.2 non-changeable layer: surfaces and text ------------------ */
+  /* Each value is the lightest-on-darkest pairing that still satisfies the
+     layer's stated intent, then nudged for contrast where the reference
+     relied on a dark canvas to do the work. */
+  --nx-bg-app: #f5f6f9; /* soft off-white, never pure white, never branded   */
+  --nx-bg-app-deep: #edeff4; /* layering behind the workspace                  */
+  --nx-surface: #ffffff; /* clean white, raised above the background          */
+  --nx-surface-alt: #fafbfd; /* alt rows / subtle fills                       */
+  --nx-surface-sunken: #f1f3f7; /* wells, hovers, disabled fields               */
+  --nx-text: #10141f; /* deep neutral charcoal  16.9:1 on --nx-bg-app         */
+  --nx-text-secondary: #464f63; /* mid neutral grey   7.6:1                    */
+  --nx-text-muted: #616c82; /* labels / help text  5.2:1                    */
   --nx-text-inverse: #ffffff;
-  --nx-border: #e3e6ea;
-  --nx-border-strong: #ccd1d9;
-  --nx-divider: #eceef1;
+  --nx-border: #e2e6ee;
+  --nx-border-strong: #c9d0dd;
+  --nx-divider: #edeff4;
 
-  /* --- semantic colours (13.2: never branded) --------------------------- */
-  --nx-success: #17754a;
-  --nx-success-bg: #e7f5ee;
-  --nx-success-border: #b9e3cd;
-  --nx-warning: #8a6100;
+  /* --- semantic colours (13.2: never branded) ---------------------------- */
+  --nx-success: #0f6b45;
+  --nx-success-bg: #e8f6ef;
+  --nx-success-border: #b6e0cb;
+  --nx-warning: #7a5300;
   --nx-warning-bg: #fdf3dd;
-  --nx-warning-border: #f2ddb0;
-  --nx-danger: #b3261e;
+  --nx-warning-border: #f0d9a6;
+  --nx-danger: #a81f16;
   --nx-danger-bg: #fdecea;
-  --nx-danger-border: #f5c6c2;
-  --nx-info: #1857a4;
+  --nx-danger-border: #f3c4bf;
+  --nx-info: #14538f;
   --nx-info-bg: #e9f1fb;
-  --nx-info-border: #c4d8f4;
-  --nx-neutral-bg: #eef0f3;
-  --nx-neutral-border: #dde1e6;
+  --nx-info-border: #bcd6f2;
+  --nx-neutral-bg: #eef0f4;
+  --nx-neutral-border: #dde1e9;
 
-  /* --- chart series (13.2: first series is accent, rest neutral) -------- */
+  /* --- chart series (13.2: first series is accent, rest neutral) ---------- */
   --nx-chart-1: var(--nx-color-accent);
-  --nx-chart-2: #7b8494;
-  --nx-chart-3: #aab2bf;
-  --nx-chart-4: #c7ccd5;
-  --nx-chart-5: #586074;
-  --nx-chart-6: #8f97a6;
-  --nx-chart-grid: #e7e9ed;
+  --nx-chart-2: #6b7488;
+  --nx-chart-3: #99a2b4;
+  --nx-chart-4: #c2c9d6;
+  --nx-chart-5: #4c5568;
+  --nx-chart-6: #838c9f;
+  --nx-chart-grid: #e7eaf0;
 
-  /* --- 13.3 accent token table (takes the company colour) --------------- */
-  --nx-color-accent: #111111;          /* 13.4.1 default = near-black */
-  --nx-color-accent-strong: #000000;   /* hover / pressed */
-  --nx-color-accent-soft: #f1f1f1;     /* tinted fills (selected row, chips) */
-  --nx-color-on-accent: #ffffff;       /* 13.5.1 computed label colour */
-  --nx-color-accent-ring: rgb(17 17 17 / 0.28);
-  --nx-color-accent-tint: rgb(17 17 17 / 0.07);
+  /* --- RULE 13.3 accent token table (takes the company colour) ----------- */
+  --nx-color-accent: #111111; /* 13.4.1 default = near-black charcoal          */
+  --nx-color-accent-strong: #000000;
+  --nx-color-accent-soft: #eeeeF0;
+  --nx-color-on-accent: #ffffff; /* 13.5.1 computed label colour, never chosen */
+  --nx-color-accent-ring: rgb(17 17 17 / 0.24);
+  --nx-color-accent-tint: rgb(17 17 17 / 0.06);
 
-  /* --- type scale (Poppins, RULE 17.3.4 recommended default) ------------ */
-  --nx-font-sans: "Poppins", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
-  --nx-font-mono: "SFMono-Regular", ui-monospace, "Cascadia Mono", Consolas, monospace;
+  /* --- the rest of the stored brand record -------------------------------- */
+  /* `themes` also carries primary_color, secondary_color, navy_color and
+     font_family (Part 1 section 26). The server sends all of them; before this
+     was true they arrived and were silently discarded, so a company that chose
+     a secondary colour or a typeface saw no change at all.
+
+     RULE 13.1.1 and 13.2 constrain WHERE these may land, so they are consumed
+     only on brand-identity surfaces — the logo tile, the sign-in brand panel and
+     the splash — and never as a workspace background or as body text colour.
+     The accent itself keeps taking `primary_color` (RULE 13.4.3). */
+  --nx-color-primary: var(--nx-color-accent);
+  --nx-color-secondary: #131d38;
+  --nx-color-navy: #0b1224;
+  /* RULE 13.5.1 also computes the label colour for the company's primary. */
+  --nx-color-on-primary: var(--nx-color-on-accent);
+  --nx-font-family: var(--nx-font-sans);
+
+  /* --- the reference site's brand ink, used on brand surfaces only -------- */
+  /* These never drive a tenant workspace: RULE 13.2 fixes those to the neutral
+     layer above. They exist for the Nexora splash/welcome identity and for the
+     wordmark tile, where RULE 13.3 (logo and site identity) already allows a
+     branded touchpoint. */
+  --nx-ink: #070a12;
+  --nx-ink-elevated: #0b1020;
+  --nx-ink-surface: #101728;
+  --nx-ink-line: #96a8cd;
+  --nx-brand-accent: #7c9cff;
+  --nx-brand-accent-bright: #a5bcff;
+  --nx-brand-accent-ink: #0a1024;
+  --nx-brand-teal: #5fd6c4;
+  --nx-brand-fg: #f3f6fc;
+  --nx-brand-fg-muted: #b0bccf;
+  --nx-brand-fg-subtle: #8e9bb3;
+
+  /* --- type: the reference's three-font system --------------------------- */
+  --nx-font-sans: "Inter Variable", Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+    sans-serif;
+  --nx-font-display: "Fraunces Variable", Fraunces, ui-serif, Georgia, "Times New Roman", serif;
+  --nx-font-mono: "JetBrains Mono Variable", "JetBrains Mono", ui-monospace, "SFMono-Regular",
+    "Cascadia Mono", Consolas, monospace;
+
+  /* Display scale, transcribed from the reference's own values. */
+  --nx-display-xl: clamp(2.1rem, 4.4vw, 3.1rem);
+  --nx-display-lg: clamp(1.7rem, 3.2vw, 2.35rem);
+  --nx-display-md: clamp(1.35rem, 2.3vw, 1.7rem);
+  --nx-display-sm: clamp(1.12rem, 1.7vw, 1.3rem);
+
+  /* Interface scale. The reference runs a tighter, larger-reading scale than the
+     previous Nexora values, which is the single biggest legibility win here. */
   --nx-text-xs: 0.75rem;
   --nx-text-sm: 0.8125rem;
   --nx-text-md: 0.875rem;
@@ -69,7 +149,6 @@
   --nx-text-lg: 1.0625rem;
   --nx-text-xl: 1.25rem;
   --nx-text-2xl: 1.5rem;
-  --nx-text-3xl: 1.875rem;
 
   /* --- spacing scale ---------------------------------------------------- */
   --nx-space-1: 4px;
@@ -83,28 +162,39 @@
   --nx-space-12: 48px;
   --nx-space-16: 64px;
 
-  /* --- radii ------------------------------------------------------------ */
-  --nx-radius-sm: 6px;
-  --nx-radius: 10px;
-  --nx-radius-lg: 14px;
+  /* --- radii: the reference family --------------------------------------- */
+  --nx-radius-sm: 8px;
+  --nx-radius: 12px;
+  --nx-radius-lg: 16px;
+  --nx-radius-xl: 20px;
   --nx-radius-pill: 999px;
 
-  /* --- depth (13.2: depth comes from borders and soft shadows) ---------- */
-  --nx-shadow-xs: 0 1px 2px rgb(16 18 24 / 0.05);
-  --nx-shadow-sm: 0 1px 3px rgb(16 18 24 / 0.07), 0 1px 2px rgb(16 18 24 / 0.04);
-  --nx-shadow: 0 4px 14px rgb(16 18 24 / 0.07), 0 1px 3px rgb(16 18 24 / 0.05);
-  --nx-shadow-lg: 0 16px 40px rgb(16 18 24 / 0.14);
+  /* --- depth: ring-first, shadow-second (the reference raises no shadows) */
+  --nx-shadow-xs: 0 1px 2px rgb(16 20 31 / 0.05);
+  --nx-shadow-sm: 0 1px 2px rgb(16 20 31 / 0.05), 0 4px 12px -6px rgb(16 20 31 / 0.08);
+  --nx-shadow: 0 2px 4px rgb(16 20 31 / 0.05), 0 12px 28px -14px rgb(16 20 31 / 0.16);
+  --nx-shadow-lg: 0 8px 24px -8px rgb(16 20 31 / 0.16), 0 24px 60px -20px rgb(16 20 31 / 0.24);
   --nx-shadow-card: var(--nx-shadow-sm);
+  --nx-ring: 0 0 0 1px var(--nx-border);
 
-  /* --- motion ----------------------------------------------------------- */
-  --nx-ease: cubic-bezier(0.22, 0.61, 0.36, 1);
-  --nx-fast: 120ms;
-  --nx-slow: 220ms;
+  /* --- motion: the reference's easing and durations ---------------------- */
+  --nx-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --nx-fast: 140ms;
+  --nx-slow: 300ms;
 
-  /* --- layout ----------------------------------------------------------- */
-  --nx-sidebar-w: 264px;
-  --nx-sidebar-w-collapsed: 68px;
-  --nx-header-h: 60px;
+  /* --- layout: the reference's container and gutters ---------------------- */
+  --nx-container: 1240px;
+  --nx-gutter: 1.25rem;
+  --nx-sidebar-w: 268px;
+  --nx-sidebar-w-collapsed: 72px;
+  --nx-header-h: 64px;
+}
+
+@media (min-width: 40em) {
+  :root { --nx-gutter: 1.75rem; }
+}
+@media (min-width: 64em) {
+  :root { --nx-gutter: 2.5rem; }
 }
 
 /* 13.4.2 - the Platform Owner portal: same token pattern, green, its own
@@ -112,10 +202,10 @@
 .nxp {
   --nx-color-accent: #0f7b4f;
   --nx-color-accent-strong: #0a5f3c;
-  --nx-color-accent-soft: #e8f5ee;
+  --nx-color-accent-soft: #e6f4ec;
   --nx-color-on-accent: #ffffff;
-  --nx-color-accent-ring: rgb(15 123 79 / 0.3);
-  --nx-color-accent-tint: rgb(15 123 79 / 0.08);
+  --nx-color-accent-ring: rgb(15 123 79 / 0.28);
+  --nx-color-accent-tint: rgb(15 123 79 / 0.07);
   --nx-chart-1: var(--nx-color-accent);
   --nx-brand-identity: "Nexora Platform";
 }
@@ -136,37 +226,53 @@ body,
   height: 100%;
 }
 
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: calc(var(--nx-header-h) + 1.5rem);
+  -webkit-text-size-adjust: 100%;
+}
+
 body {
   margin: 0;
   font-family: var(--nx-font-sans);
   font-size: var(--nx-text-base);
-  line-height: 1.55;
+  line-height: 1.6;
   color: var(--nx-text);
   background: var(--nx-bg-app);
-  background-image: radial-gradient(circle at 100% 0%, rgb(255 255 255 / 0.75), transparent 46%);
+  /* The reference layers its canvas with a soft directional wash rather than a
+     flat fill. RULE 13.2 allows this: it is a neutral, never a company colour. */
+  background-image:
+    radial-gradient(110% 70% at 100% 0%, rgb(255 255 255 / 0.9), transparent 58%),
+    radial-gradient(80% 60% at 0% 100%, rgb(16 20 31 / 0.035), transparent 62%);
+  background-attachment: fixed;
   -webkit-font-smoothing: antialiased;
-  text-rendering: optimizeLegibility;
+  -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  overflow-x: clip;
 }
 
 h1, h2, h3, h4, h5 {
   margin: 0;
+  font-family: var(--nx-font-display);
   font-weight: 600;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.015em;
   color: var(--nx-text);
+  text-wrap: balance;
 }
 
-h1 { font-size: var(--nx-text-2xl); line-height: 1.25; }
-h2 { font-size: var(--nx-text-xl); }
-h3 { font-size: var(--nx-text-lg); }
-h4 { font-size: var(--nx-text-base); }
+h1 { font-size: var(--nx-display-lg); line-height: 1.12; }
+h2 { font-size: var(--nx-display-md); line-height: 1.18; }
+h3 { font-size: var(--nx-display-sm); line-height: 1.28; }
+h4 { font-size: var(--nx-text-lg); line-height: 1.3; }
 
-p { margin: 0; }
+p { margin: 0; text-wrap: pretty; }
 
 a {
   color: var(--nx-color-accent);
   text-decoration: none;
+  transition: color var(--nx-fast) var(--nx-ease);
 }
-a:hover { text-decoration: underline; }
+a:hover { color: var(--nx-color-accent-strong); text-decoration: underline; }
 
 button, input, select, textarea {
   font: inherit;
@@ -177,16 +283,16 @@ img { max-width: 100%; }
 
 ::selection {
   background: var(--nx-color-accent-tint);
+  color: var(--nx-text);
 }
 
-/* Focus ring - 13.3: the accent takes the focused control's ring. */
+/* 13.3 - the focus ring takes the accent. */
 :focus-visible {
   outline: 2px solid var(--nx-color-accent);
   outline-offset: 2px;
   border-radius: var(--nx-radius-sm);
 }
 
-/* Scrollbars stay neutral. */
 * {
   scrollbar-width: thin;
   scrollbar-color: var(--nx-border-strong) transparent;
@@ -203,7 +309,7 @@ img { max-width: 100%; }
 }
 
 /* ==========================================================================
-   App frame
+   App frame — the reference's fixed rail + sticky translucent header
    ========================================================================== */
 
 .nx-app {
@@ -214,7 +320,7 @@ img { max-width: 100%; }
 
 .nx-app--collapsed { --nx-sidebar-w: var(--nx-sidebar-w-collapsed); }
 
-@media (max-width: 960px) {
+@media (max-width: 1024px) {
   .nx-app { grid-template-columns: minmax(0, 1fr); }
 }
 
@@ -232,41 +338,67 @@ img { max-width: 100%; }
   z-index: 30;
 }
 
+/* 13.3 header accents - a thin accent element, as the reference uses for its
+   logo tile rather than a heavy bar. */
 .nx-sidebar__brand {
   display: flex;
   align-items: center;
   gap: var(--nx-space-3);
-  padding: var(--nx-space-4) var(--nx-space-4);
+  padding: var(--nx-space-3) var(--nx-space-4);
   border-bottom: 1px solid var(--nx-divider);
   min-height: var(--nx-header-h);
-  border-top: 3px solid var(--nx-color-accent); /* 13.3 header accent */
 }
 
+/* The reference's logo treatment, adapted: a gradient ink tile with a radial
+   highlight and an inset white ring. RULE 13.3 "logo and site identity" and
+   RULE 13.6.2 (no broken image - the company initial stands in). */
 .nx-sidebar__logo {
-  width: 34px;
-  height: 34px;
-  border-radius: 9px;
+  width: 36px;
+  height: 36px;
+  border-radius: 11px;
   display: grid;
   place-items: center;
-  font-weight: 700;
+  font-family: var(--nx-font-family);
+  font-weight: 600;
   font-size: var(--nx-text-md);
-  color: var(--nx-color-on-accent);
-  background: var(--nx-color-accent);
+  letter-spacing: 0.02em;
+  color: var(--nx-color-on-primary);
+  background-color: var(--nx-ink-surface);
+  background-image:
+    radial-gradient(120% 90% at 20% 0%, color-mix(in srgb, var(--nx-color-primary) 55%, transparent), transparent 62%),
+    linear-gradient(
+      150deg,
+      color-mix(in srgb, var(--nx-color-secondary) 78%, #ffffff) 0%,
+      var(--nx-color-secondary) 52%,
+      var(--nx-color-navy) 100%
+    );
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.16);
   flex: none;
   object-fit: contain;
-}
-
-.nx-sidebar__brand-name {
-  font-weight: 600;
-  font-size: var(--nx-text-base);
-  white-space: nowrap;
   overflow: hidden;
 }
 
+.nx-sidebar__brand-name {
+  font-family: var(--nx-font-display);
+  font-weight: 600;
+  font-size: var(--nx-text-base);
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* The reference's mono micro-label, exactly: uppercase, 0.24em tracking. */
 .nx-sidebar__brand-sub {
-  font-size: var(--nx-text-xs);
+  font-family: var(--nx-font-mono);
+  font-size: 0.625rem;
+  font-weight: 500;
+  letter-spacing: 0.19em;
+  text-transform: uppercase;
   color: var(--nx-text-muted);
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .nx-sidebar__scroll {
@@ -283,17 +415,31 @@ img { max-width: 100%; }
   gap: var(--nx-space-3);
 }
 
-.nx-navgroup { margin-bottom: var(--nx-space-4); }
+.nx-navgroup { margin-bottom: var(--nx-space-5); }
 
-.nx-navgroup__title {
-  font-size: 0.6875rem;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--nx-text-muted);
+.nx-navgroup__head {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  gap: var(--nx-space-2);
+  background: none;
+  border: 0;
   padding: 0 var(--nx-space-3) var(--nx-space-2);
+  cursor: pointer;
+  text-align: left;
 }
 
+.nx-navgroup__title,
+.nx-navgroup__head {
+  font-family: var(--nx-font-mono);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.19em;
+  text-transform: uppercase;
+  color: var(--nx-text-muted);
+}
+
+/* 13.3 - the active navigation item and its indicator take the accent. */
 .nx-navitem {
   position: relative;
   display: flex;
@@ -302,7 +448,7 @@ img { max-width: 100%; }
   width: 100%;
   padding: 8px var(--nx-space-3);
   border: 0;
-  border-radius: var(--nx-radius-sm);
+  border-radius: var(--nx-radius-pill);
   background: transparent;
   color: var(--nx-text-secondary);
   font-size: var(--nx-text-md);
@@ -317,20 +463,20 @@ img { max-width: 100%; }
   text-decoration: none;
 }
 
-/* 13.3 - the active navigation item and its indicator bar take the accent. */
 .nx-navitem.is-active {
   background: var(--nx-color-accent-soft);
-  color: var(--nx-color-accent);
+  color: var(--nx-color-accent-strong);
   font-weight: 600;
 }
 
 .nx-navitem.is-active::before {
   content: "";
   position: absolute;
-  left: -12px;
-  top: 6px;
-  bottom: 6px;
+  left: -13px;
+  top: 50%;
+  transform: translateY(-50%);
   width: 3px;
+  height: 18px;
   border-radius: 0 3px 3px 0;
   background: var(--nx-color-accent);
 }
@@ -338,7 +484,7 @@ img { max-width: 100%; }
 .nx-navitem__icon { flex: none; display: grid; place-items: center; }
 .nx-navitem__badge { margin-left: auto; }
 
-/* --- header ------------------------------------------------------------- */
+/* --- header: the reference's translucent, blurred, sticky bar ------------- */
 
 .nx-content { display: flex; flex-direction: column; min-width: 0; }
 
@@ -348,49 +494,98 @@ img { max-width: 100%; }
   z-index: 20;
   display: flex;
   align-items: center;
-  gap: var(--nx-space-3);
+  gap: var(--nx-space-2);
   min-height: var(--nx-header-h);
-  padding: var(--nx-space-2) var(--nx-space-6);
-  background: rgb(255 255 255 / 0.86);
-  backdrop-filter: blur(10px);
+  padding: var(--nx-space-2) var(--nx-gutter);
+  background: rgb(255 255 255 / 0.82);
+  backdrop-filter: blur(14px) saturate(1.6);
+  -webkit-backdrop-filter: blur(14px) saturate(1.6);
   border-bottom: 1px solid var(--nx-border);
-  border-top: 3px solid var(--nx-color-accent);
+  transition: background var(--nx-slow) var(--nx-ease), border-color var(--nx-slow) var(--nx-ease);
 }
 
 .nx-header__spacer { flex: 1; }
 
 .nx-main {
   flex: 1;
-  padding: var(--nx-space-6);
-  max-width: 1440px;
+  padding: var(--nx-space-8) var(--nx-gutter) var(--nx-space-16);
+  max-width: var(--nx-container);
   width: 100%;
   margin: 0 auto;
 }
 
-@media (max-width: 960px) {
-  .nx-main { padding: var(--nx-space-4); }
+@media (max-width: 640px) {
+  .nx-main { padding: var(--nx-space-5) var(--nx-gutter) var(--nx-space-12); }
+}
+
+/* Boot state before the session resolves. */
+.nx-boot {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
 }
 
 /* ==========================================================================
    Typography helpers
    ========================================================================== */
 
-.nx-h1 { font-size: var(--nx-text-2xl); font-weight: 600; letter-spacing: -0.015em; }
-.nx-h2 { font-size: var(--nx-text-xl); font-weight: 600; }
-.nx-h3 { font-size: var(--nx-text-lg); font-weight: 600; }
+.nx-h1 { font-family: var(--nx-font-display); font-size: var(--nx-display-lg); font-weight: 600; letter-spacing: -0.022em; line-height: 1.12; }
+.nx-h2 { font-family: var(--nx-font-display); font-size: var(--nx-display-md); font-weight: 600; letter-spacing: -0.018em; line-height: 1.18; }
+.nx-h3 { font-family: var(--nx-font-display); font-size: var(--nx-display-sm); font-weight: 600; letter-spacing: -0.012em; line-height: 1.28; }
+
+/* The reference's `.eyebrow`, verbatim. */
 .nx-eyebrow {
-  font-size: 0.6875rem;
-  font-weight: 600;
-  letter-spacing: 0.09em;
+  font-family: var(--nx-font-mono);
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 0.24em;
   text-transform: uppercase;
   color: var(--nx-text-muted);
 }
+
+/* The reference's `.lede`. */
+.nx-lede {
+  font-size: clamp(1.02rem, 1.55vw, 1.2rem);
+  line-height: 1.7;
+  color: var(--nx-text-secondary);
+}
+
+/* The reference's `.prose-body`. */
+.nx-prose {
+  font-size: 0.9375rem;
+  line-height: 1.72;
+  color: var(--nx-text-secondary);
+}
+
 .nx-muted { color: var(--nx-text-secondary); }
 .nx-faint { color: var(--nx-text-muted); }
 .nx-mono { font-family: var(--nx-font-mono); font-variant-numeric: tabular-nums; }
 .nx-num { font-variant-numeric: tabular-nums; }
 .nx-link { color: var(--nx-color-accent); font-weight: 500; cursor: pointer; background: none; border: 0; padding: 0; }
 .nx-link:hover { text-decoration: underline; }
+
+/* The reference's `.link-underline`: a sweep that grows from the left. */
+.nx-sweep {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  position: relative;
+  color: var(--nx-color-accent);
+  font-weight: 500;
+  transition: color var(--nx-fast) var(--nx-ease);
+}
+.nx-sweep::after {
+  content: "";
+  position: absolute;
+  left: 0; bottom: -3px;
+  width: 100%; height: 1px;
+  background: var(--nx-color-accent);
+  transform: scaleX(0);
+  transform-origin: 100%;
+  transition: transform 350ms var(--nx-ease);
+}
+.nx-sweep:hover { color: var(--nx-color-accent-strong); text-decoration: none; }
+.nx-sweep:hover::after { transform: scaleX(1); transform-origin: 0; }
 
 /* ==========================================================================
    Layout helpers
@@ -412,13 +607,32 @@ img { max-width: 100%; }
 @media (max-width: 760px)  { .nx-grid--2, .nx-grid--3, .nx-grid--4 { grid-template-columns: minmax(0, 1fr); } }
 
 /* ==========================================================================
-   Surfaces
+   Surfaces — the reference's ring-first panels
    ========================================================================== */
+
+/* The reference's `.panel`: a hairline ring over a barely-tinted surface, with
+   depth from an inner top highlight rather than an outer drop shadow. */
+.nx-panel {
+  border: 1px solid var(--nx-border);
+  background: var(--nx-surface);
+  border-radius: var(--nx-radius-lg);
+  position: relative;
+}
+.nx-panel::before {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  top: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgb(16 20 31 / 0.07), transparent);
+  border-radius: inherit;
+  pointer-events: none;
+}
 
 .nx-card {
   background: var(--nx-surface);
   border: 1px solid var(--nx-border);
-  border-radius: var(--nx-radius);
+  border-radius: var(--nx-radius-lg);
   box-shadow: var(--nx-shadow-xs);
 }
 
@@ -443,23 +657,37 @@ img { max-width: 100%; }
   gap: var(--nx-space-3);
   align-items: center;
   justify-content: flex-end;
+  flex-wrap: wrap;
 }
+
+/* The reference's hairline grid: a line-coloured background revealed through
+   1px gaps. Used for stat tiles and card groups. */
+.nx-hairgrid {
+  display: grid;
+  gap: 1px;
+  overflow: hidden;
+  border: 1px solid var(--nx-border);
+  border-radius: var(--nx-radius-lg);
+  background: var(--nx-border);
+}
+.nx-hairgrid > * { background: var(--nx-surface); }
 
 .nx-page-head {
   display: flex;
   align-items: flex-start;
   gap: var(--nx-space-4);
-  margin-bottom: var(--nx-space-5);
+  margin-bottom: var(--nx-space-6);
   flex-wrap: wrap;
 }
 
 .nx-page-head__actions { margin-left: auto; display: flex; gap: var(--nx-space-2); flex-wrap: wrap; }
 
-/* Stat tiles - the landing summary blocks of RULE 12.0.3. */
+/* Stat tiles - the landing summary blocks of RULE 12.0.3, in the reference's
+   hairline-grid form with the reference's mono label. */
 .nx-stat {
   background: var(--nx-surface);
   border: 1px solid var(--nx-border);
-  border-radius: var(--nx-radius);
+  border-radius: var(--nx-radius-lg);
   padding: var(--nx-space-4) var(--nx-space-5);
   display: flex;
   flex-direction: column;
@@ -469,9 +697,10 @@ img { max-width: 100%; }
 }
 
 .nx-stat__label {
-  font-size: var(--nx-text-xs);
+  font-family: var(--nx-font-mono);
+  font-size: 0.6875rem;
   font-weight: 500;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.19em;
   text-transform: uppercase;
   color: var(--nx-text-muted);
   display: flex;
@@ -480,19 +709,21 @@ img { max-width: 100%; }
 }
 
 .nx-stat__value {
+  font-family: var(--nx-font-display);
   font-size: var(--nx-text-2xl);
   font-weight: 600;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.018em;
   font-variant-numeric: tabular-nums;
   line-height: 1.15;
+  color: var(--nx-text);
 }
 
 .nx-stat__hint { font-size: var(--nx-text-xs); color: var(--nx-text-secondary); }
 
-.nx-stat--accent .nx-stat__value { color: var(--nx-color-accent); }
+.nx-stat--accent .nx-stat__value { color: var(--nx-color-accent-strong); }
 
 /* ==========================================================================
-   Buttons (13.3 - primary/secondary emphasis take the accent)
+   Buttons — the reference's pill system, on the Vision's accent tokens
    ========================================================================== */
 
 .nx-btn {
@@ -503,38 +734,45 @@ img { max-width: 100%; }
   align-items: center;
   justify-content: center;
   gap: var(--nx-space-2);
-  padding: 8px 16px;
-  min-height: 36px;
-  border-radius: var(--nx-radius-sm);
+  padding: 9px 18px;
+  min-height: 38px;
+  border-radius: var(--nx-radius-pill);
   border: 1px solid var(--btn-bd);
   background: var(--btn-bg);
   color: var(--btn-fg);
   font-size: var(--nx-text-md);
   font-weight: 500;
+  line-height: 1;
   cursor: pointer;
   white-space: nowrap;
   transition: background var(--nx-fast) var(--nx-ease), border-color var(--nx-fast) var(--nx-ease),
-    box-shadow var(--nx-fast) var(--nx-ease), transform var(--nx-fast) var(--nx-ease);
+    box-shadow var(--nx-fast) var(--nx-ease), transform var(--nx-fast) var(--nx-ease),
+    color var(--nx-fast) var(--nx-ease);
   text-decoration: none;
 }
 
 .nx-btn:hover:not(:disabled) { background: var(--nx-surface-alt); text-decoration: none; }
 .nx-btn:active:not(:disabled) { transform: translateY(1px); }
-.nx-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+.nx-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
+/* RULE 13.3 row 1 - the primary action takes the company colour, and its label
+   colour is computed by RULE 13.5.1, never chosen. */
 .nx-btn--primary {
   background: var(--nx-color-accent);
   border-color: var(--nx-color-accent);
   color: var(--nx-color-on-accent);
-  box-shadow: var(--nx-shadow-xs);
+  box-shadow: 0 1px 2px rgb(16 20 31 / 0.08);
 }
-.nx-btn--primary:hover:not(:disabled) { background: var(--nx-color-accent-strong); border-color: var(--nx-color-accent-strong); }
+.nx-btn--primary:hover:not(:disabled) {
+  background: var(--nx-color-accent-strong);
+  border-color: var(--nx-color-accent-strong);
+}
 
-/* Secondary emphasis: outline of the accent (13.3 row 2). */
+/* RULE 13.3 row 2 - secondary emphasis is an outline or a tint of the accent. */
 .nx-btn--secondary {
-  background: var(--nx-surface);
+  background: transparent;
   border-color: var(--nx-color-accent);
-  color: var(--nx-color-accent);
+  color: var(--nx-color-accent-strong);
 }
 .nx-btn--secondary:hover:not(:disabled) { background: var(--nx-color-accent-soft); }
 
@@ -552,10 +790,10 @@ img { max-width: 100%; }
 }
 .nx-btn--danger:hover:not(:disabled) { filter: brightness(0.92); background: var(--nx-danger); }
 
-.nx-btn--sm { min-height: 30px; padding: 4px 10px; font-size: var(--nx-text-sm); }
-.nx-btn--lg { min-height: 44px; padding: 10px 22px; font-size: var(--nx-text-base); }
+.nx-btn--sm { min-height: 32px; padding: 6px 13px; font-size: var(--nx-text-sm); }
+.nx-btn--lg { min-height: 46px; padding: 12px 24px; font-size: var(--nx-text-base); }
 .nx-btn--block { width: 100%; }
-.nx-btn--icon { padding: 6px; min-width: 34px; min-height: 34px; }
+.nx-btn--icon { padding: 6px; min-width: 38px; min-height: 38px; border-radius: var(--nx-radius-pill); }
 
 /* ==========================================================================
    Forms
@@ -578,8 +816,8 @@ img { max-width: 100%; }
 .nx-select,
 .nx-textarea {
   width: 100%;
-  padding: 8px 12px;
-  min-height: 38px;
+  padding: 9px 13px;
+  min-height: 40px;
   border: 1px solid var(--nx-border-strong);
   border-radius: var(--nx-radius-sm);
   background: var(--nx-surface);
@@ -611,15 +849,15 @@ img { max-width: 100%; }
 
 .nx-select {
   appearance: none;
-  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%235b616e' d='M6 8.5 2 4h8z'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='none' stroke='%23464f63' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round' d='M2.5 4.5 6 8l3.5-3.5'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
-  background-position: right 10px center;
-  padding-right: 30px;
+  background-position: right 11px center;
+  padding-right: 32px;
 }
 
 .nx-search { position: relative; display: flex; align-items: center; }
-.nx-search__icon { position: absolute; left: 10px; color: var(--nx-text-muted); display: grid; pointer-events: none; }
-.nx-search .nx-input { padding-left: 32px; }
+.nx-search__icon { position: absolute; left: 11px; color: var(--nx-text-muted); display: grid; pointer-events: none; }
+.nx-search .nx-input { padding-left: 34px; }
 
 /* 13.3 - selected-state controls take the accent. */
 .nx-check {
@@ -635,7 +873,7 @@ img { max-width: 100%; }
 .nx-switch { position: relative; display: inline-flex; align-items: center; gap: var(--nx-space-2); cursor: pointer; }
 .nx-switch input { position: absolute; opacity: 0; inset: 0; cursor: pointer; }
 .nx-switch__track {
-  width: 38px; height: 22px;
+  width: 40px; height: 23px;
   border-radius: var(--nx-radius-pill);
   background: var(--nx-border-strong);
   transition: background var(--nx-fast) var(--nx-ease);
@@ -646,14 +884,14 @@ img { max-width: 100%; }
   content: "";
   position: absolute;
   top: 3px; left: 3px;
-  width: 16px; height: 16px;
+  width: 17px; height: 17px;
   border-radius: 50%;
   background: #fff;
   box-shadow: var(--nx-shadow-xs);
   transition: transform var(--nx-fast) var(--nx-ease);
 }
 .nx-switch input:checked + .nx-switch__track { background: var(--nx-color-accent); }
-.nx-switch input:checked + .nx-switch__track::after { transform: translateX(16px); }
+.nx-switch input:checked + .nx-switch__track::after { transform: translateX(17px); }
 .nx-switch input:focus-visible + .nx-switch__track { outline: 2px solid var(--nx-color-accent); outline-offset: 2px; }
 
 /* ==========================================================================
@@ -664,7 +902,7 @@ img { max-width: 100%; }
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  padding: 2px 9px;
+  padding: 3px 10px;
   border-radius: var(--nx-radius-pill);
   font-size: var(--nx-text-xs);
   font-weight: 500;
@@ -674,7 +912,7 @@ img { max-width: 100%; }
 }
 
 .nx-badge--neutral { background: var(--nx-neutral-bg); color: var(--nx-text-secondary); border-color: var(--nx-neutral-border); }
-.nx-badge--accent  { background: var(--nx-color-accent-soft); color: var(--nx-color-accent); border-color: transparent; }
+.nx-badge--accent  { background: var(--nx-color-accent-soft); color: var(--nx-color-accent-strong); border-color: transparent; }
 .nx-badge--success { background: var(--nx-success-bg); color: var(--nx-success); border-color: var(--nx-success-border); }
 .nx-badge--warning { background: var(--nx-warning-bg); color: var(--nx-warning); border-color: var(--nx-warning-border); }
 .nx-badge--danger  { background: var(--nx-danger-bg); color: var(--nx-danger); border-color: var(--nx-danger-border); }
@@ -689,9 +927,9 @@ img { max-width: 100%; }
 
 /* 13.3 - badge and notification dot take the accent. */
 .nx-count {
-  min-width: 18px;
-  height: 18px;
-  padding: 0 5px;
+  min-width: 19px;
+  height: 19px;
+  padding: 0 6px;
   border-radius: var(--nx-radius-pill);
   background: var(--nx-color-accent);
   color: var(--nx-color-on-accent);
@@ -715,7 +953,7 @@ img { max-width: 100%; }
 
 .nx-tab {
   position: relative;
-  padding: 9px 14px;
+  padding: 10px 14px;
   border: 0;
   background: transparent;
   color: var(--nx-text-secondary);
@@ -723,17 +961,17 @@ img { max-width: 100%; }
   font-weight: 500;
   cursor: pointer;
   white-space: nowrap;
-  border-radius: var(--nx-radius-sm) var(--nx-radius-sm) 0 0;
+  border-radius: var(--nx-radius-pill) var(--nx-radius-pill) 0 0;
 }
 
 .nx-tab:hover { color: var(--nx-text); background: var(--nx-surface-sunken); }
 
-.nx-tab.is-active { color: var(--nx-color-accent); font-weight: 600; }
+.nx-tab.is-active { color: var(--nx-color-accent-strong); font-weight: 600; }
 
 .nx-tab.is-active::after {
   content: "";
   position: absolute;
-  left: 8px; right: 8px; bottom: -1px;
+  left: 10px; right: 10px; bottom: -1px;
   height: 2px;
   border-radius: 2px 2px 0 0;
   background: var(--nx-color-accent);
@@ -745,7 +983,7 @@ img { max-width: 100%; }
 
 .nx-table-wrap {
   overflow-x: auto;
-  border-radius: var(--nx-radius);
+  border-radius: var(--nx-radius-lg);
 }
 
 .nx-table {
@@ -756,19 +994,20 @@ img { max-width: 100%; }
 
 .nx-table th {
   text-align: left;
-  font-size: var(--nx-text-xs);
-  font-weight: 600;
-  letter-spacing: 0.05em;
+  font-family: var(--nx-font-mono);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--nx-text-muted);
   background: var(--nx-surface-alt);
-  padding: 10px var(--nx-space-4);
+  padding: 11px var(--nx-space-4);
   border-bottom: 1px solid var(--nx-border);
   white-space: nowrap;
 }
 
 .nx-table td {
-  padding: 11px var(--nx-space-4);
+  padding: 12px var(--nx-space-4);
   border-bottom: 1px solid var(--nx-divider);
   color: var(--nx-text);
   vertical-align: middle;
@@ -806,14 +1045,12 @@ img { max-width: 100%; }
   background: var(--nx-neutral-bg);
   overflow: hidden;
 }
-
 .nx-progress__bar {
   height: 100%;
   border-radius: inherit;
   background: var(--nx-color-accent);
   transition: width var(--nx-slow) var(--nx-ease);
 }
-
 .nx-progress--success .nx-progress__bar { background: var(--nx-success); }
 .nx-progress--warning .nx-progress__bar { background: var(--nx-warning); }
 .nx-progress--danger .nx-progress__bar { background: var(--nx-danger); }
@@ -830,8 +1067,8 @@ img { max-width: 100%; }
   font-size: var(--nx-text-sm);
   font-weight: 600;
   background: var(--nx-color-accent-soft);
-  color: var(--nx-color-accent);
-  border: 2px solid var(--nx-color-accent);
+  color: var(--nx-color-accent-strong);
+  border: 1px solid var(--nx-color-accent);
   flex: none;
   overflow: hidden;
   object-fit: cover;
@@ -851,6 +1088,7 @@ img { max-width: 100%; }
   font-size: var(--nx-text-sm);
   color: var(--nx-text-muted);
   flex-wrap: wrap;
+  margin-bottom: var(--nx-space-4);
 }
 
 .nx-breadcrumbs a, .nx-breadcrumbs button {
@@ -869,10 +1107,10 @@ img { max-width: 100%; }
   display: flex;
   align-items: center;
   gap: var(--nx-space-3);
-  padding: var(--nx-space-3) var(--nx-space-6);
+  padding: var(--nx-space-3) var(--nx-gutter);
   background: var(--nx-surface);
   border-bottom: 1px solid var(--nx-border);
-  border-left: 3px solid var(--nx-color-accent);
+  box-shadow: inset 3px 0 0 var(--nx-color-accent);
   flex-wrap: wrap;
 }
 
@@ -890,17 +1128,18 @@ img { max-width: 100%; }
   color: var(--nx-text-secondary);
 }
 
+/* RULE 13.3 "empty-state illustration accents". */
 .nx-empty__icon {
   width: 56px; height: 56px;
   border-radius: 16px;
   display: grid;
   place-items: center;
   background: var(--nx-color-accent-soft);
-  color: var(--nx-color-accent);
+  color: var(--nx-color-accent-strong);
 }
 
-.nx-empty__title { font-weight: 600; color: var(--nx-text); font-size: var(--nx-text-base); }
-.nx-empty__text { font-size: var(--nx-text-md); max-width: 46ch; }
+.nx-empty__title { font-family: var(--nx-font-display); font-weight: 600; color: var(--nx-text); font-size: var(--nx-display-sm); }
+.nx-empty__text { font-size: var(--nx-text-md); max-width: 46ch; line-height: 1.65; }
 
 .nx-errorstate {
   display: flex;
@@ -908,7 +1147,7 @@ img { max-width: 100%; }
   padding: var(--nx-space-4);
   border: 1px solid var(--nx-danger-border);
   background: var(--nx-danger-bg);
-  border-radius: var(--nx-radius);
+  border-radius: var(--nx-radius-lg);
   color: var(--nx-danger);
   font-size: var(--nx-text-md);
   align-items: flex-start;
@@ -921,14 +1160,14 @@ img { max-width: 100%; }
   align-items: flex-start;
   padding: var(--nx-space-8);
   border: 1px dashed var(--nx-border-strong);
-  border-radius: var(--nx-radius);
+  border-radius: var(--nx-radius-lg);
   background: var(--nx-surface);
 }
 
 .nx-skeleton {
-  background: linear-gradient(90deg, var(--nx-surface-sunken) 25%, #eceef2 37%, var(--nx-surface-sunken) 63%);
+  background: linear-gradient(90deg, var(--nx-surface-sunken) 25%, #e9ecf2 37%, var(--nx-surface-sunken) 63%);
   background-size: 400% 100%;
-  animation: nx-shimmer 1.3s ease-in-out infinite;
+  animation: nx-shimmer 1.4s ease-in-out infinite;
   border-radius: var(--nx-radius-sm);
 }
 
@@ -965,8 +1204,8 @@ img { max-width: 100%; }
 .nx-overlay {
   position: fixed;
   inset: 0;
-  background: rgb(15 17 23 / 0.42);
-  backdrop-filter: blur(2px);
+  background: rgb(16 20 31 / 0.36);
+  backdrop-filter: blur(3px);
   display: grid;
   place-items: center;
   padding: var(--nx-space-6);
@@ -978,14 +1217,15 @@ img { max-width: 100%; }
 
 .nx-modal {
   background: var(--nx-surface);
-  border-radius: var(--nx-radius-lg);
+  border-radius: var(--nx-radius-xl);
+  border: 1px solid var(--nx-border);
   box-shadow: var(--nx-shadow-lg);
   width: min(620px, 100%);
   max-height: 88vh;
   display: flex;
   flex-direction: column;
   animation: nx-pop var(--nx-slow) var(--nx-ease);
-  border-top: 3px solid var(--nx-color-accent);
+  overflow: hidden;
 }
 
 .nx-modal--wide { width: min(920px, 100%); }
@@ -1009,12 +1249,13 @@ img { max-width: 100%; }
   gap: var(--nx-space-2);
   padding: var(--nx-space-4) var(--nx-space-5);
   border-top: 1px solid var(--nx-divider);
+  flex-wrap: wrap;
 }
 
 .nx-drawer-overlay {
   position: fixed;
   inset: 0;
-  background: rgb(15 17 23 / 0.34);
+  background: rgb(16 20 31 / 0.3);
   z-index: 90;
   animation: nx-fade var(--nx-fast) var(--nx-ease);
 }
@@ -1025,11 +1266,11 @@ img { max-width: 100%; }
   width: min(560px, 100%);
   background: var(--nx-surface);
   box-shadow: var(--nx-shadow-lg);
+  border-left: 1px solid var(--nx-border);
   z-index: 91;
   display: flex;
   flex-direction: column;
   animation: nx-slide var(--nx-slow) var(--nx-ease);
-  border-left: 3px solid var(--nx-color-accent);
 }
 
 @keyframes nx-slide { from { transform: translateX(24px); opacity: 0.6; } }
@@ -1050,20 +1291,20 @@ img { max-width: 100%; }
   gap: var(--nx-space-3);
   align-items: flex-start;
   padding: var(--nx-space-3) var(--nx-space-4);
-  border-radius: var(--nx-radius);
+  border-radius: var(--nx-radius-lg);
   background: var(--nx-surface);
   border: 1px solid var(--nx-border);
-  border-left: 3px solid var(--nx-color-accent);
   box-shadow: var(--nx-shadow);
+  box-shadow: var(--nx-shadow), inset 3px 0 0 var(--nx-color-accent);
   font-size: var(--nx-text-md);
   animation: nx-toast-in var(--nx-slow) var(--nx-ease);
 }
 
 @keyframes nx-toast-in { from { opacity: 0; transform: translateY(8px); } }
 
-.nx-toast--success { border-left-color: var(--nx-success); }
-.nx-toast--danger { border-left-color: var(--nx-danger); }
-.nx-toast--warning { border-left-color: var(--nx-warning); }
+.nx-toast--success { box-shadow: var(--nx-shadow), inset 3px 0 0 var(--nx-success); }
+.nx-toast--danger { box-shadow: var(--nx-shadow), inset 3px 0 0 var(--nx-danger); }
+.nx-toast--warning { box-shadow: var(--nx-shadow), inset 3px 0 0 var(--nx-warning); }
 .nx-toast__title { font-weight: 600; }
 .nx-toast__text { color: var(--nx-text-secondary); font-size: var(--nx-text-sm); }
 
@@ -1074,11 +1315,11 @@ img { max-width: 100%; }
 .nx-menu {
   position: absolute;
   right: 0;
-  top: calc(100% + 6px);
-  min-width: 220px;
+  top: calc(100% + 8px);
+  min-width: 230px;
   background: var(--nx-surface);
   border: 1px solid var(--nx-border);
-  border-radius: var(--nx-radius);
+  border-radius: var(--nx-radius-lg);
   box-shadow: var(--nx-shadow-lg);
   padding: 6px;
   z-index: 60;
@@ -1089,7 +1330,7 @@ img { max-width: 100%; }
   align-items: center;
   gap: var(--nx-space-2);
   width: 100%;
-  padding: 8px 10px;
+  padding: 8px 11px;
   border: 0;
   border-radius: var(--nx-radius-sm);
   background: transparent;
@@ -1132,7 +1373,7 @@ img { max-width: 100%; }
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 3px 10px;
+  padding: 4px 11px;
   border-radius: var(--nx-radius-pill);
   background: var(--nx-surface-sunken);
   border: 1px solid var(--nx-border);
@@ -1148,11 +1389,136 @@ img { max-width: 100%; }
 .nx-mobile-only { display: none; }
 @media (max-width: 760px) { .nx-mobile-only { display: initial; } }
 
-/* Print (13.3 - exported/printed documents carry the accent header rule). */
+/* ==========================================================================
+   Brand surface - the reference site's exact identity, used for the Nexora
+   splash/welcome only. Scoped so it can never leak into a tenant workspace
+   (RULE 13.1.2, 13.4.2) and never recolours a company token.
+   ========================================================================== */
+
+.nx-brand {
+  position: relative;
+  isolation: isolate;
+  background: var(--nx-ink);
+  color: var(--nx-brand-accent-ink);
+  overflow: hidden;
+}
+.nx-brand__grid {
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  opacity: 0.75;
+  background-image:
+    linear-gradient(90deg, rgb(150 168 205 / 0.07) 1px, transparent 1px),
+    linear-gradient(rgb(150 168 205 / 0.07) 1px, transparent 1px);
+  background-size: 64px 64px;
+  mask-image: radial-gradient(120% 85% at 50% 0%, #000 35%, transparent 78%);
+  -webkit-mask-image: radial-gradient(120% 85% at 50% 0%, #000 35%, transparent 78%);
+}
+.nx-brand__orb {
+  position: absolute;
+  z-index: -1;
+  border-radius: 9999px;
+  filter: blur(90px);
+  pointer-events: none;
+}
+.nx-brand__orb--accent {
+  background: radial-gradient(circle at 50% 50%, rgb(124 156 255 / 0.34), transparent 68%);
+}
+.nx-brand__orb--teal {
+  background: radial-gradient(circle at 50% 50%, rgb(95 214 196 / 0.26), transparent 70%);
+}
+
+/* The reference's mark, exactly: gradient ink tile + radial highlight +
+   inset white ring. RULE 13.6.2 - a company without a logo shows its name in a
+   styled placeholder, never a broken image.
+
+   The tile's gradient stops are driven by the company's own stored secondary
+   and navy colours (Part 1 section 26), so choosing them is actually visible —
+   while RULE 13.1.1 still holds, because this is the logo, not a page. */
+.nx-mark {
+  position: relative;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 11px;
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.16);
+  background-color: var(--nx-ink-surface);
+  background-image:
+    radial-gradient(120% 90% at 20% 0%, color-mix(in srgb, var(--nx-color-primary) 55%, transparent), transparent 62%),
+    linear-gradient(
+      150deg,
+      color-mix(in srgb, var(--nx-color-secondary) 78%, #ffffff) 0%,
+      var(--nx-color-secondary) 52%,
+      var(--nx-color-navy) 100%
+    );
+  color: var(--nx-color-on-primary);
+  font-family: var(--nx-font-family);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  flex: none;
+}
+
+/* The reference's ink-side type ramp. */
+.nx-brand__title {
+  font-family: var(--nx-font-display);
+  font-size: clamp(2.1rem, 6vw, 3.6rem);
+  line-height: 1.04;
+  letter-spacing: -0.028em;
+  color: #ffffff;
+  margin: 0;
+}
+.nx-brand__lede {
+  font-family: var(--nx-font-display);
+  font-weight: 400;
+  font-size: clamp(1.08rem, 2.2vw, 1.4rem);
+  line-height: 1.38;
+  letter-spacing: -0.012em;
+  color: #f3f6fc;
+  margin: 0;
+}
+.nx-brand__eyebrow {
+  font-family: var(--nx-font-mono);
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--nx-brand-accent);
+  margin: 0;
+}
+.nx-brand__muted { color: var(--nx-brand-fg-muted); }
+.nx-brand__faint { color: var(--nx-brand-fg-subtle); }
+
+/* The reference's reveal-on-load motion, with the reference's easing. */
+.nx-reveal {
+  opacity: 0;
+  transform: translateY(18px);
+  will-change: opacity, transform;
+  transition: opacity 0.75s var(--nx-ease), transform 0.75s var(--nx-ease);
+}
+.nx-reveal.is-in { opacity: 1; transform: none; }
+
+/* Print (13.3 - exported/printed documents carry the accent brand element). */
 @media print {
   .nx-sidebar, .nx-header, .nx-page-head__actions { display: none !important; }
   .nx-app { grid-template-columns: 1fr; }
   body { background: #fff; }
   .nx-card { border-color: var(--nx-border); box-shadow: none; }
   .nx-print-brand { border-top: 3px solid var(--nx-color-accent); }
+}
+
+/* ==========================================================================
+   Reduced motion - the reference honours it, so the product does too.
+   ========================================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .nx-reveal { opacity: 1; transform: none; }
 }

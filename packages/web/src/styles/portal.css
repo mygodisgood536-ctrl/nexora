@@ -1,58 +1,131 @@
-/* Company portal composition. Token law lives in @nexora/ui; only
-   portal-only layout (login, ritual, nav accordion, command palette)
-   lives here. RULE 13 - company colour stays a highlighter. */
+/* Company portal composition.
 
-/* ---------------------------------------------------------- login ---- */
+   The token law (RULE 13) lives in @nexora/ui. Only portal-only layout lives
+   here: the sign-in brand panel, the Credential Ritual, the navigation
+   accordion, the command palette and a few page helpers.
+
+   Composition follows the owner's reference site: the split brand panel, the
+   container/gutter rhythm, the hairline treatment, and the mono micro-label.
+   The company colour remains a highlighter (RULE 13.1.1) — nothing here paints
+   a surface with it. */
+
+/* ---------------------------------------------------------- sign-in ---- */
+/* The reference's hero split: identity on one side, the form on the other. */
 .nxl {
   min-height: 100vh;
   display: grid;
   grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
 }
 
+/* The brand panel is a brand surface, so it carries the reference's ink
+   identity. It states the COMPANY's name and logo (RULE 3.5.1, RULE 13.6.1) —
+   the company's colour appears only on the mark and the focus ring, never as a
+   background wash. */
 .nxl__brand {
-  background:
-    radial-gradient(1100px 480px at 12% 0%, rgb(255 255 255 / 0.16), transparent 60%),
-    linear-gradient(155deg, var(--nx-navy, #0d1c36) 0%, #16305a 62%, var(--nx-color-accent) 160%);
-  color: #fff;
-  padding: clamp(32px, 6vw, 72px);
+  position: relative;
+  isolation: isolate;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  gap: 32px;
+  gap: var(--nx-space-8);
+  padding: clamp(32px, 5vw, 68px);
+  background: var(--nx-ink);
+  color: #ffffff;
+  overflow: hidden;
+}
+
+.nxl__brand > * { position: relative; z-index: 1; }
+
+/* The reference's masked grid backdrop plus its two glow orbs. */
+.nxl__bg { pointer-events: none; }
+.nxl__bg--accent,
+.nxl__bg--teal {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(90px);
+  z-index: 0;
+}
+.nxl__bg--accent {
+  width: 34rem; height: 34rem;
+  left: -10rem; top: -8rem;
+  background: radial-gradient(circle at 50% 50%, rgb(124 156 255 / 0.34), transparent 68%);
+}
+.nxl__bg--teal {
+  width: 26rem; height: 26rem;
+  right: -8rem; bottom: -8rem;
+  background: radial-gradient(circle at 50% 50%, rgb(95 214 196 / 0.24), transparent 68%);
+}
+@media (max-width: 640px) {
+  .nxl__bg--accent, .nxl__bg--teal { width: 20rem; height: 20rem; }
 }
 
 .nxl__brand h1 {
-  color: #fff;
-  font-size: clamp(26px, 3vw, 36px);
-  letter-spacing: -0.02em;
+  color: #ffffff;
+  /* A company's stored `font_family` is honoured on brand surfaces, never on
+     workspace body text (RULE 13.1.1, 13.3.1). */
+  font-family: var(--nx-font-family);
+  font-size: clamp(1.85rem, 3.6vw, 2.7rem);
+  line-height: 1.08;
+  letter-spacing: -0.024em;
 }
 
-.nxl__brand p { color: rgb(255 255 255 / 0.82); max-width: 48ch; }
+.nxl__brand p {
+  color: #b0bccf;
+  max-width: 46ch;
+  line-height: 1.7;
+}
+
+.nxl__eyebrow {
+  font-family: var(--nx-font-mono);
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--nx-brand-accent);
+  margin-bottom: var(--nx-space-4);
+}
 
 .nxl__logo {
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
   border-radius: 12px;
   display: grid;
   place-items: center;
-  background: var(--nx-color-accent);
-  color: var(--nx-color-on-accent);
-  font-weight: 700;
+  font-family: var(--nx-font-family);
+  font-weight: 600;
   font-size: 1.05rem;
+  color: var(--nx-color-on-primary);
   flex: none;
+  overflow: hidden;
+  background-image:
+    radial-gradient(120% 90% at 20% 0%, color-mix(in srgb, var(--nx-color-primary) 55%, transparent), transparent 62%),
+    linear-gradient(
+      150deg,
+      color-mix(in srgb, var(--nx-color-secondary) 78%, #ffffff) 0%,
+      var(--nx-color-secondary) 52%,
+      var(--nx-color-navy) 100%
+    );
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.16);
 }
 
-.nxl__marks { display: flex; gap: 10px; flex-wrap: wrap; }
+/* RULE 13.6.2 - a company without a logo shows its name in a styled
+   placeholder, never a broken image. */
+.nxl__logo img { width: 100%; height: 100%; object-fit: contain; }
+
+.nxl__identity { display: flex; align-items: center; gap: var(--nx-space-3); min-width: 0; }
+
+.nxl__marks { display: flex; gap: 8px; flex-wrap: wrap; }
 
 .nxl__mark {
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  padding: 6px 12px;
+  padding: 6px 13px;
   border-radius: 999px;
-  background: rgb(255 255 255 / 0.12);
-  border: 1px solid rgb(255 255 255 / 0.22);
-  font-size: 0.8125rem;
+  background: rgb(255 255 255 / 0.06);
+  border: 1px solid rgb(255 255 255 / 0.14);
+  font-size: var(--nx-text-sm);
+  color: #dbe2f0;
 }
 
 .nxl__form {
@@ -66,18 +139,40 @@
 
 @media (max-width: 900px) {
   .nxl { grid-template-columns: minmax(0, 1fr); }
-  .nxl__brand { min-height: 210px; }
+  .nxl__brand { min-height: 230px; gap: var(--nx-space-5); }
 }
 
-/* --------------------------------------------------------- ritual ---- */
+/* ------------------------------------------------------- ritual ---- */
+/* RULE 9 / Credential Ritual: a quiet, neutral canvas so the stepper and the
+   credential panel are the only things drawing attention. */
 .nxr {
   min-height: 100vh;
   display: grid;
   place-items: center;
   padding: clamp(24px, 5vw, 64px);
-  background:
-    radial-gradient(900px 420px at 50% -10%, var(--nx-color-accent-soft, transparent), transparent 70%),
-    var(--nx-bg-app);
+  background: var(--nx-bg-app);
+}
+
+/* The ritual is the one screen where the user is mid-credential, so it gets a
+   real panel to hold the stepper, the explanation and the credential box. */
+.nxr__panel {
+  width: min(620px, 100%);
+  padding: clamp(24px, 4vw, 40px);
+  background: var(--nx-surface);
+  border: 1px solid var(--nx-border);
+  border-radius: var(--nx-radius-xl);
+  box-shadow: var(--nx-shadow);
+  position: relative;
+}
+.nxr__panel::before {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  top: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--nx-color-accent-ring), transparent);
+  border-radius: inherit;
+  pointer-events: none;
 }
 
 .nxr__steps {
@@ -90,17 +185,18 @@
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  padding: 6px 12px;
+  padding: 6px 13px;
   border-radius: 999px;
   border: 1px solid var(--nx-border);
   background: var(--nx-surface);
-  font-size: 0.8125rem;
+  font-size: var(--nx-text-sm);
   color: var(--nx-text-secondary);
 }
 
+/* 13.3 - the active step takes the accent. */
 .nxr__step.is-active {
   border-color: var(--nx-color-accent);
-  color: var(--nx-color-accent);
+  color: var(--nx-color-accent-strong);
   background: var(--nx-color-accent-soft);
   font-weight: 600;
 }
@@ -115,12 +211,12 @@
   display: block;
   margin-top: 8px;
   font-family: var(--nx-font-mono);
-  font-size: 0.75rem;
+  font-size: var(--nx-text-xs);
   word-break: break-all;
-  background: var(--nx-bg-app);
+  background: var(--nx-surface-sunken);
   border: 1px solid var(--nx-border);
-  border-radius: 6px;
-  padding: 8px 10px;
+  border-radius: var(--nx-radius-sm);
+  padding: 9px 11px;
 }
 
 /* ----------------------------------------------- nav (click-to-open groups) - */
@@ -128,29 +224,33 @@
   width: 100%;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   background: none;
   border: 0;
-  padding: 8px 12px;
-  font: inherit;
-  font-size: 0.7rem;
-  font-weight: 600;
-  letter-spacing: 0.08em;
+  padding: 6px var(--nx-space-3);
+  font-family: var(--nx-font-mono);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.19em;
   text-transform: uppercase;
   color: var(--nx-text-muted);
   cursor: pointer;
-  border-radius: 8px;
+  border-radius: var(--nx-radius-sm);
+  transition: color var(--nx-fast) var(--nx-ease), background var(--nx-fast) var(--nx-ease);
 }
 
-.nx-navgroup__head:hover { color: var(--nx-text-secondary); background: var(--nx-bg-hover); }
+.nx-navgroup__head:hover {
+  color: var(--nx-text-secondary);
+  background: var(--nx-surface-sunken);
+}
 
-.nx-navgroup__head .nx-grow { flex: 1; }
+.nx-navgroup__head .nx-grow { flex: 1; text-align: left; }
 
 /* ------------------------------------------------- command palette ---- */
 .nx-palette {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
   max-height: min(56vh, 460px);
   overflow-y: auto;
 }
@@ -162,23 +262,28 @@
   width: 100%;
   padding: 9px 12px;
   border: 0;
-  border-radius: 8px;
+  border-radius: var(--nx-radius-sm);
   background: none;
-  font: inherit;
+  font-family: var(--nx-font-sans);
   font-size: var(--nx-text-sm);
-  color: var(--nx-text-primary);
+  color: var(--nx-text);
   text-align: left;
   cursor: pointer;
 }
 
+/* 13.3 - the highlighted palette row takes a tint of the accent. */
 .nx-palette__item:hover,
-.nx-palette__item.is-active { background: var(--nx-color-accent-soft); color: var(--nx-color-accent); }
+.nx-palette__item.is-active {
+  background: var(--nx-color-accent-soft);
+  color: var(--nx-color-accent-strong);
+}
 
 .nx-palette__group {
-  padding: 8px 12px 4px;
-  font-size: 0.7rem;
-  font-weight: 600;
-  letter-spacing: 0.08em;
+  padding: 10px 12px 4px;
+  font-family: var(--nx-font-mono);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.19em;
   text-transform: uppercase;
   color: var(--nx-text-muted);
 }
@@ -192,16 +297,16 @@
   border-radius: 5px;
   padding: 1px 6px;
   color: var(--nx-text-muted);
-  background: var(--nx-bg-app);
+  background: var(--nx-surface-alt);
 }
 
 /* ---------------------------------------------------- layout helpers ---- */
 .nx-toolbar {
   display: flex;
   align-items: flex-end;
-  gap: 12px;
+  gap: var(--nx-space-3);
   flex-wrap: wrap;
-  margin-bottom: 12px;
+  margin-bottom: var(--nx-space-4);
 }
 
 .nx-toolbar .nx-field { min-width: 180px; }
@@ -209,26 +314,22 @@
 .nx-form-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
-  margin: 12px 0;
+  gap: var(--nx-space-3);
+  margin: var(--nx-space-3) 0;
 }
 
 @media (max-width: 760px) {
   .nx-form-grid { grid-template-columns: minmax(0, 1fr); }
 }
 
-.nx-panel {
-  background: var(--nx-surface);
-  border: 1px solid var(--nx-border);
-  border-radius: var(--nx-radius-lg);
-  padding: 16px;
-}
+.nx-panel { padding: var(--nx-space-4); }
 
+/* The reference's auto-fitting metric grid. */
 .nx-metrics {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 12px;
-  margin: 12px 0;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: var(--nx-space-3);
+  margin: var(--nx-space-3) 0;
 }
 
 .nx-crumbs {
@@ -239,11 +340,11 @@
 .nx-code {
   font-family: var(--nx-font-mono);
   font-size: 0.78rem;
-  line-height: 1.5;
-  background: var(--nx-bg-app);
+  line-height: 1.55;
+  background: var(--nx-surface-sunken);
   border: 1px solid var(--nx-border);
   border-radius: var(--nx-radius);
-  padding: 10px 12px;
+  padding: 11px 13px;
   overflow-x: auto;
   white-space: pre-wrap;
   word-break: break-word;
@@ -252,7 +353,62 @@
 
 .nx-error { color: var(--nx-danger); }
 
-@media print {
-  .nx-sidebar, .nx-header { display: none !important; }
-  .nx-app { grid-template-columns: 1fr; }
+/* ------------------------------------------------------------ splash ---- */
+/* The Nexora brand splash. Painted over the already-mounted app, never in
+   front of a route, so it cannot block sign-in or trap the router. */
+.nxs {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: grid;
+  place-items: center;
+  padding: clamp(24px, 5vw, 56px);
+  transition: opacity 420ms var(--nx-ease), visibility 420ms var(--nx-ease);
 }
+.nxs[data-leaving="true"] { opacity: 0; visibility: hidden; }
+
+.nxs__inner {
+  position: relative;
+  z-index: 1;
+  width: min(760px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: clamp(24px, 4vw, 40px);
+}
+
+.nxs__identity { display: flex; align-items: center; gap: var(--nx-space-3); }
+
+.nxs__copy { display: flex; flex-direction: column; gap: var(--nx-space-4); }
+.nxs__copy .nx-brand__eyebrow { margin: 0; }
+.nxs__copy .nx-brand__lede { max-width: 56ch; }
+
+.nxs__orb {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(90px);
+  pointer-events: none;
+  z-index: 0;
+}
+.nxs__orb--accent {
+  width: 30rem; height: 30rem;
+  left: -9rem; top: -7rem;
+  background: radial-gradient(circle at 50% 50%, rgb(124 156 255 / 0.36), transparent 68%);
+}
+.nxs__orb--teal {
+  width: 24rem; height: 24rem;
+  right: -7rem; bottom: -7rem;
+  background: radial-gradient(circle at 50% 50%, rgb(95 214 196 / 0.26), transparent 70%);
+}
+@media (max-width: 640px) {
+  .nxs__orb--accent { width: 18rem; height: 18rem; }
+  .nxs__orb--teal { width: 14rem; height: 14rem; }
+}
+
+/* The reference's `.hairline-top`, on the base of the splash copy. */
+.nxs__rule {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+.nxs__rule span { height: 1px; background: linear-gradient(90deg, transparent, rgb(124 156 255 / 0.45), transparent); }
+.nxs__rule span:last-child { background: linear-gradient(90deg, transparent, rgb(95 214 196 / 0.38), transparent); }

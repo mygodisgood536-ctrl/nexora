@@ -1,8 +1,18 @@
 import { apiUrl } from "./api";
 
 export interface CompanyTheme {
-  company?: { name?: string; slug?: string };
+  /** RULE 13.6.1 - the logo is pre-auth so the login screen is fully branded. */
+  company?: { name?: string; slug?: string; logoUrl?: string | null };
   tokens?: Record<string, string>;
+}
+
+/**
+ * RULE 13.6.2 - the company logo, or null when the company has not uploaded
+ * one. Callers render a styled name placeholder rather than a broken image.
+ */
+export function companyLogo(): string | null {
+  const url = themeCache?.company?.logoUrl;
+  return typeof url === "string" && url.length > 0 ? url : null;
 }
 
 /**
