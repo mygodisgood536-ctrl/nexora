@@ -88,7 +88,7 @@ export function Shell({
     <div className={cx("nx-app", collapsed && "nx-app--collapsed")}>
       <aside className={cx("nx-sidebar", mobileOpen && "is-open")} style={mobileOpen ? { display: "flex" } : undefined}>
         <div className="nx-sidebar__brand">
-          <span className="nx-sidebar__logo" aria-hidden="true">N</span>
+          <span className="nx-sidebar__logo" aria-hidden="true">NX</span>
           {!collapsed && (
             <div style={{ minWidth: 0 }}>
               <div className="nx-sidebar__brand-name">Nexora Platform</div>
@@ -162,7 +162,14 @@ export function Shell({
         </div>
       </aside>
 
-      {mobileOpen && <div className="nx-drawer-overlay" onClick={() => setMobileOpen(false)} />}
+      {mobileOpen && (
+        <button
+          type="button"
+          aria-label="Close navigation"
+          className="nx-drawer-overlay"
+          onClick={() => setMobileOpen(false)}
+        />
+      )}
 
       <div className="nx-content">
         <header className="nx-header">

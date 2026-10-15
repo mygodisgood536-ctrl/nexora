@@ -165,7 +165,7 @@ placeholder. That is intentional fail-closed behaviour — the deploy will fail 
 
 ### Project 1 — the company portal + API
 
-1. Vercel dashboard → **Add New → Project** → import `mygodisgood536-ctn/nexora`.
+1. Vercel dashboard → **Add New → Project** → import `mygodisgood536-ctrl/nexora`.
 2. Vercel will now detect the workspace instead of erroring, because `vercel.json` exists at the root.
 3. **Framework Preset:** Vercel may show "Other". That is correct — `vercel.json` supplies everything.
 4. Confirm the settings Vercel shows:
@@ -186,9 +186,19 @@ placeholder. That is intentional fail-closed behaviour — the deploy will fail 
 
 1. **Add New → Project** → import the same repository.
 2. **Root Directory:** `packages/platform-web`
-3. Environment variable: `VITE_PLATFORM_API_BASE_URL=https://<project-1-domain>`
-4. Also add Project 1's domain to Project 1's `CORS_ORIGIN`.
-5. **Deploy**, then attach a distinct domain (e.g. `owner.nexora.app`).
+3. **Build Step → "Include source files outside of the Root Directory": ON.** This is the one setting that decides
+   whether this project can build at all. `packages/platform-web` imports `@nexora/ui` and `@nexora/shared`, which are
+   its *siblings* in the workspace. With that option off, Vercel uploads only `packages/platform-web`, `npm install`
+   cannot resolve the workspace root, and the build fails immediately. It is enabled by default for projects created
+   after 27 August 2020; confirm it before the first deploy.
+4. Confirm the Build and Output settings Vercel shows (these come from `packages/platform-web/vercel.json`, which
+   deliberately runs both commands from the workspace root):
+   - Install Command: `cd ../.. && npm install --no-audit --no-fund`
+   - Build Command: `cd ../.. && npm run build --workspace=packages/platform-web`
+   - Output Directory: `dist`
+5. Environment variable: `VITE_PLATFORM_API_BASE_URL=https://<project-1-domain>`
+6. Also add this project's domain to Project 1's `CORS_ORIGIN` (comma-separated list).
+7. **Deploy**, then attach a distinct domain (e.g. `owner.nexora.app`).
 
 ### Migrations
 
@@ -219,14 +229,29 @@ AFTER  (raw first)  : { "b" : 2,\n  "a" : 1000000.50, ... }    ← byte-for-byte
 ```
 
 `1000000.50` had become `1000000.5`. The provider's HMAC is computed over the original bytes, so **every inbound
-payment would have been rejected as an invalid signature** — money-in silently dead. `api/nexora-api.ts` also sets
-`api.bodyParser: false` in `vercel.json` for the same reason: a platform-level body parser would break HMAC again.
+payment would have been rejected as an invalid signature** — money-in silently dead.
+
+**Do not add a platform body parser.** An earlier version of this repository set `"api": { "bodyParser": false }` in
+`vercel.json` to protect the raw body. That key is not a supported root property: the published schema
+(`https://openapi.vercel.sh/vercel.json`) sets `additionalProperties: false` and has no `bodyParser`, so it fails
+validation rather than protecting anything. It has been removed.
+
+No parser is needed. Vercel's Node runtime reads the body once and then **restores the stream** onto the request
+(`restoreBody` in `packages/node/src/serverless-functions/helpers.ts` re-points `req.read`/`req.on`/`req.addListener` at a
+`PassThrough` holding the original bytes), so the `express.raw()` mount on `/api/v1/webhooks` still receives them
+byte-for-byte. `npm run verify:serverless-routes` proves this against the bundled function.
 
 ### 6.2 Host-independent routing
 
-The same Express app now runs locally and as a function. A small middleware resolves the effective request path from
-`req.url`, `x-invoke-path`, `x-vercel-original-path` and `originalUrl`, so `/api/v1/...` and `/platform/v1/...` resolve
-identically no matter how the host invokes the handler.
+The same Express app runs locally and as a function. Vercel compiles a rewrite into a destination that carries the
+captured segments as **query parameters** — `/api/v1/:path*` becomes `/api/nexora-api?path=$1` — so the app rebuilds
+the original path from `path`, `poPath` and `tenant` rather than depending on any undocumented header.
+
+`poPath` exists solely to tell the Platform Owner API from the company API: without it, `/platform/v1/companies` and
+`/api/v1/companies` would both arrive as `?path=companies` and be indistinguishable.
+
+`npm run verify:vercel-routing` proves the round-trip using **Vercel's own route compiler** (`@vercel/routing-utils`),
+not a hand-written matcher, so a rewrite that silently mis-routes cannot pass.
 
 ### 6.3 Bounded database pool
 
@@ -240,8 +265,12 @@ calls (Vision Part 1 §21/§23, RULE 8.5.6), which is exactly the right shape fo
 
 ### 6.5 Still pending (unchanged, and honestly so)
 
-- **PostgreSQL** is not installed on your PC. 298 server tests, the 28 acceptance flows and the isolation attack suite
-  therefore have **not** been run. Do not read a green build as proof they pass.
+- **PostgreSQL.** There is no local database server and the test harness is remote-capable rather than local-only: point
+  `ADMIN_DATABASE_URL`, `APP_DATABASE_URL` and `DATABASE_URL` at a **Neon** instance and `npm run test:db` provisions an
+  isolated `nexora_unittest` database, applies all 87 migrations and runs the full suite. Until that is done the
+  database-backed suites have **not** been run, and a green build is not proof they pass.
+  What does run without a database: `npm run test:offline` (21 tests — the shared theme/permission laws and the
+  server's Vision Part 13 theme-law scan).
 - **OpenCode AI** is not installed. Part 21's live discovery/verification/execution is unproven.
 - **Object storage.** `EVIDENCE_STORAGE_ROOT` writes to local disk. On Vercel the filesystem is ephemeral per instance, so
   face-capture evidence will **not persist**. Switch to object storage before real use.
@@ -253,35 +282,42 @@ calls (Vision Part 1 §21/§23, RULE 8.5.6), which is exactly the right shape fo
 
 | File | Change |
 |---|---|
-| `vercel.json` | **New.** Multi-service config: portal build, API function, SPA fallback. |
-| `api/nexora-api.ts` | **New.** Serverless entrypoint exporting the real Express app. |
-| `packages/platform-web/vercel.json` | **New.** Config for the separate owner-console project. |
-| `.vercelignore` | **New.** Keeps tests, docs and scratch output out of the deployment. |
-| `.env.example` | **New.** Placeholder env documentation, no secrets. |
-| `packages/server/src/app.ts` | Raw-body capture before `express.json()`; host-independent path resolution. |
+| `vercel.json` | Portal build + one serverless API function + SPA fallback. The invalid top-level `api` key was removed. |
+| `api/nexora-api.ts` | Serverless entrypoint exporting the real Express app. |
+| `packages/platform-web/vercel.json` | Config for the separate owner-console project; install and build run from the workspace root. |
+| `.vercelignore` | Keeps tests, docs and scratch output out of the deployment. |
+| `.env.example` | Placeholder env documentation, no secrets. |
+| `packages/server/src/app.ts` | Raw-body capture before `express.json()`; path reconstruction from Vercel's compiled rewrite parameters. |
+| `packages/server/src/modules/branding/routes.ts` | `/theme` now returns `logo_url` (RULE 13.6.1 — the logo on the login screen). |
 | `packages/server/src/db/pool.ts` | Serverless-aware, bounded pool configuration. |
-| `packages/server/src/config/env.ts` | New pool/TLS environment variables with honest semantics. |
+| `packages/server/src/config/env.ts` | Pool/TLS environment variables with honest semantics. |
 | `packages/web/src/lib/api.ts` | `apiUrl()` helper; optional `VITE_API_BASE_URL` (empty = same-origin). |
-| `packages/web/src/lib/theme.ts` | Uses `apiUrl()` instead of a hard-coded path. |
+| `packages/web/src/lib/theme.ts` | `companyLogo()`; uses `apiUrl()` instead of a hard-coded path. |
 | `packages/web/src/pages/ReportsPage.tsx` | CSV export uses `apiUrl()`. |
 | `packages/platform-web/src/lib/api.ts` | `platformUrl()` helper; optional `VITE_PLATFORM_API_BASE_URL`. |
+| `scripts/validate-vercel-config.mjs` | Validates both configs against the live Vercel schema. |
+| `scripts/verify-vercel-routing.ts` | Rewrite ⇄ Express round-trip, using Vercel's own route compiler. |
+| `scripts/verify-serverless-routes.ts` | Route smoke against the bundled function. |
 
 Nothing was removed, and the two frontends remain separate applications.
 
 ---
 
-## 8. Local verification performed
+## 8. Verification performed
+
+Everything below is run by `npm run verify` and is reproducible on any machine with Node 20+.
 
 | Check | Result |
 |---|---|
 | `npm run typecheck` (5 workspaces) | pass |
-| `npx eslint` (server, web, platform-web, api) | pass |
-| `npm run build --workspace=packages/web` | pass — assets emitted as `/assets/…` |
-| `npm run build --workspace=packages/platform-web` | pass |
-| Serverless bundle (esbuild, node target, CJS as Vercel emits) | pass — 2.49 MB, workspace TS source inlined |
-| Bundled function boots and routes | pass — see below |
-| Webhook raw-body ordering | **proved fixed** with a before/after byte comparison |
-| Dev server smoke (`:5173`) | pass, no transform errors |
+| `npm run lint` | pass |
+| `npm run test:offline` | pass — 21 tests, no database required |
+| `npm run build` (both frontends) | pass — assets emitted as `/assets/…` |
+| Serverless bundle (esbuild, node20, CJS as Vercel emits) | pass |
+| `npm run verify:vercel-config` | pass — both configs valid against `openapi.vercel.sh` |
+| `npm run verify:vercel-routing` | pass — round-trip via Vercel's own route compiler |
+| `npm run verify:serverless-routes` | pass — see below |
+| `npm run verify:design` | pass — tokens, Vision colour law, WCAG contrast, class coverage |
 
 Routing verified against the **bundled** function (the actual deploy artifact):
 
@@ -293,5 +329,7 @@ Routing verified against the **bundled** function (the actual deploy artifact):
 | `GET /api/v1/definitely-not-here` | 404 | API 404, **not** swallowed by the SPA fallback |
 | `GET /platform/v1/definitely-not` | 404 | platform router mounted |
 
-**Not verified:** the actual Vercel build and the deployed URLs — no Vercel account or CLI is available here. The bundling
-and routing evidence above is strong but is not a substitute for the real deploy; treat the first deploy as the final check.
+**Not verified:** the actual Vercel build and the deployed URLs — no Vercel account was available in the environment
+where this was written, so no project could be created and no build could be triggered. The bundling, schema and routing
+evidence above is strong but is not a substitute for the real deploy; treat the first deploy as the final check. The two
+account actions it needs are listed in `docs/VERCEL-ACCOUNT-ACTIONS.md`.

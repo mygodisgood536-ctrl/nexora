@@ -210,6 +210,16 @@
   --nx-brand-identity: "Nexora Platform";
 }
 
+/* RULE 13.4.2 - the owner console keeps the same token pattern but its own
+   identity: green replaces the blue highlight on the mark, so a screenshot of
+   this console is never mistaken for a company workspace. */
+.nxp .nx-sidebar__logo,
+.nxp .nx-mark {
+  background-image:
+    radial-gradient(120% 90% at 20% 0%, rgb(95 214 196 / 0.42), transparent 62%),
+    linear-gradient(150deg, #223056 0%, #131d38 52%, #0b1224 100%);
+}
+
 /* ==========================================================================
    Base
    ========================================================================== */
@@ -671,6 +681,25 @@ img { max-width: 100%; }
   background: var(--nx-border);
 }
 .nx-hairgrid > * { background: var(--nx-surface); }
+
+/* The landing summary (RULE 12.0.3). Tiles sit directly on the hairline grid,
+   so they carry no border of their own — the grid's 1px gap is the rule. */
+.nx-hairgrid--metrics {
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  border-radius: var(--nx-radius-lg);
+}
+.nx-hairgrid--metrics > .nx-stat {
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  padding: var(--nx-space-5);
+}
+.nx-hairgrid--metrics > .nx-stat:first-child {
+  border-top-left-radius: calc(var(--nx-radius-lg) - 1px);
+}
+.nx-hairgrid--metrics > .nx-stat:hover {
+  background: var(--nx-surface-alt);
+}
 
 .nx-page-head {
   display: flex;

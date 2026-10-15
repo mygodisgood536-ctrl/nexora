@@ -4,6 +4,23 @@
 **Authority:** `docs/verification/VISION-v3.9-AUTHORITY.txt` — Vision v3.9 FINAL CLEAN AUTHORITY.
 **Prepared:** Stage 14 of Part 16 (the design instructions), written only after the Vision Audit (Stage 13).
 
+> **Reconciled with the implemented design.** This brief describes every screen,
+> state, role and colour rule, and that substance still holds. The visual
+> identity it was written against has since been replaced by the owner's
+> reference site (`cornelius-adedeji-victor-website.vercel.app`).
+>
+> **Read `docs/DESIGN-SYSTEM.md` first** — it is the authority for typography,
+> colour values, radii, spacing, depth and motion, and it is enforced in CI by
+> `npm run verify:design`. Where this brief and `docs/DESIGN-SYSTEM.md` disagree
+> on a visual value, the design system wins.
+>
+> What changed that affects how you read this brief:
+> - The typeface is **Fraunces / Inter / JetBrains Mono**, not Poppins.
+> - The accent colour law (RULE 13.1–13.9) is **unchanged** and still binding.
+>   Everything below about the company colour still applies exactly.
+> - Spacing, radii, shadow strategy and the section rhythm are now the
+>   design system's, not the values quoted below.
+
 ---
 
 ## 0. Who this document is for, and what it assumes

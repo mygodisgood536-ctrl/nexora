@@ -124,14 +124,18 @@ export function DashboardPage() {
         description={ws.purpose}
         breadcrumbs={<Crumbs items={[{ label: "Home" }, { label: "Overview" }]} />}
       />
-      <section className="nx-metrics">
+      {/* The reference's hairline grid: a line-coloured surface with 1px gaps
+          reads as one composed block rather than a row of loose cards. */}
+      <section className="nx-hairgrid nx-hairgrid--metrics">
         {ws.blocks.map((b) => {
           const f = fetchers[b.metric];
           if (!f) return <Stat key={b.metric} label={b.label} value={"—"} />;
           return <Block key={b.metric} fetcher={f} label={b.label} />;
         })}
       </section>
-      <p className="nx-muted">Figures come from your role scopes in the live API; anything your roles cannot access reads “—”.</p>
+      <p className="nx-muted" style={{ marginTop: "var(--nx-space-4)", fontSize: "var(--nx-text-sm)" }}>
+        Figures come from your role scopes in the live API; anything your roles cannot access reads “—”.
+      </p>
     </>
   );
 }
