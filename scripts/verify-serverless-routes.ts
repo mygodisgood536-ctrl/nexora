@@ -13,8 +13,9 @@
  *   npx tsx scripts/verify-serverless-routes.ts
  */
 import { createRequire } from "node:module";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { existsSync } from "node:fs";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import type { Server } from "node:http";
 import type { Express } from "express";
 
@@ -22,7 +23,11 @@ import type { Express } from "express";
 process.env.LOG_LEVEL ??= "fatal";
 process.env.NODE_ENV ??= "test";
 
-const BUNDLE = join(tmpdir(), "nx-verify.cjs");
+// Written by `npm run build:serverless`, which bundles api/nexora-api.ts the way
+// Vercel does (esbuild, node target, CommonJS). Keeping both on one path means
+// the harness can never silently test a stale bundle.
+const REPO = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+const BUNDLE = resolve(REPO, "node_modules", ".cache", "nx-verify.cjs");
 
 let failures = 0;
 function check(label: string, ok: boolean, detail = ""): void {
@@ -34,6 +39,10 @@ function check(label: string, ok: boolean, detail = ""): void {
 }
 
 const require_ = createRequire(import.meta.url);
+if (!existsSync(BUNDLE)) {
+  console.error(`missing bundle: ${BUNDLE}\nrun: npm run build:serverless`);
+  process.exit(1);
+}
 const mod = require_(BUNDLE);
 const app: Express = mod.default ?? mod.app ?? mod;
 

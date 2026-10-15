@@ -57,34 +57,81 @@ export function createApp(): express.Express {
   //
   // The same Express app is mounted two ways:
   //   - locally: `node src/index.ts`, where req.url is already the real path;
-  //   - as a serverless function behind a rewrite, where the handler may be
-  //     invoked on the function's own path ("/api/nexora-api") while the
-  //     caller's original path survives only in a header or `originalUrl`.
+  //   - on Vercel, where a rewrite routes the request to this function and the
+  //     handler is invoked on the function's own path ("/api/nexora-api").
   //
-  // Rather than assume which of those the host does, the app picks the first
-  // path it can see that actually looks like one of its own API prefixes. The
-  // mounts further down are therefore identical in every environment, and
-  // `/api/v1/...` can never fall through to the SPA catch-all or the 404.
-  const API_PREFIXES = ["/api/v1", "/platform/v1", "/api"];
+  // Vercel appends every captured rewrite parameter to the destination's query
+  // string, which is what makes the original path recoverable without relying on
+  // any undocumented header. Verified against Vercel's own routing engine
+  // (@vercel/routing-utils), which compiles:
+  //
+  //   /api/v1/:path*                 -> /api/nexora-api?path=$1
+  //   /platform/v1/:poPath*          -> /api/nexora-api?poPath=$1
+  //   /:tenant/api/v1/:path*         -> /api/nexora-api?tenant=$1&path=$2
+  //   /:tenant/platform/v1/:poPath*  -> /api/nexora-api?tenant=$1&poPath=$2
+  //
+  // `poPath` exists only to distinguish the Platform Owner API from the company
+  // API: without it, `/platform/v1/companies` and `/api/v1/companies` would both
+  // arrive as `?path=companies` and be indistinguishable. The names `path`,
+  // `tenant` and `poPath` are reserved here and deliberately do not collide with
+  // any query parameter the application itself reads (limit, offset, status,
+  // branchId, from, to, search, company, …).
+  // NOTE: "/api" is deliberately NOT in this list. The function's own path is
+  // "/api/nexora-api", and treating that as "already an API path" would make
+  // every rewritten request pass through un-rebuilt and 404 in production.
+  const API_PREFIXES = ["/api/v1", "/platform/v1"];
+  const VERCEL_PARAMS = new Set(["path", "poPath", "tenant"]);
 
   app.use((req, _res, next) => {
     const current = req.url ?? "";
-    const alreadyMounted = API_PREFIXES.some((p) => current === p || current.startsWith(`${p}/`));
-    if (alreadyMounted) return next();
 
-    const candidates = [
-      req.headers["x-invoke-path"],
-      req.headers["x-vercel-original-path"],
-      req.originalUrl
-    ];
-    for (const candidate of candidates) {
-      if (typeof candidate !== "string" || candidate.length === 0) continue;
-      const found = API_PREFIXES.some((p) => candidate === p || candidate.startsWith(`${p}/`));
-      if (found) {
-        req.url = candidate;
-        return next();
+    // Already an API path: local development, or a direct function invocation.
+    if (API_PREFIXES.some((p) => current === p || current.startsWith(`${p}/`))) {
+      return next();
+    }
+
+    const queryStart = current.indexOf("?");
+    if (queryStart === -1) return next();
+    const params = new URLSearchParams(current.slice(queryStart + 1));
+
+    const tenant = params.get("tenant");
+    // A recovered segment may itself carry a `?…` tail if the host folded the
+    // original query into the captured value. Splitting it off keeps list
+    // filters and pagination working instead of corrupting the path.
+    const split = (raw: string | null): [string | null, string | null] => {
+      if (raw === null) return [null, null];
+      const at = raw.indexOf("?");
+      return at === -1 ? [raw, null] : [raw.slice(0, at), raw.slice(at + 1)];
+    };
+    const [apiPath, apiTail] = split(params.get("path"));
+    const [poPath, poTail] = split(params.get("poPath"));
+
+    let rebuilt: string | null = null;
+    let tail: string | null = null;
+    if (apiPath !== null) {
+      rebuilt = `${tenant ? `/${tenant}` : ""}/api/v1${apiPath ? `/${apiPath}` : ""}`;
+      tail = apiTail;
+    } else if (poPath !== null) {
+      rebuilt = `${tenant ? `/${tenant}` : ""}/platform/v1${poPath ? `/${poPath}` : ""}`;
+      tail = poTail;
+    }
+    if (rebuilt === null) return next();
+
+    // Carry the caller's own query parameters through, minus the ones Vercel
+    // added for routing. Anything the application filters or paginates on must
+    // survive the rewrite.
+    const passthrough = new URLSearchParams();
+    for (const [key, value] of params) {
+      if (!VERCEL_PARAMS.has(key)) passthrough.append(key, value);
+    }
+    if (tail) {
+      const fromTail = new URLSearchParams(tail);
+      for (const [key, value] of fromTail) {
+        if (!VERCEL_PARAMS.has(key) && !passthrough.has(key)) passthrough.append(key, value);
       }
     }
+    const search = passthrough.toString();
+    req.url = search ? `${rebuilt}?${search}` : rebuilt;
     return next();
   });
 

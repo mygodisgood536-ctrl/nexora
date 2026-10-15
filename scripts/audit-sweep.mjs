@@ -1,8 +1,6 @@
 import { readFileSync, writeFileSync, readdirSync, statSync } from "node:fs";
 import { join, extname } from "node:path";
 
-const data = JSON.parse(readFileSync("docs/verification/vision-rules.json", "utf8"));
-
 /* ---------- build a corpus of the repo's source ---------- */
 const ROOT = ".";
 const SKIP = new Set(["node_modules", "dist", ".git", "coverage", ".next", "build"]);
@@ -27,22 +25,6 @@ for (const f of files) {
 }
 
 console.log("corpus files:", corpus.length);
-
-const hits = (needles) => {
-  const out = [];
-  const pats = needles.map((n) => new RegExp(n, "i"));
-  for (const f of corpus) {
-    for (const p of pats) {
-      const m = p.exec(f.text);
-      if (m) {
-        const line = f.text.slice(0, m.index).split(/\r?\n/).length;
-        out.push({ path: f.path, line, match: m[0].slice(0, 90) });
-        break;
-      }
-    }
-  }
-  return out;
-};
 
 writeFileSync(
   "docs/verification/_corpus-stats.json",

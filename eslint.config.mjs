@@ -17,5 +17,14 @@ export default tseslint.config(
     rules: {
       "no-console": "off"
     }
+  },
+  {
+    // `.cjs` is CommonJS by definition, so `require()` is not an accident there.
+    // These are standalone terminal tools, not product code.
+    files: ["**/*.cjs"],
+    rules: {
+      "no-console": "off",
+      "@typescript-eslint/no-require-imports": "off"
+    }
   }
 );

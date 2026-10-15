@@ -14,12 +14,19 @@
     "typecheck": "npm run typecheck --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
     "lint": "eslint .",
+    "build": "npm run build --workspace=packages/web && npm run build --workspace=packages/platform-web",
+    "build:serverless": "esbuild api/nexora-api.ts --bundle --platform=node --target=node20 --format=cjs --outfile=node_modules/.cache/nx-verify.cjs --log-level=warning",
+    "verify:vercel-config": "node scripts/validate-vercel-config.mjs",
+    "verify:vercel-routing": "npm run build:serverless && tsx scripts/verify-vercel-routing.ts",
+    "verify:serverless-routes": "npm run build:serverless && tsx scripts/verify-serverless-routes.ts",
+    "verify:deploy": "npm run typecheck && npm run lint && npm run build && npm run verify:vercel-config && npm run verify:vercel-routing && npm run verify:serverless-routes",
     "db:start": "powershell -ExecutionPolicy Bypass -File scripts/start-postgres.ps1",
     "db:stop": "powershell -ExecutionPolicy Bypass -File scripts/stop-postgres.ps1",
     "db:provision": "node packages/server/scripts/provision-db.mjs"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",
+    "@vercel/routing-utils": "^6.6.0",
     "eslint": "^9.30.0",
     "typescript": "^5.8.0",
     "typescript-eslint": "^8.35.0"

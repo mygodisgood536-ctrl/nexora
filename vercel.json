@@ -4,9 +4,6 @@
   "installCommand": "npm install --no-audit --no-fund",
   "buildCommand": "npm run build --workspace=packages/web",
   "outputDirectory": "packages/web/dist",
-  "api": {
-    "bodyParser": false
-  },
   "functions": {
     "api/nexora-api.ts": {
       "maxDuration": 60,
@@ -14,12 +11,10 @@
     }
   },
   "rewrites": [
-    { "source": "/api/v1/webhooks/:provider", "destination": "/api/nexora-api" },
     { "source": "/api/v1/:path*", "destination": "/api/nexora-api" },
-    { "source": "/platform/v1/:path*", "destination": "/api/nexora-api" },
-    { "source": "/:tenant/api/v1/webhooks/:provider", "destination": "/api/nexora-api" },
+    { "source": "/platform/v1/:poPath*", "destination": "/api/nexora-api" },
     { "source": "/:tenant/api/v1/:path*", "destination": "/api/nexora-api" },
-    { "source": "/:tenant/platform/v1/:path*", "destination": "/api/nexora-api" },
+    { "source": "/:tenant/platform/v1/:poPath*", "destination": "/api/nexora-api" },
     { "source": "/((?!api/|platform/).*)", "destination": "/index.html" }
   ]
 }
