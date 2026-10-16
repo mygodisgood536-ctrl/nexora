@@ -2905,13 +2905,64 @@ async function runDisbursement(
          FROM loan_applications WHERE id=$1 FOR UPDATE`,
       [input.applicationId]
     );
-    if ((existing.rowCount ?? 0) === 0) throw AppError.notFound("Application not found");
+    if (existing.rowCount === undefined || (existing.rowCount ?? 0) === 0) {
+      throw AppError.notFound("Application not found");
+    }
     const app = existing.rows[0]!;
     if (app.status !== "approved") {
       throw AppError.conflict(`Cannot disburse an application in status '${app.status}'`);
     }
     if (app.disbursed_at !== null) {
       throw AppError.conflict("Application is already disbursed");
+    }
+
+    // RULE 10.4.3 / 7.1.1 — a branch-scoped actor may only act inside its own
+    // branch. Without this a branch worker holding a disbursement verb could
+    // reach across the company into another branch's application, because the
+    // disbursement query below is deliberately tenant-scoped at company level.
+    if (actor.branchId !== null && actor.branchId !== app.branch_id) {
+      throw AppError.forbidden(
+        "This application belongs to another branch; a branch-scoped account may only disburse inside its own branch"
+      );
+    }
+
+    // RULE 10.4.3 / 19.13.1 — disbursement authority is the END of the
+    // configured approval chain. The chain is company data (RULE 19.12.1 /
+    // 19.12.2), so the authority is resolved from the chain rather than from a
+    // hard-coded sequence: whoever is configured as the final stage is the
+    // final disbursement authority. A company that wants branch-level
+    // disbursement configures a chain that ends at a branch role; a company
+    // that keeps it at Head Office configures one that ends there. No role may
+    // disburse outside that authority, which is what keeps a Collection Officer
+    // (RULE 12.27 "Cannot: approve a loan") from disbursing at all.
+    const finalStage = await db.query<{ role_id: string }>(
+      `SELECT role_id
+         FROM approval_chain_steps
+        WHERE chain_id = $1
+        ORDER BY stage_order DESC
+        LIMIT 1`,
+      [app.chain_id]
+    );
+    if ((finalStage.rowCount ?? 0) === 0) {
+      throw AppError.conflict(
+        "This application's approval chain has no configured stages; disbursement authority cannot be resolved"
+      );
+    }
+    const holdsFinalAuthority = await db.query<{ id: string }>(
+      `SELECT DISTINCT ra.id
+         FROM role_assignments ra
+        WHERE ra.user_id = $1
+          AND ra.company_id = $2
+          AND ra.role_id = $3
+          AND ra.status = 'active'
+          AND (ra.assignment_type = 'permanent'
+               OR (ra.starts_at <= now() AND (ra.ends_at IS NULL OR ra.ends_at > now())))`,
+      [actor.sub, actor.companyId, finalStage.rows[0]!.role_id]
+    );
+    if ((holdsFinalAuthority.rowCount ?? 0) === 0) {
+      throw AppError.forbidden(
+        "Disbursement is reserved to the final disbursement authority configured on this loan product's approval chain"
+      );
     }
 
     const cust = await db.query<{
@@ -3191,10 +3242,14 @@ async function runDisbursement(
     const portalInserted = await db.query<{
       id: string; username: string; status: string; portal_url: string;
     }>(
-      `INSERT INTO customer_portal_access
-         (company_id, branch_id, customer_id, portal_url, username, password_hash, status)
-       VALUES ($1,$2,$3,$4,$5,$6,'provisioned')
-       RETURNING id, username, status, portal_url`,
+`INSERT INTO customer_portal_access
+  (company_id, branch_id, customer_id, portal_url, username, password_hash, status,
+   credential_state, credential_issued_at, credential_expires_at)
+  VALUES ($1,$2,$3,$4,$5,$6,'provisioned','credential_issued',now(),
+          now() + make_interval(hours => COALESCE((
+            SELECT s.credential_ritual_window_hours FROM company_settings s
+             WHERE s.company_id = $1), 168)))
+  RETURNING id, username, status, portal_url`,
       [
         actor.companyId, app.branch_id, app.customer_id, portalUrl,
         full, passwordHash,

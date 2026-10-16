@@ -50,6 +50,13 @@ export interface WorkerActor {
   sub: string;
   companyId: string;
   branchId: string | null;
+  /**
+   * RULE 6.3.1 - creation authority follows the MD, then HR, then the Branch
+   * Workplace, and HR may create "any Head Office role EXCEPT MD and Deputy
+   * MD". `manage_workers` is held by both MD and HR, so the verb alone cannot
+   * express that boundary; the actor's actual role keys can.
+   */
+  roleKeys?: string[];
 }
 
 export interface ActorMeta {
@@ -296,6 +303,23 @@ export async function createWorker(
   // a branch role is never created without exactly one branch.
   const world = roleWorldFor(input.roleKey);
   const wideScope = input.scopeType === "company_wide" || input.scopeType === "head_office";
+
+  // RULE 6.3.1 - the MD and the Deputy MD are the two roles HR may not create
+  // ("HR: Any Head Office role except MD and Deputy MD"). The MD creates both,
+  // and creating a Deputy MD is company-defining, so it is not delegable to HR
+  // without an explicit delegation this service has no record of. This is
+  // enforced here rather than by the verb, because `manage_workers` is held by
+  // MD and HR alike.
+  const MD_ONLY_ROLES = new Set(["md", "deputy_md"]);
+  if (MD_ONLY_ROLES.has(input.roleKey)) {
+    const actorRoles = actor.roleKeys ?? [];
+    if (!actorRoles.includes("md")) {
+      throw AppError.forbidden(
+        `Only the Managing Director may create the ${input.roleKey} account (RULE 6.3.1)`
+      );
+    }
+  }
+
   if (world === "head_office" && !wideScope) {
     throw AppError.unprocessable(
       `${input.roleKey} is a Head Office role and must be assigned company-wide scope`

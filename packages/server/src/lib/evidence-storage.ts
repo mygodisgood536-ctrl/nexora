@@ -91,14 +91,25 @@ export async function putImmutableEvidenceObject(
   };
 }
 
-export async function verifyEvidenceObject(
-  storageObjectRef: string,
+/**
+ * RULE 20.5.4 - verify an evidence object that has already been recovered to an
+ * arbitrary absolute path (a restore drill copies objects out of the primary
+ * evidence root into an isolated working directory and must judge the COPY,
+ * not the original).
+ *
+ * The stored bytes are AES-256-GCM ciphertext. The digest the database recorded,
+ * `image_sha256`, covers the PLAINTEXT image, so it can only be reproduced by
+ * authenticating and decrypting first. Hashing the ciphertext would never match
+ * and would silently report every intact object as corrupt.
+ */
+export async function verifyEvidenceObjectAtPath(
+  absolutePath: string,
   expectedSha256: string,
   expectedSize: number
 ): Promise<{ exists: boolean; valid: boolean; actualSha256: string | null; actualSize: number | null; error: string | null }> {
   let payload: Buffer;
   try {
-    payload = await readFile(objectPath(storageObjectRef));
+    payload = await readFile(absolutePath);
   } catch (error) {
     const code = error && typeof error === "object" && "code" in error ? String(error.code) : "";
     if (code === "ENOENT") {
@@ -114,9 +125,12 @@ export async function verifyEvidenceObject(
     decipher.setAuthTag(authTag);
     const plaintext = Buffer.concat([decipher.update(ciphertext), decipher.final()]);
     const actualSha256 = createHash("sha256").update(plaintext).digest("hex");
+    const hashMatches = actualSha256 === expectedSha256;
+    const sizeMatches = plaintext.length === expectedSize;
     return {
       exists: true,
-      valid: actualSha256 === expectedSha256 && plaintext.length === expectedSize,
+      // Both must hold. A size match alone, or a hash match alone, is not proof.
+      valid: hashMatches && sizeMatches,
       actualSha256,
       actualSize: plaintext.length,
       error: null
@@ -124,6 +138,14 @@ export async function verifyEvidenceObject(
   } catch {
     return { exists: true, valid: false, actualSha256: null, actualSize: null, error: "object_decryption_failed" };
   }
+}
+
+export async function verifyEvidenceObject(
+  storageObjectRef: string,
+  expectedSha256: string,
+  expectedSize: number
+): Promise<{ exists: boolean; valid: boolean; actualSha256: string | null; actualSize: number | null; error: string | null }> {
+  return verifyEvidenceObjectAtPath(objectPath(storageObjectRef), expectedSha256, expectedSize);
 }
 
 export async function deleteEvidenceObject(storageObjectRef: string): Promise<void> {

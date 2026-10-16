@@ -4,6 +4,7 @@ import { cp, mkdir, readdir, rm, writeFile } from "node:fs/promises";
 import { join, sep } from "node:path";
 import pg from "pg";
 import { AppError } from "../../lib/errors";
+import { verifyEvidenceObjectAtPath } from "../../lib/evidence-storage";
 import { decryptFile, deriveBackupKeys, type BackupKeys } from "./crypto";
 import { readManifest, manifestPath } from "./manifest";
 import { siteById, type BackupPolicy } from "./policy";
@@ -353,8 +354,6 @@ async function verifyRecoveredEvidence(
         ORDER BY created_at ASC LIMIT 200`
     );
     if (rows.rows.length === 0) return empty;
-    const { createHash } = await import("node:crypto");
-    const { readFile } = await import("node:fs/promises");
     const evidenceRoot = join(workRoot, "recovered-evidence");
     await mkdir(evidenceRoot, { recursive: true });
     let matched = 0;
@@ -372,13 +371,32 @@ async function verifyRecoveredEvidence(
         missing += 1;
         continue;
       }
-      // The evidence objects themselves are encrypted at rest by the evidence
-      // vault; recovery verifies the recorded digest against the object the
-      // database references, which is the check RULE 20.5.4 requires.
-      const bytes = await readFile(path);
-      const digest = createHash("sha256").update(bytes).digest("hex");
-      if (digest === row.image_sha256 || bytes.length !== row.file_size_bytes) mismatched += 1;
-      else matched += 1;
+      // RULE 20.5.4 - evidence hashes must be checked during recovery so
+      // corruption or mismatch is detected rather than silently accepted.
+      //
+      // The recovered copy is AES-256-GCM ciphertext; image_sha256 covers the
+      // plaintext, so the copy is authenticated and decrypted before its digest
+      // is compared. An object counts as matched only when the hash AND the size
+      // both agree with what the database recorded. Anything else is a mismatch,
+      // and anything unreadable is a genuine mismatch rather than a pass.
+      const verdict = await verifyEvidenceObjectAtPath(
+        path,
+        row.image_sha256,
+        Number(row.file_size_bytes ?? 0)
+      ).catch(() => ({
+        exists: false,
+        valid: false,
+        actualSha256: null,
+        actualSize: null,
+        error: "object_unverifiable"
+      }));
+      if (!verdict.exists) {
+        missing += 1;
+      } else if (verdict.valid) {
+        matched += 1;
+      } else {
+        mismatched += 1;
+      }
     }
     return { checked: rows.rows.length, matched, mismatched, missing };
   } finally {

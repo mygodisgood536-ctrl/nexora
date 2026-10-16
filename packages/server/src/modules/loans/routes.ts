@@ -701,9 +701,11 @@ loanDisbursementsRouter.post(
   "/",
   requireCompleteSession,
   // RULE 19.13.1 / 10.4.3 — disbursement authority is the end of the
-  // configured chain: it is its own verb, not a side effect of holding the
-  // generic `create` used to raise an application.
-  requirePermission(["disburse", "create"]),
+  // configured chain: it is its own verb, held only by the roles a company
+  // configured as a final disbursement stage. It is NOT a side effect of holding
+  // the generic `create` verb used to raise an application, because a Collection
+  // Officer holds `create` (RULE 12.27) and must never be able to disburse.
+  requirePermission("disburse"),
   wrap(async (req, res) => {
     const parsed = disburseSchema.safeParse(req.body ?? {});
     if (!parsed.success) throw AppError.unprocessable("Validation failed");

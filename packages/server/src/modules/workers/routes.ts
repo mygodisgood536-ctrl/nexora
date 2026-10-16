@@ -36,9 +36,17 @@ export const workersRouter = Router();
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-function actor(req: Request): { sub: string; companyId: string; branchId: string | null } {
+function actor(req: Request): { sub: string; companyId: string; branchId: string | null; roleKeys: string[] } {
   const p = req.principal!;
-  return { sub: p.sub, companyId: p.companyId, branchId: p.branchId ?? null };
+  return {
+    sub: p.sub,
+    companyId: p.companyId,
+    branchId: p.branchId ?? null,
+    // RULE 6.3.1 / 18.17 - creation authority is per role, not per verb. The
+    // service needs the actor's actual role keys to refuse, for example, an HR
+    // account creating an MD, because `manage_workers` is held by both.
+    roleKeys: (p.roles ?? []).map((r) => r.roleKey)
+  };
 }
 
 function metaFrom(req: Request): { ip: string | null; userAgent: string | null; requestId: string | null } {
@@ -212,7 +220,12 @@ const resetPasswordSchema = z.object({
 workersRouter.post(
   "/:id/reset-password",
   requireCompleteSession,
-  requirePermission("configure"),
+  // RULE 5.9.1 / 5.2.3.5 - HR's own authority includes "Issue a fresh initial
+  // credential to a worker who lost theirs", and HR holds `manage_workers` from
+  // migration 0078. The previous `configure` gate made that HR power
+  // unreachable, because `configure` is a company-configuration verb HR never
+  // holds.
+  requirePermission("manage_workers"),
   wrap(async (req, res) => {
     const id = String(req.params.id);
     if (!UUID_RE.test(id)) throw AppError.badRequest("Invalid worker id");

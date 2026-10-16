@@ -8,12 +8,16 @@ import { AppError } from "../../lib/errors";
 import {
   isPortalEnabled,
   loginCustomerPortal,
+  portalChangePassword,
   portalLoanDetail,
   portalLoans,
   portalMe,
   portalPayments,
   portalReceipts,
+  portalRitual,
   portalSavings,
+  portalTotpSetup,
+  portalTotpVerify,
   portalVirtualAccount,
   verifyPortalToken,
   type PortalPrincipal,
@@ -71,6 +75,57 @@ customerPortalRouter.post(
     const parsed = loginSchema.safeParse(req.body ?? {});
     if (!parsed.success) throw AppError.unprocessable("Validation failed");
     res.json(await loginCustomerPortal(parsed.data));
+  })
+);
+
+// ---------------------------------------------------------------------------
+// RULE 5.2.4 / 5.3.1 / 12.31 - the customer completes the same credential
+// ritual every worker completes. These three endpoints are reachable while the
+// ritual is outstanding; every data endpoint below refuses until it is done.
+// RULE 2.4.3 - the failure message never reveals whether the account exists.
+// ---------------------------------------------------------------------------
+
+customerPortalRouter.get(
+  "/ritual",
+  requirePortal,
+  wrap(async (req, res) => {
+    res.json(await portalRitual(req.portal!));
+  })
+);
+
+const portalChangePasswordSchema = z.object({
+  newPassword: z.string().min(1).max(200),
+});
+
+customerPortalRouter.post(
+  "/ritual/password",
+  requirePortal,
+  wrap(async (req, res) => {
+    const parsed = portalChangePasswordSchema.safeParse(req.body ?? {});
+    if (!parsed.success) throw AppError.unprocessable("Validation failed");
+    res.json(await portalChangePassword(req.portal!, parsed.data));
+  })
+);
+
+customerPortalRouter.post(
+  "/ritual/authenticator/setup",
+  requirePortal,
+  wrap(async (req, res) => {
+    res.json(await portalTotpSetup(req.portal!));
+  })
+);
+
+const portalTotpVerifySchema = z.object({
+  code: z.string().min(6).max(6),
+});
+
+customerPortalRouter.post(
+  "/ritual/authenticator/verify",
+  requirePortal,
+  wrap(async (req, res) => {
+    const parsed = portalTotpVerifySchema.safeParse(req.body ?? {});
+    if (!parsed.success) throw AppError.unprocessable("Validation failed");
+    res.json(await portalTotpVerify(req.portal!, parsed.data));
   })
 );
 
