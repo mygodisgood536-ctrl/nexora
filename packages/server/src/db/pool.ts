@@ -1,5 +1,6 @@
 import pg from "pg";
 import { env } from "../config/env";
+import { logger } from "../lib/logger";
 
 /**
  * Serverless-aware connection pool.
@@ -31,6 +32,18 @@ export const pool = new pg.Pool({
     : env.DATABASE_SSL === "verify-full"
       ? { ssl: { rejectUnauthorized: true } }
       : {})
+});
+
+// pg emits 'error' on the pool when a client that is IDLE IN the pool fails
+// (the database closed it, a network blip, or - very commonly - a managed
+// pooler such as Neon's recycling a connection between requests). Node's
+// EventEmitter turns an unhandled 'error' event into an uncaught exception, so
+// without this listener a routine idle-socket close would crash the process -
+// or, on Vercel, abort whichever invocation happened to be in flight. The pool
+// discards the dead client and creates a fresh one on the next checkout, so the
+// correct response is to record it and carry on.
+pool.on("error", (error) => {
+  logger.error({ err: error }, "idle database client error (pool will reconnect)");
 });
 
 export async function dbHealth(): Promise<"up" | "down"> {
