@@ -19,6 +19,7 @@
 // `numeric` (never float) and every write is wrapped in a single
 // transaction so a partial failure cannot leak inconsistent state.
 import type pg from "pg";
+import { randomBytes } from "node:crypto";
 import { withTenant, withBypass } from "../../db/repo";
 import { AppError } from "../../lib/errors";
 import { decryptSecret, encryptSecret, secretFingerprint } from "../../lib/ai-secret-vault";
@@ -91,6 +92,14 @@ export interface ProviderConfigRow {
   apiKey: string;
   isActive: boolean;
   mdApproved: boolean;
+  /**
+   * RULE 8.5.1 - the system-generated webhook endpoint for this configuration.
+   * It is minted by the system, is non-guessable, and is never typed by a
+   * person. The operator copies it into the provider dashboard (or the platform
+   * registers it programmatically); they never choose it.
+   */
+  webhookEndpointPath: string;
+  isPrimary: boolean;
   createdAt: string;
 }
 
@@ -127,9 +136,66 @@ function toProviderConfigRow(
     apiKey: stored ? `stored (${(row as { api_key_fingerprint?: string | null }).api_key_fingerprint ?? "••••"})` : "",
     isActive: (row as { is_active: boolean }).is_active,
     mdApproved: (row as { md_approved_at: Date | null }).md_approved_at !== null,
+    webhookEndpointPath:
+      (row as { webhook_endpoint_path?: string | null }).webhook_endpoint_path ?? "",
+    isPrimary: (row as { is_primary?: boolean }).is_primary === true,
     createdAt: (row as { created_at: Date }).created_at.toISOString(),
   };
 }
+
+/**
+ * RULE 8.5.1 / 8.5.2 - resolve the endpoint an inbound webhook arrived on.
+ *
+ * The endpoint alone determines the company, branch and provider. Nobody types
+ * or chooses the binding, and an operator cannot point a provider's webhook at
+ * another tenant (RULE 8.6.1-1).
+ */
+export async function resolveWebhookEndpoint(
+  token: string
+): Promise<{ companyId: string; branchId: string | null; provider: string; configId: string } | null> {
+  return withBypass(async (db) => {
+    const r = await db.query<{
+      company_id: string;
+      branch_id: string | null;
+      provider: string;
+      id: string;
+    }>(
+      `SELECT company_id, branch_id, provider, id
+         FROM payment_provider_configs
+        WHERE webhook_endpoint_token = $1
+        LIMIT 1`,
+      [token]
+    );
+    if ((r.rowCount ?? 0) === 0) return null;
+    const row = r.rows[0]!;
+    return { companyId: row.company_id, branchId: row.branch_id, provider: row.provider, configId: row.id };
+  });
+}
+
+/**
+ * RULE 8.5.1 - (re)issue the endpoint token for a configuration. Called when a
+ * provider becomes Active so the endpoint is bound at that moment, and by IT's
+ * technical credential flow when a secret is rotated, so a leaked endpoint can
+ * be replaced without touching the provider's business configuration.
+ */
+export async function mintWebhookEndpoint(
+  companyId: string,
+  configId: string
+): Promise<string> {
+  return withBypass(async (db) => {
+    const token = randomBytes(32).toString("base64url");
+    const path = `${WEBHOOK_ENDPOINT_PREFIX}${token}`;
+    await db.query(
+      `UPDATE payment_provider_configs
+          SET webhook_endpoint_token=$2, webhook_endpoint_path=$3
+        WHERE id=$1 AND company_id=$4`,
+      [configId, token, path, companyId]
+    );
+    return path;
+  });
+}
+
+export const WEBHOOK_ENDPOINT_PREFIX = "/api/v1/webhooks/payments/endpoint/";
 
 // Vision V3.2 Part 8 — roles that may change a branch's provider: the MD's
 // management group plus the Finance group. The IT/System Administrator only
@@ -261,8 +327,8 @@ export async function createProviderConfig(
                      md_approved_by = EXCLUDED.md_approved_by,
                      connection_tested_at = NULL,
                      connection_test_ok = NULL
-       RETURNING id, company_id, provider, api_base_url, api_key,
-                 is_active, md_approved_at, created_at`,
+RETURNING id, company_id, provider, api_base_url, api_key,
+   is_active, md_approved_at, created_at, webhook_endpoint_path, is_primary`,
       [actor.companyId, input.provider.trim(),
        input.apiBaseUrl.trim(), encryptedApiKey, apiKeyFingerprint,
        actorIsMd ? new Date() : null,
@@ -525,6 +591,7 @@ export async function listProviderConfigs(
     }>(
       `SELECT ppc.id, ppc.provider, ppc.api_base_url, ppc.api_key, ppc.api_key_fingerprint,
               ppc.is_active, ppc.md_approved_at, ppc.created_at,
+        ppc.webhook_endpoint_path, ppc.is_primary,
               (SELECT bpa.branch_id FROM branch_payment_accounts bpa
                 WHERE bpa.provider_config_id = ppc.id
                 ORDER BY bpa.created_at LIMIT 1) AS branch_id
@@ -549,6 +616,7 @@ export async function getActiveProviderConfig(
     }>(
       `SELECT ppc.id, ppc.provider, ppc.api_base_url, ppc.api_key, ppc.api_key_fingerprint,
               ppc.is_active, ppc.md_approved_at, ppc.created_at,
+        ppc.webhook_endpoint_path, ppc.is_primary,
               bpa.branch_id
          FROM payment_provider_configs ppc
          JOIN branch_payment_accounts bpa ON bpa.provider_config_id = ppc.id
@@ -579,7 +647,16 @@ export async function approveProviderConfig(
         RETURNING id`,
       [configId, actor.sub, actor.companyId]
     );
-    if ((r.rowCount ?? 0) === 0) throw AppError.notFound("Provider config not found");
+if ((r.rowCount ?? 0) === 0) throw AppError.notFound("Provider config not found");
+
+    // RULE 8.5.1 - "the moment a provider becomes Active for a branch, the
+    // system generates the branch's webhook endpoint, uniquely and
+    // non-guessably, scoped to that company, that branch and that provider" and
+    // binds incoming webhooks to it automatically. Authorisation by the MD is
+    // the last step before activation, so the endpoint is minted here and never
+    // by a person.
+    await mintWebhookEndpoint(actor.companyId, configId);
+
     await db.query(
       `INSERT INTO audit_logs (company_id, actor_user_id, action, entity_type,
                                entity_id, reason, ip_address, user_agent, request_id)

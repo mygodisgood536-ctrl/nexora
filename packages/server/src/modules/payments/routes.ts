@@ -402,32 +402,63 @@ export async function handlePaymentWebhook(
   res: Response,
   next: NextFunction
 ): Promise<void> {
-  try {
-    const provider = String(req.params.provider ?? "");
-    if (!/^[a-z0-9_-]{2,40}$/i.test(provider)) {
-      res.status(400).json({ error: "invalid provider name" });
-      return;
+try {
+    const { withBypass, withTenant } = await import("../../db/repo");
+  const { insertNotificationsToMds } = await import("../notifications/service");
+    const { resolveWebhookEndpoint } = await import("./service");
+
+    const endpointToken = req.params.token ? String(req.params.token) : null;
+    let provider: string;
+    let companyId: string | null;
+    let endpointBranchId: string | null = null;
+
+    if (endpointToken) {
+      // RULE 8.5.1 / 8.5.2 - the endpoint resolves the tenant, branch and
+      // provider. A caller cannot name any of them.
+      const endpoint = await resolveWebhookEndpoint(endpointToken);
+      if (!endpoint) {
+        res.status(404).json({ error: "unknown webhook endpoint" });
+        return;
+      }
+      companyId = endpoint.companyId;
+      endpointBranchId = endpoint.branchId;
+      provider = endpoint.provider;
+    } else {
+      const providerParam = String(req.params.provider ?? "");
+      if (!/^[a-z0-9_-]{2,40}$/i.test(providerParam)) {
+        res.status(400).json({ error: "invalid provider name" });
+        return;
+      }
+      provider = providerParam;
+      const companySlug = req.header("x-nexora-company");
+      if (!companySlug) {
+        res.status(400).json({ error: "missing X-Nexora-Company header" });
+        return;
+      }
+      companyId = await withBypass(async (db) => {
+        const r = await db.query<{ id: string }>(
+          `SELECT id FROM companies WHERE slug=$1`, [companySlug]
+        );
+        return (r.rowCount ?? 0) > 0 ? r.rows[0]!.id : null;
+      });
+      if (!companyId) {
+        res.status(400).json({ error: "unknown company" });
+        return;
+      }
+      // RULE 8.6.1-1 - this path lets a caller name the tenant, so record its
+      // use. Nothing is published to operators here.
+      await withTenant(companyId, null, async (db) => {
+        await db.query(
+          `INSERT INTO audit_logs (company_id, action, entity_type, entity_id, reason)
+           VALUES ($1,'webhook.legacy_endpoint_used','payment_provider_configs',NULL,$2)`,
+          [companyId, `provider=${provider} ip=${req.ip ?? "unknown"}`]
+        );
+      });
     }
-    const companySlug = req.header("x-nexora-company");
-    if (!companySlug) {
-      res.status(400).json({ error: "missing X-Nexora-Company header" });
-      return;
-    }
+
     const signature = req.header("x-nexora-signature") ?? "";
     if (!signature) {
       res.status(401).json({ error: "missing signature" });
-      return;
-    }
-    const { withBypass, withTenant } = await import("../../db/repo");
-  const { insertNotificationsToMds } = await import("../notifications/service");
-    const companyId = await withBypass(async (db) => {
-      const r = await db.query<{ id: string }>(
-        `SELECT id FROM companies WHERE slug=$1`, [companySlug]
-      );
-      return (r.rowCount ?? 0) > 0 ? r.rows[0]!.id : null;
-    });
-    if (!companyId) {
-      res.status(400).json({ error: "unknown company" });
       return;
     }
     const secret = await loadSigningSecret(companyId, provider);
@@ -472,7 +503,7 @@ export async function handlePaymentWebhook(
       res.status(401).json({ error: "invalid signature" });
       return;
     }
-    return await dispatchVerifiedWebhook(req, res, companyId, provider, bodyString);
+return await dispatchVerifiedWebhook(req, res, companyId, provider, bodyString, endpointBranchId);
   } catch (err) {
     next(err);
   }
@@ -483,9 +514,11 @@ async function dispatchVerifiedWebhook(
   res: Response,
   companyId: string,
   provider: string,
-  bodyString: string
+  bodyString: string,
+  endpointBranchId: string | null
 ): Promise<void> {
   const { withTenant } = await import("../../db/repo");
+  const { insertNotificationsToMds } = await import("../notifications/service");
   let parsed: unknown;
   try {
     parsed = JSON.parse(bodyString);
@@ -535,7 +568,62 @@ async function dispatchVerifiedWebhook(
   const kind: "payment.received" | "payment.reversed" =
     body.event === "payment.reversed" ? "payment.reversed" : "payment.received";
 
-  const companySlug = req.header("x-nexora-company")!;
+// RULE 8.5.2 - the company is resolved from the endpoint (or the legacy header),
+// never from a field the caller can choose. Resolving the slug from the
+// already-resolved company id means the generated endpoint needs no header at
+// all.
+const companySlug = await withTenant(companyId, null, async (db) => {
+    const r = await db.query<{ slug: string }>(`SELECT slug FROM companies WHERE id=$1`, [companyId]);
+    return r.rows[0]?.slug ?? "";
+  });
+
+  // RULE 8.5.2 / RULE 8.5.4A - a payload that names a virtual account or
+  // customer belonging to a DIFFERENT branch must be rejected as not belonging
+  // to this endpoint, and no record may be written to that other branch. The
+  // endpoint's branch is the fact; the payload is checked against it.
+  if (endpointBranchId) {
+    const accountNumber = String(body.transaction.account_number ?? "");
+    if (accountNumber) {
+      const vaOwner = await withTenant(companyId, null, async (db) => {
+        const r = await db.query<{ branch_id: string }>(
+          `SELECT branch_id FROM virtual_accounts
+            WHERE company_id=$1 AND account_number=$2
+            ORDER BY created_at DESC LIMIT 1`,
+          [companyId, accountNumber]
+        );
+        return r.rows[0]?.branch_id ?? null;
+      });
+      if (vaOwner && vaOwner !== endpointBranchId) {
+        await withTenant(companyId, null, async (db) => {
+          await db.query(
+            `INSERT INTO webhook_exceptions
+               (company_id, branch_id, provider, exception_type, raw_payload, detail)
+             VALUES ($1,$2,$3,'cross_branch_payload',$4::jsonb,$5::jsonb)`,
+            [companyId, endpointBranchId, provider, bodyString,
+             JSON.stringify({
+               reason: "virtual account belongs to another branch than this webhook endpoint",
+               endpoint_branch_id: endpointBranchId,
+               account_branch_id: vaOwner
+             })]
+          );
+          await db.query(
+            `INSERT INTO audit_logs (company_id, branch_id, action, entity_type, reason)
+             VALUES ($1,$2,'webhook.cross_branch_rejected','webhook_exceptions',$3)`,
+            [companyId, endpointBranchId,
+             `account ${accountNumber} belongs to branch ${vaOwner}`]
+          );
+          await insertNotificationsToMds(db, companyId, "webhook.failure", {
+            provider,
+            exception_type: "cross_branch_payload",
+            reason: "virtual account belongs to another branch than this webhook endpoint"
+          });
+        });
+        res.status(422).json({ error: "account does not belong to this webhook endpoint" });
+        return;
+      }
+    }
+  }
+
   const event: NormalizedWebhookEvent = {
     provider,
     providerEventId: body.event_id ?? body.transaction.reference,
@@ -600,6 +688,27 @@ async function dispatchVerifiedWebhook(
   res.status(200).json({ ok: true, outcome });
 }
 
+/**
+ * RULE 8.5.1 - THE webhook endpoint. It carries an opaque token minted by the
+ * system when the provider became Active; that token alone determines the
+ * company, branch and provider. Nobody types it, nobody chooses the binding, and
+ * it cannot be guessed (RULE 8.6.1-1).
+ */
+webhookRouter.post(
+  "/payments/endpoint/:token",
+  raw({ type: "*/*", limit: "1mb" }),
+  handlePaymentWebhook
+);
+
+/**
+ * Legacy ingress retained for providers configured before migration 0090.
+ *
+ * RULE 8.6.1-1 prohibits a webhook whose tenant is chosen by a person. The
+ * header below lets the caller name the company, so this path is deprecated and
+ * MUST NOT be presented to operators; the generated endpoint is what the product
+ * publishes. Every use is audit-logged so any remaining dependency on it is
+ * visible, and it is removed once all configurations carry a generated endpoint.
+ */
 webhookRouter.post(
   "/payments/:provider",
   raw({ type: "*/*", limit: "1mb" }),
