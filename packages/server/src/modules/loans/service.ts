@@ -1522,6 +1522,29 @@ export async function saveApplicationStage(
     if (app.status === "disbursed" || app.status === "withdrawn") {
       throw AppError.conflict(`Application stages cannot be changed after '${app.status}'`);
     }
+
+    // RULE 19.6.2 - "Before Next is enabled for a stage, that stage must be
+    // successfully saved to the server", and the application is an ordered
+    // sequence (customer info, guarantor info, loan terms, evidence, bank
+    // details, preview). Completing a later stage while an earlier one is still
+    // open would mean Next was enabled without its prerequisite, so the earlier
+    // stage must already be completed or deliberately in progress.
+    if (input.status === "completed") {
+      const targetSequence = APPLICATION_STAGE_SEQUENCE[input.stageKey];
+      const earlierOpen = await db.query<{ stage_key: string; sequence: number }>(
+        `SELECT stage_key, sequence
+           FROM loan_application_stages
+          WHERE application_id = $1 AND sequence < $2 AND status <> 'completed'
+          ORDER BY sequence ASC`,
+        [applicationId, targetSequence]
+      );
+      if ((earlierOpen.rowCount ?? 0) > 0) {
+        throw AppError.conflict(
+          `Stage '${input.stageKey}' cannot be completed before ` +
+          `'${earlierOpen.rows[0]!.stage_key}' is completed`
+        );
+      }
+    }
     const saved = await db.query<ApplicationStageRow>(
       `INSERT INTO loan_application_stages
          (application_id, company_id, branch_id, stage_key, sequence, status, payload)
@@ -1674,27 +1697,24 @@ export async function createApplication(
       );
     }
 
-    const firstStage = await db.query<{ stage_order: number }>(
-      `SELECT MIN(stage_order) AS stage_order FROM approval_chain_steps WHERE chain_id=$1`,
-      [p.approval_chain_id]
-    );
-    const currentStage = firstStage.rows[0]?.stage_order ?? null;
-    const terms = input.terms
+    // RULE 19.11.2 - a draft has no current approval stage. The chain's first stage
+// is resolved at submission time, once every stage and validation has passed.
+const terms = input.terms
       ? calculateApplicationTerms(input.principalAmount, input.terms)
       : null;
 
     const inserted = await db.query<ApplicationRow>(
-      `INSERT INTO loan_applications (company_id, branch_id, customer_id, product_id, chain_id,
-                                     principal_amount, status, current_stage_order, submitted_by)
-       VALUES ($1,$2,$3,$4,$5,$6,'in_review',$7,$8)
-       RETURNING id, branch_id, customer_id, product_id, chain_id, principal_amount,
-                 status, current_stage_order, submitted_by, decided_by, decided_at,
-                 rejection_reason, disbursed_at, created_at`,
-      [
-        actor.companyId, customer.branch_id, customer.id, p.id, p.approval_chain_id,
-        input.principalAmount, currentStage, actor.sub,
-      ]
-    );
+`INSERT INTO loan_applications (company_id, branch_id, customer_id, product_id, chain_id,
+     principal_amount, status, current_stage_order, submitted_by)
+   VALUES ($1,$2,$3,$4,$5,$6,'draft',NULL,$7)
+   RETURNING id, branch_id, customer_id, product_id, chain_id, principal_amount,
+   status, current_stage_order, submitted_by, decided_by, decided_at,
+   rejection_reason, disbursed_at, created_at`,
+    [
+      actor.companyId, customer.branch_id, customer.id, p.id, p.approval_chain_id,
+      input.principalAmount, actor.sub
+    ]
+  );
     const appRow = inserted.rows[0]!;
     if (terms) {
       await db.query(
@@ -1720,11 +1740,10 @@ export async function createApplication(
     }
     await auditLoan(
       db, actor.companyId, customer.branch_id, actor.sub,
-      "loan_application.submitted", "loan_applications", appRow.id,
+      "loan_application.draft_started", "loan_applications", appRow.id,
       null,
       { customer_id: customer.id, product_id: p.id,
-        principal_amount: appRow.principal_amount, status: "in_review",
-        current_stage_order: currentStage,
+        principal_amount: appRow.principal_amount, status: "draft",
         terms: terms ? {
           repayment_mode: terms.repaymentMode,
           repayment_weekday: terms.repaymentWeekday,
@@ -1737,18 +1756,171 @@ export async function createApplication(
         } : null },
       null, meta
     );
-    if (currentStage !== null) {
-      await notifyStageApprovers(db, {
-        companyId: actor.companyId,
-        branchId: customer.branch_id,
-        chainId: p.approval_chain_id,
-        stageOrder: currentStage,
-        applicationId: appRow.id,
-        customerId: customer.id,
-        submittedBy: actor.sub
-      });
-    }
+    // RULE 19.11.2 - the application is NOT yet in the approval workflow. No
+    // approver is notified, no stage is current, and nothing can be decided
+    // until the C.O. submits it through submitApplication().
     return appRow;
+  });
+}
+
+/**
+ * RULE 19.11.2 - submission. The C.O. submits only after required stages and
+ * validations pass, and submission is what moves the application into the
+ * configured approval workflow. It does not delete the draft history.
+ *
+ * `readyForSubmission` used to be computed by the preview and then never
+ * consulted by any decision path; this is that gate.
+ */
+export async function submitApplication(
+  actor: LoanActor,
+  applicationId: string,
+  meta: ActorMeta = {}
+): Promise<{ id: string; status: string; currentStage: number }> {
+  return withTenant(actor.companyId, null, async (db) => {
+    const found = await db.query<{
+      id: string; branch_id: string; customer_id: string; chain_id: string; status: string;
+      current_stage_order: number | null; submitted_by: string;
+    }>(
+      `SELECT id, branch_id, customer_id, chain_id, status, current_stage_order, submitted_by
+         FROM loan_applications WHERE id=$1 FOR UPDATE`,
+      [applicationId]
+    );
+    if ((found.rowCount ?? 0) === 0) throw AppError.notFound("Application not found");
+    const app = found.rows[0]!;
+
+    if (actor.branchId !== null && actor.branchId !== app.branch_id) {
+      throw AppError.forbidden("Cannot submit another branch's application");
+    }
+    if (app.status !== "draft") {
+      throw AppError.conflict(`This application is '${app.status}', not a draft awaiting submission`);
+    }
+
+    // Every gate the preview reports is enforced here, so submission cannot
+    // bypass a validation the product claims to apply.
+    const failures: string[] = [];
+    const customerId = app.customer_id;
+
+    const stages = await db.query<{ stage_key: string; status: string; sequence: number }>(
+      `SELECT stage_key, status, sequence
+         FROM loan_application_stages
+        WHERE application_id = $1
+        ORDER BY sequence ASC`,
+      [app.id]
+    );
+    for (const stage of stages.rows) {
+      if (stage.status !== "completed") {
+        failures.push(`Stage '${stage.stage_key}' is not complete`);
+      }
+    }
+
+    // RULE 9.4 / 19.5 - customer and guarantor live captures, both verified.
+    for (const party of ["customer", "guarantor"] as const) {
+      try {
+        await requireVerifiedFaceCapture(db, {
+          companyId: actor.companyId,
+          customerId,
+          captureFor: "loan_application",
+          party,
+          applicationId: app.id,
+          label: `A verified ${party} loan-application face capture`
+        });
+      } catch {
+        failures.push(`No verified ${party} live face capture for this application`);
+      }
+    }
+
+    // RULE 19.7 - 19.10 - every required evidence type, for both parties.
+    const requiredEvidence = [
+      "government_id",
+      "house",
+      "business",
+      "loan_form",
+      "default_form"
+    ] as const;
+    const verified = await db.query<{ evidence_type: string; party: string }>(
+      `SELECT DISTINCT evidence_type, party
+         FROM loan_application_evidence
+        WHERE application_id=$1 AND verification_status='verified'`,
+      [app.id]
+    );
+    for (const type of requiredEvidence) {
+      for (const party of ["customer", "guarantor"] as const) {
+        const ok = verified.rows.some(
+          (e) => e.evidence_type === type && e.party === party
+        );
+        if (!ok) failures.push(`Missing verified ${party} ${type} evidence`);
+      }
+    }
+
+    try {
+      await requireMatchedBankDetails(db, actor.companyId, app.id);
+    } catch {
+      failures.push("Bank details are missing, or the account name does not match the application identity");
+    }
+
+    const terms = await db.query<{ tally_status: string }>(
+      `SELECT tally_status FROM loan_application_terms WHERE application_id=$1`,
+      [app.id]
+    );
+    if ((terms.rowCount ?? 0) === 0) {
+      failures.push("Loan terms have not been provided");
+    } else if (terms.rows[0]!.tally_status !== "matched") {
+      failures.push("Loan terms are NOT TALLY; they must reconcile exactly before submission");
+    }
+
+    if (failures.length > 0) {
+      throw AppError.unprocessable(
+        `This application cannot be submitted yet: ${failures.join("; ")}`
+      );
+    }
+
+    const firstStage = await db.query<{ stage_order: number }>(
+      `SELECT stage_order FROM approval_chain_steps
+        WHERE chain_id = $1 ORDER BY stage_order ASC LIMIT 1`,
+      [app.chain_id]
+    );
+    if ((firstStage.rowCount ?? 0) === 0) {
+      throw AppError.conflict("This product's approval chain has no configured stages");
+    }
+    const resolved = await resolveAvailableStage(
+      db,
+      actor.companyId,
+      app.branch_id,
+      app.chain_id,
+      firstStage.rows[0]!.stage_order
+    );
+    if (resolved === null) {
+      throw AppError.conflict(
+        "No authorised assignee is available for any stage of this product's approval chain"
+      );
+    }
+
+    await db.query(
+      `UPDATE loan_applications
+          SET status='submitted', current_stage_order=$2, submitted_at=now()
+        WHERE id=$1`,
+      [app.id, resolved]
+    );
+
+    await auditLoan(
+      db, actor.companyId, app.branch_id, actor.sub,
+      "loan_application.submitted", "loan_applications", app.id,
+      { status: "draft", current_stage_order: null },
+      { status: "submitted", current_stage_order: resolved },
+      null, meta
+    );
+
+    await notifyStageApprovers(db, {
+      companyId: actor.companyId,
+      branchId: app.branch_id,
+      chainId: app.chain_id,
+      stageOrder: resolved,
+      applicationId: app.id,
+      customerId,
+      submittedBy: actor.sub
+    });
+
+    return { id: app.id, status: "submitted", currentStage: resolved };
   });
 }
 

@@ -32,6 +32,7 @@ import {
   listLoanProducts,
   withdrawApplication,
   resubmitApplication,
+  submitApplication,
   saveApplicationBankDetails,
   saveApplicationTerms,
   saveApplicationFee,
@@ -549,6 +550,23 @@ loanApplicationsRouter.post(
     const parsed = resubmitSchema.safeParse(req.body ?? {});
     if (!parsed.success) throw AppError.unprocessable("Validation failed");
     res.json(await resubmitApplication(actor(req), id, parsed.data.reason ?? null, metaFrom(req)));
+  })
+);
+
+/**
+ * RULE 19.11.2 - the C.O. submits only after required stages and validations
+ * pass, and submission is what moves the application into the configured
+ * approval workflow. Until this is called the application is a draft: no stage is
+ * current, no approver is notified, and nothing can be decided.
+ */
+loanApplicationsRouter.post(
+  "/:id/submit",
+  requireCompleteSession,
+  requirePermission("create"),
+  wrap(async (req, res) => {
+    const id = String(req.params.id);
+    if (!UUID_RE.test(id)) throw AppError.badRequest("Invalid application id");
+    res.json(await submitApplication(actor(req), id, metaFrom(req)));
   })
 );
 
