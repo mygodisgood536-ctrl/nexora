@@ -152,6 +152,50 @@ export async function recordLoanApplicationEvidence(
       throw AppError.unprocessable("Government ID evidence requires the name read from the ID");
     }
 
+    // RULE 19.7.1 / 19.7.3 / 19.8.1 - the capture order is part of the law, not
+    // a suggestion: "the workflow captures the customer government ID live and
+    // saves it, then captures the guarantor government ID live and saves it", and
+    // "Customer house capture comes first, followed by guarantor house capture",
+    // and "Business live capture follows house capture: customer business first,
+    // guarantor business second."
+    //
+    // Without this the sequence was entirely unenforced, so a guarantor could be
+    // captured before the customer was ever present - which is precisely the
+    // fraud RULE 19.5.1 exists to prevent.
+    const ordering = [
+      { type: "government_id", label: "government ID" },
+      { type: "house", label: "house" },
+      { type: "business", label: "business" },
+      { type: "loan_form", label: "loan form" },
+      { type: "default_form", label: "default form" }
+    ];
+    const existing = await db.query<{ evidence_type: string; party: string }>(
+      `SELECT DISTINCT evidence_type, party
+         FROM loan_application_evidence
+        WHERE application_id=$1`,
+      [app.id]
+    );
+    const captured = new Set(existing.rows.map((r) => `${r.evidence_type}:${r.party}`));
+    const currentIndex = ordering.findIndex((o) => o.type === input.evidenceType);
+    if (currentIndex > 0) {
+      // Every earlier stage, for the customer first, must already exist.
+      for (let i = 0; i < currentIndex; i++) {
+        const prior = ordering[i]!;
+        if (!captured.has(`${prior.type}:customer`)) {
+          throw AppError.conflict(
+            `Capture the customer's ${prior.label} evidence first, then the guarantor's, ` +
+            `before the ${prior.label === "house" ? "business" : prior.label} stage`
+          );
+        }
+      }
+      // Within the same stage, the customer is captured before the guarantor.
+      if (input.party === "guarantor" && !captured.has(`${input.evidenceType}:customer`)) {
+        throw AppError.conflict(
+          `Capture the customer's ${ordering[currentIndex]!.label} evidence before the guarantor's`
+        );
+      }
+    }
+
     // RULE 19.4.3 / 19.7.2 — guarantor evidence belongs to the guarantor identity
     // and the government-ID name is matched against the guarantor's own name.
     let guarantorId: string | null = null;

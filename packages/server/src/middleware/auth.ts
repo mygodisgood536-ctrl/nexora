@@ -100,10 +100,20 @@ export function requireLiveSession(req: Request, _res: Response, next: NextFunct
     next();
     return;
   }
-  void withTenant(req.principal.companyId, null, async (db) => {
-    const r = await db.query<{ session_epoch: number; status: string; company_status: string }>(
-      `SELECT u.session_epoch, u.status, c.status AS company_status
-         FROM users u JOIN companies c ON c.id = u.company_id
+void withTenant(req.principal.companyId, null, async (db) => {
+    const r = await db.query<{
+      session_epoch: number;
+      status: string;
+      company_status: string;
+      last_seen_at: Date | null;
+      session_timeout_minutes: number | null;
+    }>(
+      `SELECT u.session_epoch, u.status, c.status AS company_status,
+              u.last_seen_at,
+              cs.session_timeout_minutes
+         FROM users u
+         JOIN companies c ON c.id = u.company_id
+         LEFT JOIN company_settings cs ON cs.company_id = u.company_id
         WHERE u.id = $1`,
       [req.principal!.sub]
     );
@@ -124,6 +134,43 @@ export function requireLiveSession(req: Request, _res: Response, next: NextFunct
       next(AppError.forbidden("Company is not active"));
       return;
     }
+
+    // RULE 14.4.1 - "Sessions expire after the company's configured idle
+    // timeout". The column existed since migration 0037 but nothing read it, so
+    // a session stayed live indefinitely while the user merely kept the token.
+    // The timeout is the company's own setting; an unconfigured company uses
+    // the documented default of 480 minutes (8 hours).
+    const idleTimeoutMinutes = row.session_timeout_minutes ?? 480;
+    if (row.last_seen_at !== null) {
+      const idleMs = Date.now() - new Date(row.last_seen_at).getTime();
+      if (idleMs > idleTimeoutMinutes * 60_000) {
+        await db.query(
+          `UPDATE refresh_tokens SET revoked_at=now()
+            WHERE user_id=$1 AND revoked_at IS NULL`,
+          [req.principal!.sub]
+        );
+        await db.query(
+          `INSERT INTO audit_logs (company_id, actor_user_id, action, entity_type, entity_id, reason)
+           VALUES ($1,$2,'session.idle_expired','sessions',$3,$4)`,
+          [
+            req.principal!.companyId,
+            req.principal!.sub,
+            req.principal!.sub,
+            `Idle for longer than the company's ${idleTimeoutMinutes} minute session timeout`
+          ]
+        );
+        next(
+          AppError.unauthorized(
+            `Your session expired after ${idleTimeoutMinutes} minutes of inactivity; sign in again`
+          )
+        );
+        return;
+      }
+    }
+    await db.query(
+      `UPDATE users SET last_seen_at = now() WHERE id = $1`,
+      [req.principal!.sub]
+    );
     next();
   }).catch(() => next(AppError.unauthorized("Session could not be verified")));
 }

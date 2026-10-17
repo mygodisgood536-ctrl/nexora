@@ -723,14 +723,17 @@ export function missingPartyInformation(
     ["occupation", row.occupation],
     ["house_address", row.house_address],
     ["street", row.street],
-    ["direction_to_house", row.direction_to_house]
+    ["direction_to_house", row.direction_to_house],
+    // RULE 19.4.1 names these as required CUSTOMER information: "Next of Kin,
+    // Occupation, House Address, Street, Direction to Locate the House, Child
+    // Name where applicable, Local/Area Known-As Name, Shop Address, Average
+    // Daily Income and Average Monthly Income". The income fields were
+    // previously required of the guarantor only, so a customer application could
+    // be submitted with no income recorded at all.
+    ["average_daily_income", row.average_daily_income],
+    ["average_monthly_income", row.average_monthly_income]
   ];
-  if (party === "guarantor") {
-    required.push(
-      ["average_daily_income", row.average_daily_income],
-      ["average_monthly_income", row.average_monthly_income]
-    );
-  } else {
+  if (party === "customer") {
     required.push(
       ["local_area_known_as", row.local_area_known_as],
       ["shop_address", row.shop_address]
