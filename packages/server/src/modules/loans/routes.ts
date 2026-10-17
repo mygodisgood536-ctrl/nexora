@@ -5,6 +5,12 @@ import { z } from "zod";
 import { createHash, randomUUID } from "node:crypto";
 import type { Request, Response, NextFunction } from "express";
 import { AppError } from "../../lib/errors";
+import {
+  decideLoanAdjustment,
+  listLoanAdjustments,
+  requestLoanRestructuring,
+  requestLoanWriteOff
+} from "./adjustments";
 import {  requireCompleteSession, requirePermission  } from "../../middleware/auth";
 import {
   createApplication,
@@ -60,6 +66,7 @@ export const loanProductsRouter = Router();
 export const approvalChainsRouter = Router();
 export const loanApplicationsRouter = Router();
 export const loanDisbursementsRouter = Router();
+export const adjustmentsRouter = Router();
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -871,3 +878,102 @@ loanApplicationsRouter.get(
     res.json(await listCreditAssessments(actor(req), id));
   })
 );
+
+// ---- Write-off and restructuring (RULE 10.6.3) ------------------------
+//
+// These are the two "configured processes" the Vision requires. They are
+// deliberately NOT ordinary loan edits: each creates its own auditable record
+// with its own approval authority, and neither ever rewrites the original
+// loan's history.
+
+loanApplicationsRouter.post(
+  "/:id/write-off",
+  requireCompleteSession,
+  requirePermission("approve"),
+  wrap(async (req, res) => {
+    const id = String(req.params.id);
+    if (!UUID_RE.test(id)) throw AppError.badRequest("Invalid loan id");
+    const parsed = writeOffSchema.safeParse(req.body ?? {});
+    if (!parsed.success) throw AppError.unprocessable("Validation failed");
+    res.status(201).json(
+      await requestLoanWriteOff(actor(req), {
+        loanId: id,
+        reason: parsed.data.reason,
+        ...(parsed.data.amount === undefined ? {} : { amount: parsed.data.amount })
+      }, metaFrom(req))
+    );
+  })
+);
+
+loanApplicationsRouter.post(
+  "/:id/restructuring",
+  requireCompleteSession,
+  requirePermission("approve"),
+  wrap(async (req, res) => {
+    const id = String(req.params.id);
+    if (!UUID_RE.test(id)) throw AppError.badRequest("Invalid loan id");
+    const parsed = restructuringSchema.safeParse(req.body ?? {});
+    if (!parsed.success) throw AppError.unprocessable("Validation failed");
+    res.status(201).json(
+      await requestLoanRestructuring(actor(req), {
+        loanId: id,
+        reason: parsed.data.reason,
+        newCycleDays: parsed.data.cycleDays,
+        newCycleCount: parsed.data.cycleCount,
+        newInterestRate: parsed.data.interestRate
+      }, metaFrom(req))
+    );
+  })
+);
+
+loanApplicationsRouter.get(
+  "/:id/adjustments",
+  requireCompleteSession,
+  requirePermission("view"),
+  wrap(async (req, res) => {
+    const id = String(req.params.id);
+    if (!UUID_RE.test(id)) throw AppError.badRequest("Invalid loan id");
+    res.json(await listLoanAdjustments(actor(req), id));
+  })
+);
+
+adjustmentsRouter.post(
+  "/:id/decision",
+  requireCompleteSession,
+  requirePermission("approve"),
+  wrap(async (req, res) => {
+    const id = String(req.params.id);
+    if (!UUID_RE.test(id)) throw AppError.badRequest("Invalid adjustment id");
+    const parsed = adjustmentDecisionSchema.safeParse(req.body ?? {});
+    if (!parsed.success) throw AppError.unprocessable("Validation failed");
+    res.json(
+      await decideLoanAdjustment(
+        actor(req),
+        id,
+        parsed.data.decision === "approve",
+        parsed.data.reason,
+        metaFrom(req)
+      )
+    );
+  })
+);
+
+// RULE 10.6.3 write-off / restructuring request bodies. A reason is mandatory:
+// without one there is no record of why a customer's debt was erased or their
+// terms changed, which is the whole point of making these configured processes.
+const writeOffSchema = z.object({
+  reason: z.string().min(5).max(2000),
+  amount: numericString.optional()
+});
+
+const restructuringSchema = z.object({
+  reason: z.string().min(5).max(2000),
+  cycleDays: z.number().int().positive(),
+  cycleCount: z.number().int().positive(),
+  interestRate: z.number().min(0)
+});
+
+const adjustmentDecisionSchema = z.object({
+  decision: z.enum(["approve", "reject"]),
+  reason: z.string().min(5).max(2000)
+});

@@ -1,4 +1,4 @@
-import express from "express";
+﻿import express from "express";
 import helmet from "helmet";
 import cors from "cors";
 import pinoHttp from "pino-http";
@@ -24,6 +24,7 @@ import {
   approvalChainsRouter,
   loanApplicationsRouter,
   loanDisbursementsRouter,
+  adjustmentsRouter,
 } from "./modules/loans/routes";
 import {
   paymentsRouter,
@@ -76,7 +77,7 @@ export function createApp(): express.Express {
   // arrive as `?path=companies` and be indistinguishable. The names `path`,
   // `tenant` and `poPath` are reserved here and deliberately do not collide with
   // any query parameter the application itself reads (limit, offset, status,
-  // branchId, from, to, search, company, …).
+  // branchId, from, to, search, company, â€¦).
   // NOTE: "/api" is deliberately NOT in this list. The function's own path is
   // "/api/nexora-api", and treating that as "already an API path" would make
   // every rewritten request pass through un-rebuilt and 404 in production.
@@ -96,7 +97,7 @@ export function createApp(): express.Express {
     const params = new URLSearchParams(current.slice(queryStart + 1));
 
     const tenant = params.get("tenant");
-    // A recovered segment may itself carry a `?…` tail if the host folded the
+    // A recovered segment may itself carry a `?â€¦` tail if the host folded the
     // original query into the captured value. Splitting it off keeps list
     // filters and pagination working instead of corrupting the path.
     const split = (raw: string | null): [string | null, string | null] => {
@@ -140,8 +141,8 @@ export function createApp(): express.Express {
   //
   // The Vision requires that the URL supplies the scope, with no company picker
   // in the flow. This accepts BOTH address forms for the same tenant:
-  //   acme.nexora.app/...            (hostname — the Vision default)
-  //   example.vercel.app/acme/...    (path — same application, shared apex)
+  //   acme.nexora.app/...            (hostname â€” the Vision default)
+  //   example.vercel.app/acme/...    (path â€” same application, shared apex)
   // The path form is what lets the platform run on a host that does not issue
   // wildcard subdomains without changing a single rule. The prefix is only ever
   // a lookup key for a real company slug; every request is still authorised
@@ -156,14 +157,14 @@ export function createApp(): express.Express {
       credentials: true
     })
   );
-  // WEBHOOK RAW BODY — MUST PRECEDE express.json().
+  // WEBHOOK RAW BODY â€” MUST PRECEDE express.json().
   //
   // The payment webhook verifies an HMAC computed over the EXACT bytes the
   // provider sent. `express.json()` consumes the request stream, so if it ran
   // first, `req.body` would already be a parsed object and the handler would
   // have to re-serialise it (JSON.stringify) to rebuild the signed payload.
-  // Re-serialisation is not byte-identical — key order, spacing and number
-  // formatting can all differ — so the signature would never match and every
+  // Re-serialisation is not byte-identical â€” key order, spacing and number
+  // formatting can all differ â€” so the signature would never match and every
   // inbound payment would be rejected as invalid (VISION acceptance test 13/20,
   // RULE 8.5.2). Capturing the raw bytes here, scoped to the webhook ingress
   // path only, keeps signature verification honest in every environment.
@@ -183,43 +184,44 @@ export function createApp(): express.Express {
 
   const api = express.Router();
   api.use(healthRouter);
-  api.use(themeRouter); // public pre-auth branding (Part 1 §26)
+  api.use(themeRouter); // public pre-auth branding (Part 1 Â§26)
   api.use(whoamiRouter);
   api.use("/auth", authRouter);
-  api.use("/branches", branchesRouter); // branch lifecycle (Part 1 §7–9)
-  api.use("/workers", workersRouter); // workers + role assignments (Stage 6, Part 1 §12–17)
-  api.use("/roles", rolesRouter); // role catalogue + custom roles (Stage 6, Part 1 §15)
-  api.use("/assignments", assignmentsRouter); // role-assignment lifecycle (Stage 6, Part 1 §17)
-  api.use("/customers", customersRouter); // customer domain (Stage 7A, Part 1 §22)
+  api.use("/branches", branchesRouter); // branch lifecycle (Part 1 Â§7â€“9)
+  api.use("/workers", workersRouter); // workers + role assignments (Stage 6, Part 1 Â§12â€“17)
+  api.use("/roles", rolesRouter); // role catalogue + custom roles (Stage 6, Part 1 Â§15)
+  api.use("/assignments", assignmentsRouter); // role-assignment lifecycle (Stage 6, Part 1 Â§17)
+  api.use("/customers", customersRouter); // customer domain (Stage 7A, Part 1 Â§22)
   api.use("/virtual-accounts", virtualAccountsRouter); // disbursed VA lifecycle (RULE 9.5.1)
-  api.use("/audit", auditRouter); // tenant audit trail (Part 1 §26)
-  api.use("/notifications", notificationsRouter); // notifications (Part 1 §26)
-  api.use("/accounting", accountingRouter); // statement reads from the journal (Part 2 §38-39)
-  api.use("/performance", performanceRouter); // performance analytics (Part 2 §37)
-  api.use("/customer-assignments", customerAssignmentsRouter); // C.O. customer assignments (Part 2 §34)
-  api.use("/customer-portal", customerPortalRouter); // customer portal (Part 2 §25)
-  api.use("/groups", groupsRouter); // group management (Stage 7B, Part 2 §27)
-  api.use("/loan-products", loanProductsRouter); // loan product catalogue (Stage 7C, Part 1 §23)
-  api.use("/approval-chains", approvalChainsRouter); // approval chains (Stage 7C, Part 1 §23)
-  api.use("/loan-applications", loanApplicationsRouter); // loan applications (Stage 7C, Part 1 §23)
-  api.use("/loan-disbursements", loanDisbursementsRouter); // disbursement trigger (Stage 7C, Part 1 §22-23)
-  api.use("/payment-providers", paymentProvidersRouter); // per-company payment provider config (Stage 7D, Part 1 §21)
-  api.use("/payments", paymentsRouter); // payment pipeline queries (Stage 7D, Part 1 §21)
-  api.use("/reconciliation-items", reconciliationItemsRouter); // reconciliation diff queue (Stage 7D, Part 1 §21)
-  api.use("/webhook-exceptions", webhookExceptionsRouter); // signature/schema exceptions (Stage 7D, Part 1 §21)
+  api.use("/audit", auditRouter); // tenant audit trail (Part 1 Â§26)
+  api.use("/notifications", notificationsRouter); // notifications (Part 1 Â§26)
+  api.use("/accounting", accountingRouter); // statement reads from the journal (Part 2 Â§38-39)
+  api.use("/performance", performanceRouter); // performance analytics (Part 2 Â§37)
+  api.use("/customer-assignments", customerAssignmentsRouter); // C.O. customer assignments (Part 2 Â§34)
+  api.use("/customer-portal", customerPortalRouter); // customer portal (Part 2 Â§25)
+  api.use("/groups", groupsRouter); // group management (Stage 7B, Part 2 Â§27)
+  api.use("/loan-products", loanProductsRouter); // loan product catalogue (Stage 7C, Part 1 Â§23)
+  api.use("/approval-chains", approvalChainsRouter); // approval chains (Stage 7C, Part 1 Â§23)
+  api.use("/loan-applications", loanApplicationsRouter); // loan applications (Stage 7C, Part 1 Â§23)
+  api.use("/loan-disbursements", loanDisbursementsRouter); // disbursement trigger (Stage 7C, Part 1 Â§22-23)
+  api.use("/loan-adjustments", adjustmentsRouter); // RULE 10.6.3 write-off / restructuring decisions
+  api.use("/payment-providers", paymentProvidersRouter); // per-company payment provider config (Stage 7D, Part 1 Â§21)
+  api.use("/payments", paymentsRouter); // payment pipeline queries (Stage 7D, Part 1 Â§21)
+  api.use("/reconciliation-items", reconciliationItemsRouter); // reconciliation diff queue (Stage 7D, Part 1 Â§21)
+  api.use("/webhook-exceptions", webhookExceptionsRouter); // signature/schema exceptions (Stage 7D, Part 1 Â§21)
   // Webhook entry is signature-authenticated, not session-authenticated.
   // The provider supplies the company slug in a header so the per-company
   // signing secret can be loaded.
   api.use("/webhooks", webhookRouter);
-  api.use("/reports", reportsRouter); // report library (Part 12 §12.22, RULE 11.6.2)
-  api.use("/branch-workplace", branchWorkplaceRouter); // Branch Workplace (Part 7 §7.1-7.3)
-  api.use("/visits", visitsRouter); // field activity records (Part 6 §6.4)
+  api.use("/reports", reportsRouter); // report library (Part 12 Â§12.22, RULE 11.6.2)
+  api.use("/branch-workplace", branchWorkplaceRouter); // Branch Workplace (Part 7 Â§7.1-7.3)
+  api.use("/visits", visitsRouter); // field activity records (Part 6 Â§6.4)
   api.use("/company-ai", companyAiRouter); // read-only tenant-isolated company AI (Part 21)
   api.use("/recovery", recoveryRouter); // restore/recovery integrity verification (Part 20)
   api.use("/collection-watch", collectionWatchRouter); // collection watch notifications (Part 6.4.2, 9.9)
   api.use("/overdue-escalation", overdueEscalationRouter); // overdue escalation ladder (Part 10.6.2)
   api.use("/traceability", traceabilityRouter); // real traceability chain (Part 10.9.1, 6.5.4)
-  api.use("/eod", eodRouter); // end-of-day settlement operations (Part 1 §21, §23)
+  api.use("/eod", eodRouter); // end-of-day settlement operations (Part 1 Â§21, Â§23)
   app.use("/api/v1", api);
 
   const platformApi = express.Router();
