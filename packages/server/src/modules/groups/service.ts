@@ -1,4 +1,4 @@
-ï»¿// Stage 7B - Group management (Part 2 Section 27).
+// Stage 7B - Group management (Part 2 Section 27).
 // Groups are branch-level convenience wrappers for field operations
 // (collection rounds, reporting). They have NO financial balance or
 // ledger - every loan, savings, and payment is individually owned by
@@ -125,7 +125,7 @@ export async function createGroup(
     );
     if ((b.rowCount ?? 0) === 0) throw AppError.notFound("Branch not found");
 
-    // ISS-001 â€” a re-used group name in the same branch is a predictable user
+    // ISS-001 — a re-used group name in the same branch is a predictable user
     // mistake, not a server fault: translate the unique violation into 409
     // instead of letting the raw constraint name surface as a 500.
     let inserted;
@@ -464,7 +464,7 @@ export async function addGroupMember(
   if (!input.phone?.trim()) throw AppError.unprocessable("phone is required");
 
   return withTenant(actor.companyId, null, async (db) => {
-    // RULE 19.1.4 â€” marital status and group role are selected from the
+    // RULE 19.1.4 — marital status and group role are selected from the
     // company's configured options, never free-typed.
     await ensureDefaultGroupOptions(db, actor.companyId);
     const options = await db.query<{ option_kind: string; option_value: string }>(
@@ -656,7 +656,7 @@ export async function getGroupLedger(
               ), 0), 'FM999999999999999990.00') AS savings_achieved,
               COALESCE((
                 SELECT bool_or(
-                  r.due_date < (current_date - ($4::int * interval '1 day'))
+                  r.due_date < (app_today() - ($4::int * interval '1 day'))
                   AND r.expected_repayment > r.actual_repayment
                 )
                   FROM repayment_schedule_rows r

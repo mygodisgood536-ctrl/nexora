@@ -91,10 +91,32 @@ export async function runOverdueEscalation(
   options: OverdueEscalationOptions = {}
 ): Promise<OverdueEscalationRunResult> {
   if (!actor.companyId) throw AppError.internal("tenant session required but missing");
-  const ladder = options.ladder ?? DEFAULT_ESCALATION_LADDER;
   const limit = Math.min(Math.max(options.limit ?? 200, 1), 1000);
 
   return withTenant(actor.companyId, actor.branchId, async (db) => {
+    // RULE 18.11 - the escalation thresholds are "defaults, not law" and are
+    // configurable per company. The roles at each level never change; only the
+    // day thresholds do, so an unconfigured company keeps the documented ladder.
+    const policy = await db.query<{
+      escalation_level_2_days: number | null;
+      escalation_level_3_days: number | null;
+      escalation_level_4_days: number | null;
+      escalation_level_5_days: number | null;
+    }>(
+      `SELECT escalation_level_2_days, escalation_level_3_days,
+              escalation_level_4_days, escalation_level_5_days
+         FROM company_settings WHERE company_id=$1`,
+      [actor.companyId]
+    );
+    const p = policy.rows[0];
+    const ladder = options.ladder ?? [
+      { ...DEFAULT_ESCALATION_LADDER[0]! },
+      { ...DEFAULT_ESCALATION_LADDER[1]!, minDaysPastDue: p?.escalation_level_2_days ?? DEFAULT_ESCALATION_LADDER[1]!.minDaysPastDue },
+      { ...DEFAULT_ESCALATION_LADDER[2]!, minDaysPastDue: p?.escalation_level_3_days ?? DEFAULT_ESCALATION_LADDER[2]!.minDaysPastDue },
+      { ...DEFAULT_ESCALATION_LADDER[3]!, minDaysPastDue: p?.escalation_level_4_days ?? DEFAULT_ESCALATION_LADDER[3]!.minDaysPastDue },
+      { ...DEFAULT_ESCALATION_LADDER[4]!, minDaysPastDue: p?.escalation_level_5_days ?? DEFAULT_ESCALATION_LADDER[4]!.minDaysPastDue }
+    ];
+
     const settings = await db.query<{ overdue_grace_days: number }>(
       `SELECT overdue_grace_days FROM company_settings WHERE company_id=$1`,
       [actor.companyId]
@@ -107,7 +129,7 @@ export async function runOverdueEscalation(
     }>(
       `SELECT l.id AS loan_id, l.customer_id, l.branch_id,
               SUM(rs.expected_repayment - rs.actual_repayment)::numeric(14,2) AS amount_due,
-              (current_date - MIN(rs.due_date))::int AS days_past_due,
+              (app_today() - MIN(rs.due_date))::int AS days_past_due,
               (ARRAY_AGG(ca.staff_id))[1] AS responsible_user_id
          FROM loans l
          JOIN repayment_schedule_rows rs ON rs.loan_id = l.id
@@ -115,7 +137,7 @@ export async function runOverdueEscalation(
            ON ca.customer_id = l.customer_id AND ca.status = 'active'
         WHERE l.status IN ('active','overdue')
           AND l.company_id = $1
-          AND rs.due_date <= current_date - $2::int
+          AND rs.due_date <= app_today() - $2::int
           AND (rs.expected_repayment - rs.actual_repayment) > 0
           AND ($3::uuid IS NULL OR l.branch_id = $3)
         GROUP BY l.id, l.customer_id, l.branch_id

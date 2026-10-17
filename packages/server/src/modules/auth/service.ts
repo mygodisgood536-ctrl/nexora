@@ -408,6 +408,47 @@ export async function login(
       return { ok: false, status: 403, code: "ACCOUNT_SUSPENDED", message: "Account suspended" } satisfies LoginOutcome;
     }
 
+    // RULE 2.3.3 / 2.4.1 - a branch URL grants exactly the credentials of workers
+    // assigned to THAT branch. "A branch URL login by a worker with no
+    // assignment at that branch is rejected with a neutral error and is
+    // audit-logged." Conversely a Head Office account that logs in at a branch
+    // URL resolves its own company-wide scope; it never silently becomes a
+    // branch worker.
+    //
+    // The check is therefore: the URL names a branch, and the account holds an
+    // active role assignment in that branch. Anything else is refused with the
+    // same neutral message as a bad password, so the endpoint never becomes an
+    // oracle for who works where.
+    if (ctx.branchId) {
+      const holdsBranchAssignment = await db.query<{ id: string }>(
+        `SELECT ra.id
+           FROM role_assignments ra
+          WHERE ra.user_id = $1
+            AND ra.company_id = $2
+            AND ra.status = 'active'
+            AND (ra.branch_id = $3 OR ra.branch_id IS NULL)
+            AND (ra.assignment_type = 'permanent'
+                 OR (ra.starts_at <= now() AND (ra.ends_at IS NULL OR ra.ends_at > now())))`,
+        [user.id, ctx.companyId, ctx.branchId]
+      );
+      if ((holdsBranchAssignment.rowCount ?? 0) === 0) {
+        await securityAudit(
+          db,
+          ctx.companyId,
+          ctx.branchId,
+          user.id,
+          "login.failed",
+          "security",
+          user.id,
+          undefined,
+          { reason: "no role assignment at the branch named by the login URL" },
+          "Login refused: no role assignment at this branch",
+          meta
+        );
+        return { ok: false, status: 401, message: "Invalid credentials" } satisfies LoginOutcome;
+      }
+    }
+
     // RULE 7.9.2 — a suspended branch blocks its branch workers' logins. It
     // deletes nothing, stops no in-flight money and alters no record; it is
     // reversible. A closed or not-yet-opened branch likewise admits no work.

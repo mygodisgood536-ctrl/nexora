@@ -261,7 +261,7 @@ export async function runCollectionWatch(
          JOIN customers c ON c.id = l.customer_id
          LEFT JOIN payments p ON p.customer_id = l.customer_id AND p.status IN ('posted','allocated')
         WHERE l.status IN ('active','overdue')
-          AND rs.due_date <= current_date
+          AND rs.due_date <= app_today()
           AND (rs.expected_repayment - rs.actual_repayment) > 0
         GROUP BY l.customer_id, l.branch_id
        HAVING COALESCE(MAX(p.received_at), MIN(l.disbursed_at)) <= $1
@@ -370,7 +370,7 @@ export async function runCollectionWatch(
          JOIN loans l
            ON l.customer_id = ca.customer_id AND l.status IN ('active','overdue')
          JOIN repayment_schedule_rows rs ON rs.loan_id = l.id
-        WHERE rs.due_date <= current_date
+        WHERE rs.due_date <= app_today()
         GROUP BY ca.staff_id
        HAVING COALESCE(SUM(rs.expected_repayment), 0) > 0
         LIMIT 200`
