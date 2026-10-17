@@ -9,6 +9,9 @@ import {
   allocateVerifiedPayment,
   approveProviderChange,
   createProviderConfig,
+  rejectProviderChange,
+  updateProviderConfig,
+  deactivateProviderConfig,
   dismissReconciliationItem,
   getActiveProviderConfig,
   getPayment,
@@ -144,6 +147,67 @@ paymentProvidersRouter.post(
     const id = String(req.params.id);
     if (!UUID_RE.test(id)) throw AppError.badRequest("Invalid provider config id");
     res.json(await approveProviderChange(actor(req), id, metaFrom(req)));
+  })
+);
+
+const providerDecisionSchema = z.object({
+  reason: z.string().min(3).max(500)
+});
+
+// RULE 8.4.1 step 7 - the MD either approves or rejects. A rejection must keep
+// the provider inactive WITH THE REASON RECORDED; the account on whose behalf
+// the change was made is notified of the decision either way.
+paymentProvidersRouter.post(
+  "/:id/reject",
+  requireCompleteSession,
+  requirePermission("configure"),
+  wrap(async (req, res) => {
+    const id = String(req.params.id);
+    if (!UUID_RE.test(id)) throw AppError.badRequest("Invalid provider config id");
+    const parsed = providerDecisionSchema.safeParse(req.body ?? {});
+    if (!parsed.success) throw AppError.unprocessable("A reason is required to reject a provider change");
+    res.json(await rejectProviderChange(actor(req), id, parsed.data.reason, metaFrom(req)));
+  })
+);
+
+/**
+ * RULE 8.4.2 - editing a provider follows the same flow with the same
+ * authorisation rule: the MD's own edit applies immediately, anyone else's waits
+ * for the MD. Already-stored secrets are never re-shown; the editor replaces
+ * them only if new values are entered.
+ */
+paymentProvidersRouter.patch(
+  "/:id",
+  requireCompleteSession,
+  requirePermission("configure_providers"),
+  wrap(async (req, res) => {
+    const id = String(req.params.id);
+    if (!UUID_RE.test(id)) throw AppError.badRequest("Invalid provider config id");
+    const parsed = providerConfigSchema.partial().safeParse(req.body ?? {});
+    if (!parsed.success) throw AppError.unprocessable("Validation failed");
+    res.json(await updateProviderConfig(actor(req), id, parsed.data, metaFrom(req)));
+  })
+);
+
+/**
+ * RULE 8.4.3 - removing or deactivating a provider follows the same
+ * authorisation rule and must warn explicitly, in the confirmation, what will
+ * stop working: no new virtual accounts can be created for that branch, and
+ * existing customer accounts with that provider may stop receiving payments.
+ *
+ * RULE 8.7.1 - existing virtual accounts are never deleted by this; they remain
+ * valid and recorded against their customers.
+ */
+paymentProvidersRouter.post(
+  "/:id/deactivate",
+  requireCompleteSession,
+  requirePermission("configure_providers"),
+  wrap(async (req, res) => {
+    const id = String(req.params.id);
+    if (!UUID_RE.test(id)) throw AppError.badRequest("Invalid provider config id");
+    const parsed = providerDecisionSchema.safeParse(req.body ?? {});
+    if (!parsed.success) throw AppError.unprocessable("A reason is required to deactivate a provider");
+    res.json(await deactivateProviderConfig(actor(req), id, parsed.data.reason, metaFrom(req)));
   })
 );
 

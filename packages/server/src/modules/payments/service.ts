@@ -41,6 +41,8 @@ export interface ActorMeta {
   ip?: string | null;
   userAgent?: string | null;
   requestId?: string | null;
+  /** RULE 14.3.1 - the reason, where the action type requires one. */
+  reason?: string | null;
 }
 
 // ===================== numeric helpers =====================
@@ -669,6 +671,221 @@ if ((r.rowCount ?? 0) === 0) throw AppError.notFound("Provider config not found"
   });
 }
 
+/**
+ * RULE 8.4.1 step 7 - the MD rejects a provider change made by a non-MD user.
+ * The provider stays inactive and the reason is recorded, so the account that
+ * made the change can see why it did not take effect.
+ *
+ * RULE 8.4.5 - no approval or rejection may be given on behalf of the MD by
+ * anyone, so this requires an active MD role assignment.
+ */
+export async function rejectProviderChange(
+  actor: PaymentActor,
+  providerConfigId: string,
+  reason: string,
+  meta: ActorMeta = {}
+): Promise<{ ok: true; active: false }> {
+  if (!reason || reason.trim().length < 3) {
+    throw AppError.unprocessable("A reason is required to reject a provider change");
+  }
+  return withTenant(actor.companyId, null, async (db) => {
+    if (!(await actorHoldsRole(db, actor, ["md"]))) {
+      throw AppError.forbidden("Only the MD may decide a provider change");
+    }
+    const cfg = await db.query<{ id: string; provider: string; is_active: boolean }>(
+      `SELECT id, provider, is_active FROM payment_provider_configs
+        WHERE id=$1 AND company_id=$2`,
+      [providerConfigId, actor.companyId]
+    );
+    if ((cfg.rowCount ?? 0) === 0) throw AppError.notFound("Provider config not found");
+    if (cfg.rows[0]!.is_active) {
+      throw AppError.conflict("An active provider cannot be rejected; deactivate it instead");
+    }
+
+    await db.query(
+      `UPDATE payment_provider_configs
+          SET md_approved_at = NULL, md_approved_by = NULL, is_active = false,
+              rejection_reason = $2
+        WHERE id=$1`,
+      [providerConfigId, reason]
+    );
+    await db.query(
+`INSERT INTO audit_logs (company_id, actor_user_id, action, entity_type, entity_id, reason,
+                               ip_address, user_agent, request_id)
+       VALUES ($1,$2,'payment_provider.md_rejected','payment_provider_configs',$3,$4,$5,$6,$7)`,
+      [actor.companyId, actor.sub, providerConfigId, reason,
+       meta.ip ?? null, meta.userAgent ?? null, meta.requestId ?? null]
+    );
+    return { ok: true, active: false } as const;
+  });
+}
+
+/**
+ * RULE 8.4.2 - editing a provider follows the same authorisation rule as adding
+ * one: the MD's own edit applies immediately, anyone else's waits for the MD.
+ * Already-stored secrets are never re-shown; the editor replaces them only if
+ * new values are entered, and a replaced secret is re-encrypted at rest.
+ */
+export async function updateProviderConfig(
+  actor: PaymentActor,
+  providerConfigId: string,
+  input: Partial<CreateProviderConfigInput>,
+  meta: ActorMeta = {}
+): Promise<ProviderConfigRow> {
+  return withTenant(actor.companyId, null, async (db) => {
+    if (!(await actorHoldsRole(db, actor, PROVIDER_CHANGE_ROLES))) {
+      throw AppError.forbidden(
+        "Only the MD, Deputy MD, GM or Finance group may change a branch's payment provider"
+      );
+    }
+    const found = await db.query<{ id: string; is_active: boolean; provider: string }>(
+      `SELECT id, is_active, provider FROM payment_provider_configs
+        WHERE id=$1 AND company_id=$2 FOR UPDATE`,
+      [providerConfigId, actor.companyId]
+    );
+    if ((found.rowCount ?? 0) === 0) throw AppError.notFound("Provider config not found");
+    if (found.rows[0]!.is_active) {
+      throw AppError.conflict(
+        "An active provider must be deactivated before it can be edited, so no payment is misrouted mid-change"
+      );
+    }
+
+    const actorIsMd = await actorHoldsRole(db, actor, ["md"]);
+    const nextApiBaseUrl = input.apiBaseUrl?.trim();
+    const nextApiKey = input.apiKey?.trim();
+    const nextSigningSecret = input.signingSecret?.trim();
+
+    const updated = await db.query(
+      `UPDATE payment_provider_configs
+          SET api_base_url = COALESCE($2, api_base_url),
+              api_key = COALESCE($3, api_key),
+              api_key_fingerprint = COALESCE($4, api_key_fingerprint),
+              signing_secret = COALESCE($5, signing_secret),
+              is_active = false,
+              md_approved_at = CASE WHEN $6::boolean THEN now() ELSE NULL END,
+              md_approved_by = CASE WHEN $6::boolean THEN $7 ELSE NULL END,
+              rejection_reason = NULL,
+              -- A changed credential invalidates the previous connection test:
+              -- RULE 8.6.1-4 forbids activating a provider that has not passed one.
+              connection_tested_at = CASE WHEN $3::text IS NOT NULL THEN NULL ELSE connection_tested_at END,
+              connection_test_ok = CASE WHEN $3::text IS NOT NULL THEN NULL ELSE connection_test_ok END
+        WHERE id=$1
+        RETURNING id, company_id, provider, api_base_url, api_key, api_key_fingerprint,
+                  is_active, md_approved_at, created_at, webhook_endpoint_path, is_primary`,
+      [
+        providerConfigId,
+        nextApiBaseUrl ?? null,
+        nextApiKey ? encryptSecret(actor.companyId, nextApiKey, "payment-provider") : null,
+        nextApiKey ? secretFingerprint(nextApiKey) : null,
+        nextSigningSecret
+          ? encryptSecret(actor.companyId, nextSigningSecret, "webhook-secret")
+          : null,
+        actorIsMd,
+        actor.sub
+      ]
+    );
+    const row = updated.rows[0]!;
+
+    await db.query(
+      `INSERT INTO audit_logs (company_id, actor_user_id, action, entity_type, entity_id, new_value, reason)
+       VALUES ($1,$2,'payment_provider.updated','payment_provider_configs',$3,$4::jsonb,
+               $5)`,
+      [
+        actor.companyId, actor.sub, providerConfigId,
+        JSON.stringify({
+          api_base_url: row.api_base_url,
+          api_key: nextApiKey ? "replaced" : "unchanged",
+          signing_secret: nextSigningSecret ? "replaced" : "unchanged"
+        }),
+        meta.reason ?? null
+      ]
+    );
+    // RULE 8.4.1 step 7 - a non-MD edit waits for the MD, who is notified.
+    if (!actorIsMd) {
+      await insertNotificationsToMds(db, actor.companyId, "payment_provider.approval_requested", {
+        providerConfigId,
+        action: "update",
+        reason: meta.reason ?? null
+      });
+    }
+    return toProviderConfigRow({ ...row, branch_id: null });
+  });
+}
+
+/**
+ * RULE 8.4.3 / 8.6.1-8 - deactivating follows the same authorisation rule and
+ * records the reason, so a provider is never swapped silently.
+ *
+ * RULE 8.7.1 - existing virtual accounts created with this provider are NOT
+ * deleted and remain valid and recorded against their customers. The caller is
+ * told exactly what stops working.
+ */
+export async function deactivateProviderConfig(
+  actor: PaymentActor,
+  providerConfigId: string,
+  reason: string,
+  meta: ActorMeta = {}
+): Promise<{ ok: true; active: false; affectedVirtualAccounts: number }> {
+  if (!reason || reason.trim().length < 3) {
+    throw AppError.unprocessable("A reason is required to deactivate a provider");
+  }
+  return withTenant(actor.companyId, null, async (db) => {
+    if (!(await actorHoldsRole(db, actor, PROVIDER_CHANGE_ROLES))) {
+      throw AppError.forbidden(
+        "Only the MD, Deputy MD, GM or Finance group may change a branch's payment provider"
+      );
+    }
+    const cfg = await db.query<{ id: string; provider: string; is_active: boolean }>(
+      `SELECT id, provider, is_active FROM payment_provider_configs
+        WHERE id=$1 AND company_id=$2 FOR UPDATE`,
+      [providerConfigId, actor.companyId]
+    );
+    if ((cfg.rowCount ?? 0) === 0) throw AppError.notFound("Provider config not found");
+
+    const affected = await db.query<{ n: string }>(
+      `SELECT count(*)::text AS n FROM virtual_accounts
+        WHERE company_id=$1 AND provider=$2 AND status='active'`,
+      [actor.companyId, cfg.rows[0]!.provider]
+    );
+    const affectedVirtualAccounts = Number(affected.rows[0]?.n ?? 0);
+
+    await db.query(
+      `UPDATE payment_provider_configs
+          SET is_active = false, md_approved_at = NULL, is_primary = false,
+              webhook_endpoint_token = NULL, webhook_endpoint_path = NULL
+        WHERE id=$1`,
+      [providerConfigId]
+    );
+    await db.query(
+`INSERT INTO audit_logs (company_id, actor_user_id, action, entity_type, entity_id,
+                                 new_value, reason, ip_address, user_agent, request_id)
+        VALUES ($1,$2,'payment_provider.deactivated','payment_provider_configs',$3,$4::jsonb,$5,$6,$7,$8)`,
+      [
+        actor.companyId, actor.sub, providerConfigId,
+        JSON.stringify({
+          provider: cfg.rows[0]!.provider,
+          affected_virtual_accounts: affectedVirtualAccounts,
+          warning:
+            "No new virtual accounts can be created for this provider, and existing " +
+            "customer accounts with it may stop receiving payments"
+}),
+        reason,
+        meta.ip ?? null,
+        meta.userAgent ?? null,
+        meta.requestId ?? null
+      ]
+    );
+    // RULE 8.7.5 - the MD is notified of a provider change and of any customers
+    // left needing a new account.
+    await insertNotificationsToMds(db, actor.companyId, "payment_provider.deactivated", {
+      providerConfigId,
+      provider: cfg.rows[0]!.provider,
+      affectedVirtualAccounts,
+      reason
+    });
+    return { ok: true, active: false, affectedVirtualAccounts } as const;
+  });
+}
 export interface AssignBranchPaymentAccountInput {
   branchId: string;
   providerConfigId: string;
