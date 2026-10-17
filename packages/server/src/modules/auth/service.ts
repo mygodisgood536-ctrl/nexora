@@ -223,6 +223,12 @@ interface RequestMeta {
   ip?: string;
   userAgent?: string;
   requestId?: string;
+  /**
+   * RULE 14.3.1 / 18.17 - every audit entry carries the role assignment that
+   * was used to perform the action. A person may hold several roles; without
+   * this, an action is attributable to a person but not to a duty.
+   */
+  roleUsed?: string | null;
 }
 
 interface SecurityPolicy {
@@ -276,9 +282,9 @@ async function securityAudit(
   meta: RequestMeta
 ): Promise<void> {
   await db.query(
-    `INSERT INTO audit_logs (company_id, branch_id, actor_user_id, action, entity_type,
+    `INSERT INTO audit_logs (company_id, branch_id, actor_user_id, role_used, action, entity_type,
                              entity_id, previous_value, new_value, reason, ip_address, user_agent, request_id)
-     VALUES ($1,$2,$3,$4,$5,$6,$7::jsonb,$8::jsonb,$9,$10,$11,$12)`,
+     VALUES ($1,$2,$3,$13,$4,$5,$6,$7::jsonb,$8::jsonb,$9,$10,$11,$12)`,
     [
       companyId,
       branchId,
@@ -291,7 +297,9 @@ async function securityAudit(
       reason,
       meta.ip ?? null,
       meta.userAgent ?? null,
-      meta.requestId ?? null
+      meta.requestId ?? null,
+      // RULE 14.3.1 - the role assignment used is part of the audit record.
+      meta.roleUsed ?? null
     ]
   );
 }

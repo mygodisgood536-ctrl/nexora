@@ -5,6 +5,7 @@ import { env } from "../../config/env";
 import { withTenantSession } from "../../db/pool";
 import { withBypass } from "../../db/repo";
 import { AppError } from "../../lib/errors";
+import { getRequestContext } from "../../lib/async-context";
 import { verifyTotp, generateTotpSecret, otpauthUri } from "../../lib/totp";
 import { isLegacySecret, unwrapSecret, wrapSecret } from "../../lib/secret-vault";
 import { BUILT_IN_ROLES } from "@nexora/shared";
@@ -338,18 +339,27 @@ export async function audit(
   previousValue?: unknown,
   newValue?: unknown,
   reason?: string,
-  companyId?: string | null
+  companyId?: string | null,
+  /** RULE 3.7.1 - session and IP metadata for the platform audit trail. */
+  meta?: { ip?: string | null; userAgent?: string | null; requestId?: string | null }
 ): Promise<void> {
   await db.query(
-    `INSERT INTO platform_audit_logs (actor, action, company_id, previous_value, new_value, reason)
-     VALUES ($1,$2,$3,$4,$5,$6)`,
+    `INSERT INTO platform_audit_logs
+       (actor, action, company_id, previous_value, new_value, reason, session_ip, user_agent, request_id, role_used)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
     [
       actor,
       `${entityType}.${action}`,
       companyId ?? null,
       previousValue === undefined ? null : JSON.stringify(previousValue),
       newValue === undefined ? null : JSON.stringify(newValue),
-      reason ?? null
+      reason ?? null,
+      // RULE 3.7.1 - every platform-level action records its session and IP
+      // metadata. 0002 created these columns; nothing ever populated them.
+      meta?.ip ?? null,
+      meta?.userAgent ?? null,
+      meta?.requestId ?? null,
+      getRequestContext()?.actor?.roleKey ?? null
     ]
   );
 
@@ -1034,7 +1044,22 @@ export async function discardCompanyDraft(poEmail: string, companyId: string): P
     if (row.status !== "in_setup") {
       throw new AppError(409, "NOT_A_DRAFT", "Only an unsaved draft in setup can be discarded");
     }
-    await db.query(`DELETE FROM companies WHERE id=$1`, [companyId]);
+    await db.query(
+      `INSERT INTO platform_audit_logs
+         (actor, action, company_id, previous_value, new_value, reason, session_ip, user_agent, request_id)
+       SELECT 'archive:' || COALESCE(actor_user_id::text, 'system'),
+              al.action,
+              NULL,
+              al.previous_value,
+              al.new_value,
+              COALESCE(al.reason, 'archived with discarded company draft'),
+              al.ip_address::text,
+              al.user_agent,
+              al.request_id
+         FROM audit_logs al
+        WHERE al.company_id = $1`,
+      [companyId]
+    );
     await audit(
       db, poEmail, "draft_discarded", "companies", companyId,
       { name: row.name, status: "in_setup" },
@@ -1042,6 +1067,11 @@ export async function discardCompanyDraft(poEmail: string, companyId: string): P
       undefined,
       companyId
     );
+    // RULE 3.7.2 / 14.3.2 - the draft's own audit rows are archived into the
+    // platform trail above (company reference cleared) before this delete
+    // cascades them away, so no audit entry is ever destroyed. The platform
+    // audit row is written first because it references the company.
+    await db.query(`DELETE FROM companies WHERE id=$1`, [companyId]);
   });
 }
 

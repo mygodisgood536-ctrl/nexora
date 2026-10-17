@@ -49,11 +49,12 @@ function actor(req: Request): { sub: string; companyId: string; branchId: string
   };
 }
 
-function metaFrom(req: Request): { ip: string | null; userAgent: string | null; requestId: string | null } {
+function metaFrom(req: Request): { ip: string | null; userAgent: string | null; requestId: string | null; roleUsed: string | null } {
   return {
     ip: req.ip ?? null,
     userAgent: (req.headers["user-agent"] as string | undefined) ?? null,
-    requestId: (req.headers["x-request-id"] as string | undefined) ?? null
+    requestId: (req.headers["x-request-id"] as string | undefined) ?? null,
+    roleUsed: (req.principal?.activeRoleKey ?? req.principal?.roles?.[0]?.roleKey ?? null)
   };
 }
 

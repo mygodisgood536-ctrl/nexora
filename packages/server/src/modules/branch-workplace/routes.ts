@@ -131,7 +131,8 @@ function metaFrom(req: Request) {
   return {
     ip: req.ip ?? null,
     userAgent: req.headers["user-agent"] as string | null,
-    requestId: req.headers["x-request-id"] as string | null
+    requestId: req.headers["x-request-id"] as string | null,
+    roleUsed: (req.principal?.activeRoleKey ?? req.principal?.roles?.[0]?.roleKey ?? null)
   };
 }
 

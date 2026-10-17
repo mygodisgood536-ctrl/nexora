@@ -44,11 +44,12 @@ function requireEodOperator(req: Request): void {
   }
 }
 
-function metaFrom(req: Request): { ip: string | null; userAgent: string | null; requestId: string | null } {
+function metaFrom(req: Request): { ip: string | null; userAgent: string | null; requestId: string | null; roleUsed: string | null } {
   return {
     ip: req.ip ?? null,
     userAgent: typeof req.headers["user-agent"] === "string" ? req.headers["user-agent"] : null,
     requestId: typeof req.headers["x-request-id"] === "string" ? req.headers["x-request-id"] : null,
+    roleUsed: (req.principal?.activeRoleKey ?? req.principal?.roles?.[0]?.roleKey ?? null)
   };
 }
 

@@ -34,7 +34,8 @@ function metaFrom(req: Request) {
   return {
     ip: req.ip ?? null,
     userAgent: req.header("user-agent") ?? null,
-    requestId: req.header("x-request-id") ?? null
+    requestId: req.header("x-request-id") ?? null,
+    roleUsed: (req.principal?.activeRoleKey ?? req.principal?.roles?.[0]?.roleKey ?? null)
   };
 }
 

@@ -1,4 +1,4 @@
-﻿// Stage 7B - Group management endpoints (Part 2 Section 27).
+// Stage 7B - Group management endpoints (Part 2 Section 27).
 // All endpoints are RLS-scoped via the caller's tenant session.
 // Branch-scoped sessions are restricted to their own branch by
 // the rls_branch_scope policy.
@@ -30,11 +30,12 @@ function actor(req: Request): { sub: string; companyId: string; branchId: string
   return { sub: p.sub, companyId: p.companyId, branchId: p.branchId ?? null };
 }
 
-function metaFrom(req: Request): { ip: string | null; userAgent: string | null; requestId: string | null } {
+function metaFrom(req: Request): { ip: string | null; userAgent: string | null; requestId: string | null; roleUsed: string | null } {
   return {
     ip: req.ip ?? null,
     userAgent: req.header("user-agent") ?? null,
     requestId: req.header("x-request-id") ?? null,
+    roleUsed: (req.principal?.activeRoleKey ?? req.principal?.roles?.[0]?.roleKey ?? null)
   };
 }
 

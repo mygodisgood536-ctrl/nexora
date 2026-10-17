@@ -5,6 +5,7 @@ import { AppError } from "../lib/errors";
 import type { ScopeType } from "@nexora/shared";
 import type { CredentialState } from "../lib/credential";
 import { withTenant } from "../db/repo";
+import { setRequestActor } from "../lib/async-context";
 
 export interface PrincipalRoleRef {
   roleKey: string;
@@ -57,6 +58,17 @@ export function attachPrincipal(req: Request, _res: Response, next: NextFunction
   } catch {
     return next();
   }
+  // RULE 14.3.1 / 18.17 - record the role assignment this request acts under so
+  // the tenant transaction can stamp it onto every audit row it writes. The
+  // active role lens wins; otherwise the first active assignment is the duty
+  // being exercised.
+  const p = req.principal;
+  setRequestActor({
+    userId: p.sub,
+    roleKey: p.activeRoleKey ?? p.roles?.[0]?.roleKey ?? null,
+    companyId: p.companyId,
+    branchId: p.branchId ?? null
+  });
   next();
 }
 

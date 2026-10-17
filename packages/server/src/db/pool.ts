@@ -1,6 +1,7 @@
 import pg from "pg";
 import { env } from "../config/env";
 import { logger } from "../lib/logger";
+import { getRequestContext } from "../lib/async-context";
 
 /**
  * Serverless-aware connection pool.
@@ -76,6 +77,13 @@ export async function withTenantSession<T>(
     await client.query("SELECT set_config('app.branch_restricted', 'off', true)");
     if (branchId) {
       await client.query("SELECT set_config('app.branch_restricted', 'on', true)");
+    }
+    // RULE 14.3.1 / 18.17 - attribute every audit row written in this
+    // transaction to the role assignment acting. audit_logs.role_used defaults
+    // from this GUC (migration 0089).
+    const actingRole = getRequestContext()?.actor?.roleKey;
+    if (actingRole) {
+      await client.query("SELECT set_config('app.role_used', $1, true)", [actingRole]);
     }
     const result = await fn(client);
     await client.query("COMMIT");

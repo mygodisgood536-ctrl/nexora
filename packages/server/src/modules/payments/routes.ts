@@ -45,11 +45,12 @@ function actor(req: Request): { sub: string; companyId: string; branchId: string
   return { sub: p.sub, companyId: p.companyId, branchId: p.branchId ?? null };
 }
 
-function metaFrom(req: Request): { ip: string | null; userAgent: string | null; requestId: string | null } {
+function metaFrom(req: Request): { ip: string | null; userAgent: string | null; requestId: string | null; roleUsed: string | null } {
   return {
     ip: req.ip ?? null,
     userAgent: req.header("user-agent") ?? null,
-    requestId: req.header("x-request-id") ?? null
+    requestId: req.header("x-request-id") ?? null,
+    roleUsed: (req.principal?.activeRoleKey ?? req.principal?.roles?.[0]?.roleKey ?? null)
   };
 }
 

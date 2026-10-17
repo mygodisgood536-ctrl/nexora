@@ -51,11 +51,12 @@ const loginSchema = z.object({
   password: z.string().min(1).max(200)
 });
 
-function metaFrom(req: Request): { ip: string | undefined; userAgent: string | undefined; requestId: string | undefined } {
+function metaFrom(req: Request): { ip: string | undefined; userAgent: string | undefined; requestId: string | undefined; roleUsed: string | null } {
   return {
     ip: req.ip,
     userAgent: req.headers["user-agent"],
-    requestId: (req.headers["x-request-id"] as string | undefined) ?? undefined
+    requestId: (req.headers["x-request-id"] as string | undefined) ?? undefined,
+    roleUsed: (req.principal?.activeRoleKey ?? req.principal?.roles?.[0]?.roleKey ?? null)
   };
 }
 
