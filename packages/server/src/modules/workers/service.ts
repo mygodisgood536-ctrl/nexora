@@ -709,6 +709,50 @@ export async function editWorker(
     );
     const after = updated.rows[0]!;
 
+    // RULE 5.10.1 - "profile edited" and "passport replaced" are separate entries
+    // on the mandatory audit list. A passport photograph is a distinct fact with
+    // its own retention and is never conflated with a name or contact edit.
+    if (
+      before.first_name !== after.first_name ||
+      before.middle_name !== after.middle_name ||
+      before.last_name !== after.last_name ||
+      before.username !== after.username ||
+      before.phone !== after.phone ||
+      before.email !== after.email ||
+      before.birth_day !== after.birth_day ||
+      before.birth_month !== after.birth_month
+    ) {
+      await auditWorker(
+        db, actor.companyId, before.branch_id,
+        actor.sub, "profile.edited", "workers", workerId,
+        {
+          username: before.username, first_name: before.first_name,
+          middle_name: before.middle_name, last_name: before.last_name,
+          phone: before.phone, email: before.email,
+          birth_day: before.birth_day, birth_month: before.birth_month
+        },
+        {
+          username: after.username, first_name: after.first_name,
+          middle_name: after.middle_name, last_name: after.last_name,
+          phone: after.phone, email: after.email,
+          birth_day: after.birth_day, birth_month: after.birth_month
+        },
+        input.reason ?? null,
+        meta
+      );
+    }
+
+    if (before.passport_photo_url !== after.passport_photo_url) {
+      await auditWorker(
+        db, actor.companyId, before.branch_id,
+        actor.sub, "passport.replaced", "workers", workerId,
+        { passport_photo_url: before.passport_photo_url },
+        { passport_photo_url: after.passport_photo_url },
+        input.reason ?? null,
+        meta
+      );
+    }
+
     await auditWorker(
       db, actor.companyId, before.branch_id,
       actor.sub, "worker.edited", "workers", workerId,
@@ -801,6 +845,23 @@ export async function setWorkerStatus(
       await db.query(
         `UPDATE refresh_tokens SET revoked_at=now() WHERE user_id=$1 AND revoked_at IS NULL`,
         [workerId]
+      );
+      // RULE 5.10.1 - "authenticator frozen" is on the mandatory audit list.
+      // RULE 14.2.2 - the moment it is frozen it stops working immediately,
+      // along with the password. Suspension is the event that does both, so the
+      // freeze is recorded as its own security entry.
+      await auditWorker(
+        db,
+        actor.companyId,
+        found.rows[0]!.branch_id,
+        actor.sub,
+        "authenticator.frozen",
+        "credentials",
+        workerId,
+        { frozen: false },
+        { frozen: true },
+        reason ?? `Account ${action}d`,
+        meta
       );
     }
     if (action === "reactivate") {
@@ -1053,6 +1114,23 @@ export async function transferWorkerPortfolio(
       [input.fromWorkerId]
     );
     const branchId = found.rows[0]!.branch_id ?? books.rows[0]?.branch_id ?? null;
+    // RULE 5.10.1 - "authenticator removed" is on the mandatory audit list with
+    // no exception. RULE 14.2.3 requires the removal to be audit-logged and the
+    // account to require a fresh documented credential issue and a fresh ritual
+    // before it can be usable again. The removal below is exactly that event.
+    await auditWorker(
+      db,
+      actor.companyId,
+      found.rows[0]!.branch_id,
+      actor.sub,
+      "authenticator.removed",
+      "credentials",
+      input.fromWorkerId,
+      { enrolled: true },
+      { enrolled: false },
+      input.reason ?? "Portfolio transferred to a new worker",
+      meta
+    );
     await auditWorker(
       db,
       actor.companyId,
@@ -1123,6 +1201,23 @@ export async function transferWorkerPortfolio(
       reassignedCustomers: customerIds.length,
       reason: input.reason
     });
+    // RULE 5.10.1 - "role assignment created, changed or ended" is a single
+    // mandatory audit line. The end-dating above and the new assignment created
+    // inside this transfer are the two ends of that change, so the change itself
+    // is recorded as one attributable event rather than only as its side effects.
+    await auditWorker(
+      db,
+      actor.companyId,
+      stoodDown.branchId,
+      actor.sub,
+      "role_assignment.changed",
+      "role_assignments",
+      input.fromWorkerId,
+      { holder: input.fromWorkerId, status: "active" },
+      { holder: newWorker.id, status: "ended", replaced_by: newWorker.id },
+      input.reason,
+      meta
+    );
     return { reassignedCustomers: customerIds.length, reassignedGroups: groupIds.length };
   });
 
@@ -1190,6 +1285,23 @@ export async function resetWorkerPassword(
     await db.query(
       `UPDATE refresh_tokens SET revoked_at=now() WHERE user_id=$1 AND revoked_at IS NULL`,
       [workerId]
+    );
+
+    // RULE 5.10.1 - "authenticator removed" is on the mandatory audit list. A
+    // re-issue unlinks the previous seed (RULE 14.2.3), and that removal is a
+    // distinct security event from the re-issue itself.
+    await auditWorker(
+      db,
+      actor.companyId,
+      found.rows[0]!.branch_id,
+      actor.sub,
+      "authenticator.removed",
+      "credentials",
+      workerId,
+      { enrolled: (found.rows[0]!.credential_state === "secured" || found.rows[0]!.credential_state === "ritual_in_progress") },
+      { enrolled: false },
+      reason,
+      meta
     );
 
     await auditWorker(

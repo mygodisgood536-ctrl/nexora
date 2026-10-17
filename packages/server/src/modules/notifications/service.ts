@@ -119,6 +119,36 @@ export async function insertUserNotifications(
 }
 
 /**
+ * RULE 14.4.2 - repeated failed logins lock the account for a cool-down period,
+ * and the lockout is audit-logged AND notified to HR and the MD for worker
+ * accounts. HR judges workforce behaviour (RULE 6.4) so HR must receive it, not
+ * only the MD.
+ */
+export async function notifyLockoutHrAndMd(
+  db: pg.PoolClient,
+  companyId: string,
+  payload: { userId: string; username: string; lockedUntil: string; failedAttempts: number }
+): Promise<void> {
+  const recipients = await db.query<{ user_id: string }>(
+    `SELECT DISTINCT ra.user_id
+       FROM role_assignments ra
+       JOIN roles r ON r.id = ra.role_id
+      WHERE ra.company_id=$1
+        AND ra.status='active'
+        AND r.role_key IN ('md','hr_manager','hr_officer')`,
+    [companyId]
+  );
+  if (recipients.rowCount === 0) return;
+  await insertUserNotifications(
+    db,
+    companyId,
+    recipients.rows.map((r) => r.user_id),
+    "security.lockout",
+    payload
+  );
+}
+
+/**
  * RULE 5.9.3 / RULE 4.7.1 — the MD is notified of holds, releases and
  * transfers as they happen. Resolves active MD role assignments in the
  * company and inserts one notification per recipient, scoped to the caller's

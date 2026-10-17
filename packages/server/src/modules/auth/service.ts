@@ -21,6 +21,7 @@ import {
 } from "../../lib/credential";
 import { generateTotpSecret, otpauthUri, verifyTotp } from "../../lib/totp";
 import { isLegacySecret, unwrapSecret, wrapSecret } from "../../lib/secret-vault";
+import { notifyLockoutHrAndMd } from "../notifications/service";
 
 const REFRESH_TTL_DAYS = 7;
 const BCRYPT_ROUNDS = 10;
@@ -468,6 +469,14 @@ export async function login(
           "Login lockout threshold reached",
           meta
         );
+        // RULE 14.4.2 — the lockout is notified to HR and the MD for worker
+        // accounts, not only written to the audit trail.
+        await notifyLockoutHrAndMd(db, ctx.companyId, {
+          userId: user.id,
+          username: user.username,
+          lockedUntil: locked_until.toISOString(),
+          failedAttempts: attempts
+        });
       } else {
         await db.query(
           `UPDATE users SET failed_login_attempts=$2, updated_at=now() WHERE id=$1`,
@@ -685,12 +694,35 @@ export async function changePassword(
     const found = await db.query<UserRow>(`SELECT ${USER_COLUMNS} FROM users WHERE id=$1 FOR UPDATE`, [userId]);
     if (found.rowCount === 0) throw AppError.notFound("User not found");
     const user = found.rows[0]!;
-    const policy = await loadSecurityPolicy(db, companyId);
-    validateNewPassword(newPassword, user, policy);
 
-    const ok = await bcrypt.compare(currentPassword, user.password_hash);
-    if (!ok) throw AppError.unauthorized("Current password is incorrect");
-    requireLiveTotp(user, totpCode);
+    // RULE 5.10.1 — "password change denied" is on the mandatory audit list with
+    // no exception. A refused password change is exactly the event an auditor
+    // needs to see, so the refusal is written before the error propagates and
+    // the original error is rethrown unchanged (the caller still learns nothing
+    // about which factor was wrong).
+    try {
+      const policy = await loadSecurityPolicy(db, companyId);
+      validateNewPassword(newPassword, user, policy);
+
+      const ok = await bcrypt.compare(currentPassword, user.password_hash);
+      if (!ok) throw AppError.unauthorized("Current password is incorrect");
+      requireLiveTotp(user, totpCode);
+    } catch (error) {
+      await securityAudit(
+        db,
+        companyId,
+        user.branch_id,
+        userId,
+        "password.change_denied",
+        "credentials",
+        userId,
+        undefined,
+        { denied: true },
+        error instanceof Error ? error.message : "denied",
+        meta
+      );
+      throw error;
+    }
 
     const hash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
     await db.query(
