@@ -214,6 +214,12 @@ check(
       "packages/server/src/modules/payments/routes.ts",
       "packages/server/src/modules/payments/service.ts",
       "packages/server/src/modules/platform/service.ts",
+      // The platform schedule (RULE 3.8.6). It must enumerate active companies
+      // and resolve the system attribution principal BEFORE any tenant session
+      // exists, so it cannot use withTenant for those two reads. Every actual
+      // job it starts delegates to a service that opens its own tenant
+      // transaction for that company.
+      "packages/server/src/routes/cron.ts",
       "packages/server/src/modules/workers/service.ts"
     ];
     const extra = bypassFiles.filter((f) => !allow.includes(f));

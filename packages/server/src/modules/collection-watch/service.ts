@@ -515,3 +515,11 @@ export async function resolveCollectionWatchAlert(
     return { id: updated.rows[0]!.id, resolvedAt: updated.rows[0]!.resolved_at };
   });
 }
+
+/** RULE 6.4.2 / 9.9 - collection-watch alerts are raised on a schedule (RULE 3.8.6). */
+export async function runCollectionWatchForCompany(
+  companyId: string,
+  scheduleActorId: string
+): Promise<CollectionWatchRunResult> {
+  return runCollectionWatch({ userId: scheduleActorId, companyId, branchId: null });
+}

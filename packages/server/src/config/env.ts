@@ -64,7 +64,11 @@ const envSchema = z.object({
   // backup compromise does not yield application secrets.
   BACKUP_ENCRYPTION_KEY: z.string().min(32).optional(),
   BACKUP_WORK_ROOT: z.string().optional(),
-  BACKUP_POLICY_PATH: z.string().optional()
+  BACKUP_POLICY_PATH: z.string().optional(),
+  // RULE 3.8.6 - the schedule is triggered by the platform, not by a user, so it
+  // authenticates with its own secret rather than a session. It is REQUIRED in
+  // production: with no secret the schedule route fails closed.
+  CRON_SECRET: z.string().min(32).optional()
 });
 
 export type Env = z.infer<typeof envSchema>;
@@ -93,6 +97,12 @@ if (env.NODE_ENV === "production") {
   }
   if (prodSchema.success && prodSchema.data.LIVE_CAPTURE_PROOF_SECRET.startsWith("nexora-dev")) {
     throw new Error("LIVE_CAPTURE_PROOF_SECRET must be replaced before running in production");
+  }
+  // RULE 3.8.6 - production has background work that must actually run. Without a
+  // schedule secret the schedule route is permanently closed, so the platform
+  // would silently stop ageing, escalating and expiring.
+  if (env.NODE_ENV === "production" && !env.CRON_SECRET) {
+    throw new Error("CRON_SECRET must be set before running in production");
   }
   // RULE 20.4.1 - production cannot run without an encrypted backup capability,
   // and the backup key must be a separate secret from the application's own.

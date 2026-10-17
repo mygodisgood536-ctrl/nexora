@@ -320,3 +320,14 @@ export async function resolveOverdueEscalation(
     return { id: updated.rows[0]!.id, resolvedAt: updated.rows[0]!.resolved_at };
   });
 }
+
+/**
+ * RULE 10.6.2 - the overdue escalation ladder runs on a schedule (RULE 3.8.6),
+ * inside the affected company's own tenant transaction.
+ */
+export async function runOverdueEscalationForCompany(
+  companyId: string,
+  scheduleActorId: string
+): Promise<OverdueEscalationRunResult> {
+  return runOverdueEscalation({ userId: scheduleActorId, companyId, branchId: null });
+}

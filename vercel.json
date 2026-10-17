@@ -10,6 +10,12 @@
       "memory": 1024
     }
   },
+  "crons": [
+    {
+      "path": "/api/nexora-api?__nexora_cron=1",
+      "schedule": "17 2 * * *"
+    }
+  ],
   "rewrites": [
     { "source": "/api/v1/:path*", "destination": "/api/nexora-api" },
     { "source": "/platform/v1/:poPath*", "destination": "/api/nexora-api" },

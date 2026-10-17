@@ -268,3 +268,16 @@ export async function lastEndOfDay(actor: EodActor): Promise<EodSummary | null> 
     };
   });
 }
+/**
+ * RULE 3.8.6 - end-of-day ageing runs on a schedule, not only when a person
+ * presses the button. The schedule has no user, so the audit entry records a
+ * null actor rather than inventing one (audit_logs.actor_user_id is nullable and
+ * RULE 14.3.1 requires the actor where one exists).
+ */
+export async function runEndOfDayForCompany(
+  companyId: string,
+  scheduleActorId: string,
+  meta: ActorMeta = {}
+): Promise<EodSummary> {
+  return runEndOfDay({ sub: scheduleActorId, companyId, branchId: null }, meta);
+}

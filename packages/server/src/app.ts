@@ -10,6 +10,7 @@ import { attachPrincipal } from "./middleware/auth";
 import { errorHandler } from "./middleware/error-handler";
 import { notFoundHandler } from "./middleware/not-found";
 import { whoamiRouter } from "./routes/whoami";
+import { cronRouter } from "./routes/cron";
 import { platformRouter } from "./modules/platform/routes";
 import { authRouter } from "./modules/auth/routes";
 import { themeRouter } from "./modules/branding/routes";
@@ -224,6 +225,12 @@ export function createApp(): express.Express {
   const platformApi = express.Router();
   platformApi.use(platformRouter);
   app.use("/platform/v1", platformApi);
+
+  // RULE 3.8.6 / 8.5.6 - the platform schedule. It sits outside /api/v1 because
+  // it is not a company API: it authenticates with CRON_SECRET, not a session,
+  // and it iterates companies itself so each company's work runs in its own
+  // tenant transaction.
+  app.use("/cron", cronRouter);
 
   app.use(notFoundHandler);
   app.use(errorHandler);
