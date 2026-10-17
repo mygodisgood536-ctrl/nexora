@@ -2,7 +2,7 @@
 // All endpoints are RLS-scoped via the caller's tenant session.
 import { Router } from "express";
 import { z } from "zod";
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import type { Request, Response, NextFunction } from "express";
 import { AppError } from "../../lib/errors";
 import {  requireCompleteSession, requirePermission  } from "../../middleware/auth";
@@ -53,7 +53,7 @@ import {
   markPendingEvidenceUploadFailed,
   recordLoanApplicationEvidence
 } from "../loan-evidence/service";
-import { verifyLiveEvidenceProof } from "../face-captures/proof";
+import { signLiveEvidenceProof, verifyLiveEvidenceProof } from "../face-captures/proof";
 
 export const loansRouter = Router();
 export const loanProductsRouter = Router();
@@ -381,6 +381,60 @@ loanApplicationsRouter.patch(
     if (!UUID_RE.test(id) || !UUID_RE.test(uploadId)) throw AppError.badRequest("Invalid upload id");
     const reason = String((req.body ?? {}).reason ?? "");
     res.json(await markPendingEvidenceUploadFailed(actor(req), uploadId, reason, metaFrom(req), id));
+  })
+);
+
+/**
+ * RULE 19.7 - 19.10 - live evidence (government ID, house, business, loan form,
+ * default form) is captured from the device camera. The server mints the proof
+ * that binds the declared application, party, evidence type, identity name,
+ * image hash, device and location, so the submission can prove it is the
+ * capture the system expected.
+ */
+const evidenceProofSchema = z.object({
+  party: z.enum(["customer", "guarantor"]),
+  evidenceType: z.string().min(1).max(60),
+  identityName: z.string().max(200).nullable().optional(),
+  mimeType: z.enum(["image/jpeg", "image/png"]),
+  imageSha256: z.string().regex(/^[0-9a-f]{64}$/i, "imageSha256 must be a SHA-256 hex digest"),
+  liveness: z.object({
+    checked: z.boolean(),
+    passed: z.boolean(),
+    provider: z.string().min(1).max(120),
+    checks: z.record(z.unknown()).optional()
+  }),
+  deviceMetadata: z.record(z.unknown()).optional(),
+  location: z.record(z.unknown()).optional()
+});
+
+loanApplicationsRouter.post(
+  "/:id/evidence-proof",
+  requireCompleteSession,
+  requirePermission("create"),
+  wrap(async (req, res) => {
+    const id = String(req.params.id);
+    if (!UUID_RE.test(id)) throw AppError.badRequest("Invalid application id");
+    const parsed = evidenceProofSchema.safeParse(req.body ?? {});
+    if (!parsed.success) throw AppError.unprocessable("Validation failed");
+    const body = parsed.data;
+    const application = await getApplication(actor(req), id);
+    const jti = randomUUID();
+    const issuedAt = Date.now();
+    const signature = signLiveEvidenceProof({
+      customerId: application.customer_id,
+      applicationId: id,
+      party: body.party,
+      evidenceType: body.evidenceType,
+      identityName: body.identityName ?? null,
+      mimeType: body.mimeType,
+      imageSha256: body.imageSha256,
+      liveness: body.liveness,
+      deviceMetadata: body.deviceMetadata ?? {},
+      location: body.location ?? {},
+      jti,
+      issuedAt
+    });
+    res.json({ jti, issuedAt, signature });
   })
 );
 

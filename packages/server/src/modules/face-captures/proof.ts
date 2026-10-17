@@ -8,6 +8,12 @@ export interface FaceCaptureProofData {
   purpose: string;
   mimeType: string;
   imageSha256: string;
+  /**
+   * RULE 19.5.3 - a live capture is a sequence. Binding the whole sequence into
+   * the proof stops a client minting a proof for one frame and submitting a
+   * different sequence, and stops the anti-replay frames from being swapped.
+   */
+  frameSha256?: string[];
   liveness: {
     checked: boolean;
     passed: boolean;
@@ -37,6 +43,7 @@ function canonicalPayload(data: FaceCaptureProofData): string {
     purpose: data.purpose,
     mimeType: data.mimeType,
     imageSha256: data.imageSha256,
+    frameSha256: data.frameSha256 ?? [],
     liveness: data.liveness,
     deviceMetadata: data.deviceMetadata,
     location: data.location,

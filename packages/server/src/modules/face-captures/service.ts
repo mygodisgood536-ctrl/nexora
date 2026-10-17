@@ -1,6 +1,7 @@
 import type pg from "pg";
 import { withBypass, withTenant } from "../../db/repo";
 import { AppError } from "../../lib/errors";
+import { verifyCaptureServerSide } from "../../lib/capture-verification";
 import {
   deleteEvidenceObject,
   putImmutableEvidenceObject,
@@ -252,6 +253,8 @@ export interface RecordFaceCaptureInput {
   party: FaceParty;
   purpose: FacePurpose;
   bytes: Buffer;
+  /** Additional frames of the same live capture, used for the anti-replay check. */
+  frames?: Buffer[];
   mimeType: "image/jpeg" | "image/png";
   liveness: FaceCaptureLiveness;
   deviceMetadata?: Record<string, unknown>;
@@ -452,12 +455,28 @@ export async function recordFaceCapture(
   if (input.purpose === "loan_application" && !input.applicationId) {
     throw AppError.unprocessable("loan_application captures require an applicationId");
   }
-  if (!input.liveness?.checked) {
-    throw AppError.unprocessable("A liveness check is required before a capture can be recorded");
-  }
-  if (!input.liveness.provider?.trim()) {
+  if (!input.liveness?.provider?.trim()) {
     throw AppError.unprocessable("liveness provider is required");
   }
+
+  // RULE 9.4.4 / 19.5.2 - the verdict is the server's, computed from the bytes.
+  // The client's own claim is recorded for information but never decides
+  // acceptance, so a caller cannot declare a photograph of a photograph live.
+  const livenessProviderRow = await withBypass(async (bypassDb) =>
+    bypassDb.query<{ liveness_provider: string | null }>(
+      `SELECT liveness_provider FROM company_settings WHERE company_id=$1`,
+      [actor.companyId]
+    )
+  );
+  const serverVerdict = verifyCaptureServerSide(
+    [input.bytes, ...(input.frames ?? [])],
+    {
+      checked: input.liveness.checked,
+      passed: input.liveness.passed,
+      provider: input.liveness.provider
+    },
+    livenessProviderRow.rows[0]?.liveness_provider ?? null
+  );
 
   const target = await withTenant(actor.companyId, actor.branchId, async (db): Promise<CaptureTarget> => {
     const customer = await db.query<{ id: string; branch_id: string }>(
@@ -561,11 +580,23 @@ export async function recordFaceCapture(
       });
       const reuseDetected = reuse !== null;
       const quality = evaluateFaceQuality(
-        input.liveness.checks,
-        input.liveness,
+        // The quality thresholds are the company's, but the measurements are the
+        // server's. Client-reported brightness/clarity/face-detected values are
+        // deliberately not read: RULE 9.4.4 requires the server to check that a
+        // face is actually present and the image is usable.
+        {
+          brightness: serverVerdict.analysis.brightness ?? 0,
+          clarity: serverVerdict.analysis.clarity ?? 0,
+          facePresent: serverVerdict.analysis.decoded !== null && serverVerdict.passed
+        },
+        {
+          checked: serverVerdict.checked,
+          passed: serverVerdict.passed,
+          provider: serverVerdict.provider
+        },
         await resolveFaceQualityThresholds(db, actor.companyId)
       );
-      const accepted = quality.passed && !reuseDetected;
+      const accepted = quality.passed && !reuseDetected && serverVerdict.passed;
       const sequence = await db.query<{ next_sequence: number }>(
         `SELECT COALESCE(MAX(capture_sequence),0)::int + 1 AS next_sequence
            FROM face_captures WHERE customer_id=$1 AND capture_for=$2`,

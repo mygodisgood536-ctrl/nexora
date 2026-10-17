@@ -1,11 +1,11 @@
 import { Router } from "express";
 import { z } from "zod";
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import type { Request, Response, NextFunction } from "express";
 import { AppError } from "../../lib/errors";
 import {  requireCompleteSession, requirePermission  } from "../../middleware/auth";
 import { recordFaceCapture, listFaceCaptures, describeCaptureRejection, getFaceQualitySettings, updateFaceQualitySettings } from "../face-captures/service";
-import { verifyFaceCaptureProof } from "../face-captures/proof";
+import { signFaceCaptureProof, verifyFaceCaptureProof } from "../face-captures/proof";
 import {
   createCustomer,
   getCustomer,
@@ -137,7 +137,11 @@ const faceCaptureSchema = z.object({
   applicationId: z.string().regex(UUID_RE, "applicationId must be a UUID").nullable().optional(),
   party: z.enum(["customer", "guarantor"]),
   purpose: z.enum(["registration", "loan_application"]),
-  imageBase64: z.string().min(1).max(7_000_000),
+imageBase64: z.string().min(1).max(7_000_000),
+  // RULE 19.5.3 - live capture is not limited to one image, and the server needs
+  // the sequence in order to confirm the capture actually changed over time.
+  // A single replayed still image cannot satisfy this.
+  framesBase64: z.array(z.string().min(1).max(7_000_000)).max(4).optional(),
   mimeType: z.enum(["image/jpeg", "image/png"]),
   liveness: z.object({
     checked: z.boolean(),
@@ -177,6 +181,59 @@ customersRouter.get(
   })
 );
 
+/**
+ * RULE 9.4.1 / 13 - a live capture is taken from the device camera inside the
+ * application. The server mints the capture proof that binds the declared
+ * content (customer, party, purpose, MIME, image hash, device, location) so the
+ * subsequent submission can prove it is the capture the system expected. The
+ * proof is short-lived and single-purpose; it cannot be minted for one image and
+ * presented with another, because the image hash is inside the signature.
+ */
+const faceCaptureProofSchema = z.object({
+  applicationId: z.string().regex(UUID_RE, "applicationId must be a UUID").nullable().optional(),
+  party: z.enum(["customer", "guarantor"]),
+  purpose: z.enum(["registration", "loan_application"]),
+  mimeType: z.enum(["image/jpeg", "image/png"]),
+  imageSha256: z.string().regex(/^[0-9a-f]{64}$/i, "imageSha256 must be a SHA-256 hex digest"),
+  framesSha256: z.array(z.string().regex(/^[0-9a-f]{64}$/i)).max(4).optional(),
+  liveness: z.object({
+    checked: z.boolean(),
+    passed: z.boolean(),
+    provider: z.string().min(1).max(120),
+    checks: z.record(z.unknown()).optional()
+  }),
+  deviceMetadata: z.record(z.unknown()).optional(),
+  location: z.record(z.unknown()).optional()
+});
+
+customersRouter.post(
+  "/:id/face-capture-proof",
+  requireCompleteSession,
+  requirePermission("create"),
+  wrap(async (req, res) => {
+    const id = String(req.params.id);
+    if (!UUID_RE.test(id)) throw AppError.badRequest("Invalid customer id");
+    const parsed = faceCaptureProofSchema.safeParse(req.body ?? {});
+    if (!parsed.success) throw AppError.unprocessable("Validation failed");
+    const body = parsed.data;
+    const data = {
+      customerId: id,
+      applicationId: body.applicationId ?? null,
+      party: body.party,
+      purpose: body.purpose,
+      mimeType: body.mimeType,
+      imageSha256: body.imageSha256,
+      frameSha256: body.framesSha256 ?? [],
+      liveness: body.liveness,
+      deviceMetadata: body.deviceMetadata ?? {},
+      location: body.location ?? {}
+    };
+    const jti = randomUUID();
+    const issuedAt = Date.now();
+    res.json({ jti, issuedAt, signature: signFaceCaptureProof({ ...data, jti, issuedAt }) });
+  })
+);
+
 customersRouter.post(
   "/:id/face-captures",
   requireCompleteSession,
@@ -184,12 +241,18 @@ customersRouter.post(
   wrap(async (req, res) => {
     const id = String(req.params.id);
     if (!UUID_RE.test(id)) throw AppError.badRequest("Invalid customer id");
-    const parsed = faceCaptureSchema.safeParse(req.body ?? {});
+const parsed = faceCaptureSchema.safeParse(req.body ?? {});
     if (!parsed.success) throw AppError.unprocessable("Validation failed");
     const body = parsed.data;
     const applicationId = body.applicationId ?? null;
     const imageBytes = Buffer.from(body.imageBase64, "base64");
     const imageSha256 = createHash("sha256").update(imageBytes).digest("hex");
+    // RULE 9.4.4 / 19.5.2 - the server decides whether this is a live, usable
+    // face capture. `body.liveness` is retained only as an informational
+    // record; it no longer influences acceptance. The additional frames are
+    // required so the server can measure that the capture actually changed
+    // between frames, which a replayed still photograph cannot do.
+    const extraFrames = (body.framesBase64 ?? []).map((f) => Buffer.from(f, "base64"));
     const liveness = {
       checked: body.liveness.checked,
       passed: body.liveness.passed,
@@ -203,6 +266,7 @@ customersRouter.post(
       purpose: body.purpose,
       mimeType: body.mimeType,
       imageSha256,
+      frameSha256: extraFrames.map((f) => createHash("sha256").update(f).digest("hex")),
       liveness,
       deviceMetadata: body.deviceMetadata ?? {},
       location: body.location ?? {}
@@ -216,6 +280,7 @@ customersRouter.post(
       party: body.party,
       purpose: body.purpose,
       bytes: imageBytes,
+      frames: extraFrames,
       mimeType: body.mimeType,
       liveness,
       deviceMetadata: body.deviceMetadata,
