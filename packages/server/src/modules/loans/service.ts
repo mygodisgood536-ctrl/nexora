@@ -23,6 +23,7 @@ import { fullName, initialPasswordFor } from "../../lib/credential";
 import { assertBranchAcceptsNewWork } from "../branches/service";
 import { requireVerifiedFaceCapture } from "../face-captures/service";
 import { listLoanApplicationEvidence, requireVerifiedLoanEvidence } from "../loan-evidence/service";
+import { approvedCoverFor } from "./stage-reassignment";
 
 const BCRYPT_ROUNDS = 10;
 
@@ -1890,7 +1891,8 @@ export async function submitApplication(
       actor.companyId,
       app.branch_id,
       app.chain_id,
-      firstStage.rows[0]!.stage_order
+      firstStage.rows[0]!.stage_order,
+      app.id
     );
     if (resolved === null) {
       throw AppError.conflict(
@@ -2133,7 +2135,8 @@ async function resolveAvailableStage(
   companyId: string,
   branchId: string,
   chainId: string,
-  currentStage: number | null
+  currentStage: number | null,
+  applicationId?: string
 ): Promise<number | null> {
   let stageOrder = currentStage;
   while (stageOrder !== null) {
@@ -2165,6 +2168,38 @@ async function resolveAvailableStage(
     );
     if ((available.rowCount ?? 0) > 0) return stageOrder;
     if (step.rows[0]!.mandatory) {
+      // RULE 19.12.3 - a mandatory stage is never bypassed because its
+      // assignee is unavailable. It IS resolved by an authorised assignee or by
+      // "an explicit company-authorised reassignment path". This is that path:
+      // an approved, unrevoked cover for this exact application and stage is an
+      // authorised assignee, so the stage proceeds. Without one the loan still
+      // stops - a requested or rejected reassignment resolves nothing.
+      if (applicationId !== undefined) {
+        const cover = await approvedCoverFor(db, applicationId, stageOrder);
+        if (cover !== null) {
+          const coverOk = await db.query(
+            `SELECT 1
+               FROM role_assignments ra
+               JOIN users u ON u.id=ra.user_id AND u.company_id=ra.company_id AND u.status='active'
+              WHERE ra.user_id=$1
+                AND ra.company_id=$2
+                AND ra.role_id=$3
+                AND ra.status='active'
+                AND (ra.assignment_type='permanent'
+                     OR (ra.starts_at<=now() AND (ra.ends_at IS NULL OR ra.ends_at>now())))
+                AND (
+                  ra.scope_type IN ('company_wide','head_office')
+                  OR EXISTS (
+                    SELECT 1 FROM role_assignment_branches rab
+                     WHERE rab.assignment_id=ra.id AND rab.branch_id=$4
+                  )
+                )
+              LIMIT 1`,
+            [cover, companyId, roleId, branchId]
+          );
+          if ((coverOk.rowCount ?? 0) > 0) return stageOrder;
+        }
+      }
       throw AppError.conflict(
         `Mandatory approval stage ${stageOrder} has no available authorised assignee`
       );
@@ -2371,7 +2406,8 @@ export async function decideApplication(
       actor.companyId,
       prev.branch_id,
       prev.chain_id,
-      currentStage
+      currentStage,
+      prev.id
     );
     if (resolvedStage === null) {
       throw AppError.conflict("No available approval stage remains for this application");

@@ -11,6 +11,12 @@ import {
   requestLoanRestructuring,
   requestLoanWriteOff
 } from "./adjustments";
+import {
+  decideStageReassignment,
+  listStageReassignments,
+  requestStageReassignment,
+  revokeStageReassignment
+} from "./stage-reassignment";
 import {  requireCompleteSession, requirePermission  } from "../../middleware/auth";
 import {
   createApplication,
@@ -67,6 +73,7 @@ export const approvalChainsRouter = Router();
 export const loanApplicationsRouter = Router();
 export const loanDisbursementsRouter = Router();
 export const adjustmentsRouter = Router();
+export const stageReassignmentsRouter = Router();
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -975,5 +982,96 @@ const restructuringSchema = z.object({
 
 const adjustmentDecisionSchema = z.object({
   decision: z.enum(["approve", "reject"]),
+  reason: z.string().min(5).max(2000)
+});
+
+// ---- Company-authorised approval stage reassignment (RULE 19.12.3) -------
+//
+// A mandatory approval stage with no available assignee must not freeze a
+// customer's disbursement forever, and it must never simply be skipped. These
+// endpoints are the explicit path the Vision names: request with a reason,
+// approve by a company-authorised role, revoke when the cover ends.
+
+loanApplicationsRouter.post(
+  "/:id/stage-reassignments",
+  requireCompleteSession,
+  requirePermission("approve"),
+  wrap(async (req, res) => {
+    const id = String(req.params.id);
+    if (!UUID_RE.test(id)) throw AppError.badRequest("Invalid application id");
+    const parsed = stageReassignmentSchema.safeParse(req.body ?? {});
+    if (!parsed.success) throw AppError.unprocessable("Validation failed");
+    res.status(201).json(
+      await requestStageReassignment(
+        actor(req),
+        {
+          applicationId: id,
+          stageOrder: parsed.data.stageOrder,
+          toUserId: parsed.data.toUserId,
+          reason: parsed.data.reason
+        },
+        metaFrom(req)
+      )
+    );
+  })
+);
+
+loanApplicationsRouter.get(
+  "/:id/stage-reassignments",
+  requireCompleteSession,
+  requirePermission("view"),
+  wrap(async (req, res) => {
+    const id = String(req.params.id);
+    if (!UUID_RE.test(id)) throw AppError.badRequest("Invalid application id");
+    res.json(await listStageReassignments(actor(req), id));
+  })
+);
+
+stageReassignmentsRouter.post(
+  "/:id/decision",
+  requireCompleteSession,
+  requirePermission("approve"),
+  wrap(async (req, res) => {
+    const id = String(req.params.id);
+    if (!UUID_RE.test(id)) throw AppError.badRequest("Invalid reassignment id");
+    const parsed = reassignmentDecisionSchema.safeParse(req.body ?? {});
+    if (!parsed.success) throw AppError.unprocessable("Validation failed");
+    res.json(
+      await decideStageReassignment(
+        actor(req),
+        id,
+        parsed.data.decision === "approve",
+        parsed.data.reason,
+        metaFrom(req)
+      )
+    );
+  })
+);
+
+stageReassignmentsRouter.post(
+  "/:id/revoke",
+  requireCompleteSession,
+  requirePermission("approve"),
+  wrap(async (req, res) => {
+    const id = String(req.params.id);
+    if (!UUID_RE.test(id)) throw AppError.badRequest("Invalid reassignment id");
+    const parsed = reassignmentRevokeSchema.safeParse(req.body ?? {});
+    if (!parsed.success) throw AppError.unprocessable("Validation failed");
+    res.json(await revokeStageReassignment(actor(req), id, parsed.data.reason, metaFrom(req)));
+  })
+);
+
+const stageReassignmentSchema = z.object({
+  stageOrder: z.number().int().positive(),
+  toUserId: z.string().regex(UUID_RE, "Invalid user id"),
+  reason: z.string().min(5).max(2000)
+});
+
+const reassignmentDecisionSchema = z.object({
+  decision: z.enum(["approve", "reject"]),
+  reason: z.string().min(5).max(2000)
+});
+
+const reassignmentRevokeSchema = z.object({
   reason: z.string().min(5).max(2000)
 });

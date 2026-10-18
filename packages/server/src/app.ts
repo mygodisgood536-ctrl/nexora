@@ -25,6 +25,7 @@ import {
   loanApplicationsRouter,
   loanDisbursementsRouter,
   adjustmentsRouter,
+  stageReassignmentsRouter,
 } from "./modules/loans/routes";
 import {
   paymentsRouter,
@@ -204,6 +205,7 @@ export function createApp(): express.Express {
   api.use("/approval-chains", approvalChainsRouter); // approval chains (Stage 7C, Part 1 Â§23)
   api.use("/loan-applications", loanApplicationsRouter); // loan applications (Stage 7C, Part 1 Â§23)
   api.use("/loan-disbursements", loanDisbursementsRouter); // disbursement trigger (Stage 7C, Part 1 Â§22-23)
+  api.use("/approval-stage-reassignments", stageReassignmentsRouter); // RULE 19.12.3 mandatory-stage cover
   api.use("/loan-adjustments", adjustmentsRouter); // RULE 10.6.3 write-off / restructuring decisions
   api.use("/payment-providers", paymentProvidersRouter); // per-company payment provider config (Stage 7D, Part 1 Â§21)
   api.use("/payments", paymentsRouter); // payment pipeline queries (Stage 7D, Part 1 Â§21)

@@ -357,6 +357,41 @@ check(
   "a failed poll must not permanently skip the transactions inside its window"
 );
 
+/* ------------------------------------------------------------------
+ * 7. Mandatory approval stages (RULE 19.12.3).
+ *
+ * "If an Auditor or other final pre-disbursement approval stage is configured
+ * as mandatory, that stage must be resolved by an authorised assignee or an
+ * explicit company-authorised reassignment path before disbursement can
+ * proceed."
+ *
+ * A blocked mandatory stage must still STOP the loan. The reassignment path may
+ * supply a human for that stage; it must never become a silent skip.
+ * ------------------------------------------------------------------ */
+const reassignmentSource =
+  SRC.find((s) => s.rel.endsWith("modules/loans/stage-reassignment.ts"))?.text ?? "";
+const loansSource = SRC.find((s) => s.rel.endsWith("modules/loans/service.ts"))?.text ?? "";
+check(
+  "a blocked mandatory approval stage still blocks disbursement",
+  /has no available authorised assignee/.test(loansSource),
+  "a mandatory stage must never be bypassed merely because its assignee is unavailable"
+);
+check(
+  "an explicit company-authorised reassignment path exists for blocked stages",
+  /approvedCoverFor/.test(loansSource) && /requestStageReassignment/.test(reassignmentSource),
+  "RULE 19.12.3 requires a reassignment path, not a dead end"
+);
+check(
+  "a cover approver must hold the stage's own role",
+  /assertCoverHoldsRole/.test(reassignmentSource),
+  "a reassignment to someone without the role would let an unauthorised person approve"
+);
+check(
+  "only approved reassignments resolve a stage",
+  /status\s*=\s*'approved'/.test(reassignmentSource),
+  "a requested or rejected reassignment must resolve nothing"
+);
+
 console.log(
   failures === 0
     ? "\nALL SECURITY INVARIANTS HELD"
