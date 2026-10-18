@@ -336,3 +336,46 @@ async function insertWorld(db: pg.Client): Promise<TestWorld> {
     return { companyA, companyB, branchA1, branchA2, branchB1, userA, userB, userAMD, userAuditor, userFinance, userHr, customerA1, customerA2, customerB1, vaA1, loanA1 };
 }
 
+
+/**
+ * Resolves the system-generated webhook endpoint for a company's provider, the
+ * way a real provider integration would be pointed at it (RULE 8.5.1).
+ *
+ * Tests used to post to /api/v1/webhooks/payments/{provider} and name the tenant
+ * with an X-Nexora-Company header. That is the caller-selectable-tenant shape
+ * RULE 8.6.1-1 prohibits, and it no longer exists: only the generated endpoint
+ * is accepted. Tests must therefore look the endpoint up rather than invent one,
+ * which is also what proves the endpoint actually resolves.
+ */
+export async function webhookEndpointFor(
+  companySlug: string,
+  provider: string
+): Promise<string> {
+  const key = `${companySlug}::${provider}`;
+  const cached = endpointPathCache.get(key);
+  if (cached !== undefined) return cached;
+
+  const path = await withAdminValue(async (client) => {
+    const r = await client.query<{ webhook_endpoint_path: string | null }>(
+      `SELECT p.webhook_endpoint_path
+         FROM payment_provider_configs p
+         JOIN companies c ON c.id = p.company_id
+        WHERE c.slug = $1 AND p.provider = $2
+        ORDER BY p.created_at ASC
+        LIMIT 1`,
+      [companySlug, provider]
+    );
+    const found = r.rows[0]?.webhook_endpoint_path;
+    if (!found) {
+      throw new Error(
+        `No webhook endpoint is minted for provider '${provider}' in company '${companySlug}'. ` +
+          `Every provider configuration must have one (migration 0090).`
+      );
+    }
+    return found;
+  });
+  endpointPathCache.set(key, path);
+  return path;
+}
+
+const endpointPathCache = new Map<string, string>();

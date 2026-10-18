@@ -1,11 +1,11 @@
-import { describe, it, expect } from "vitest";
+﻿import { describe, it, expect } from "vitest";
 import request from "supertest";
 import type { Express } from "express";
 import type { Response } from "supertest";
 import bcrypt from "bcryptjs";
 import { createHash, randomUUID } from "node:crypto";
 import { readFile, writeFile, rm } from "node:fs/promises";
-import { seedWorld, withAdmin, withAdminValue, type TestWorld } from "./fixtures";
+import { seedWorld, webhookEndpointFor, withAdmin, withAdminValue, type TestWorld } from "./fixtures";
 import { staffLogin, initPlatformOwner, poLogin, completeProfile, attachVerifiedFaceEvidence, attachVerifiedBankDetails, attachApplicationTerms, randomPrefix } from "./platform-helpers";
 import { totpNow } from "../src/lib/totp";
 
@@ -17,8 +17,8 @@ const SEED_HASH = bcrypt.hashSync("TestPassword!123", 8);
  * drives the real Express app and then asserts the PERSISTED database state,
  * not merely the HTTP response.
  */
-describe("v3.9 — seven fixes, executed and verified in the database", () => {
-  // FIX 1 — RULE 10.4.2: disbursement generates the ledger atomically.
+describe("v3.9 â€” seven fixes, executed and verified in the database", () => {
+  // FIX 1 â€” RULE 10.4.2: disbursement generates the ledger atomically.
   it("FIX1 disbursement persists a balanced, linked ledger entry", async () => {
     const app: Express = (await import("../src/app")).createApp();
     const w: TestWorld = await seedWorld();
@@ -114,7 +114,7 @@ describe("v3.9 — seven fixes, executed and verified in the database", () => {
     });
   });
 
-  // FIX 3 — RULE 3.3.1/3.4.1/3.4.3: company creation provisions the MD.
+  // FIX 3 â€” RULE 3.3.1/3.4.1/3.4.3: company creation provisions the MD.
   it("FIX3 company creation persists the MD, role, assignment and credential panel", async () => {
     const app: Express = (await import("../src/app")).createApp();
     await seedWorld();
@@ -191,7 +191,7 @@ describe("v3.9 — seven fixes, executed and verified in the database", () => {
     expect(again.status).toBe(409);
   });
 
-  // FIX 4 — RULE 6.2.1: a newly created role carries its platform bundle, so
+  // FIX 4 â€” RULE 6.2.1: a newly created role carries its platform bundle, so
   // requirePermission actually authorises the intended built-in role.
   it("FIX4 a new built-in role is authorised by its default bundle", async () => {
     const app: Express = (await import("../src/app")).createApp();
@@ -256,7 +256,7 @@ describe("v3.9 — seven fixes, executed and verified in the database", () => {
     expect(view.status).toBe(200);
   });
 
-  // FIX 6 — RULE 5.9.1: worker edit persists and the username follows the name.
+  // FIX 6 â€” RULE 5.9.1: worker edit persists and the username follows the name.
   it("FIX6 worker edit persists fields, username and the audit record", async () => {
     const app: Express = (await import("../src/app")).createApp();
     const w: TestWorld = await seedWorld();
@@ -321,7 +321,7 @@ describe("v3.9 — seven fixes, executed and verified in the database", () => {
     expect(relog.body.accessToken).toBeTruthy();
   });
 
-  // FIX 2 — RULE 5.2.4 / Test 18: portal username is the full name and the
+  // FIX 2 â€” RULE 5.2.4 / Test 18: portal username is the full name and the
   // initial password is @FirstName; a collision is refused; login fails closed.
   it("FIX2 portal credentials follow 5.2.4 and collision/login fail closed", async () => {
     const app: Express = (await import("../src/app")).createApp();
@@ -425,7 +425,7 @@ describe("v3.9 — seven fixes, executed and verified in the database", () => {
     });
   });
 
-  // FIX 5 — RULE 5.6.3 / 11.4.3: request -> approve -> linked reversal, with
+  // FIX 5 â€” RULE 5.6.3 / 11.4.3: request -> approve -> linked reversal, with
   // approval authority enforced and a complete audit trail.
   it("FIX5 correction request/approval posts a linked reversal with audit", async () => {
     const app: Express = (await import("../src/app")).createApp();
@@ -473,8 +473,7 @@ describe("v3.9 — seven fixes, executed and verified in the database", () => {
     const ts = String(Math.floor(Date.now() / 1000));
     const sig = crypto.createHmac("sha256", secret).update(`${ts}.${body}`).digest("hex");
     const wh = await request(app)
-      .post("/api/v1/webhooks/payments/sandbox")
-      .set("X-Nexora-Company", "alpha-test")
+      .post(await webhookEndpointFor("alpha-test", "sandbox"))
       .set("X-Nexora-Timestamp", ts)
       .set("X-Nexora-Signature", sig)
       .set("Content-Type", "application/json")
@@ -550,7 +549,7 @@ describe("v3.9 — seven fixes, executed and verified in the database", () => {
     expect(again.status).toBe(409);
   });
 
-  // FIX 7 — RULE 7.9.1/7.9.2/7.9.3/7.9.4: four states, suspension blocks
+  // FIX 7 â€” RULE 7.9.1/7.9.2/7.9.3/7.9.4: four states, suspension blocks
   // branch-worker logins, closing blocks new work, MD is notified.
   it("FIX7 branch lifecycle persists states, blocks logins/new work, notifies MD", async () => {
     const app: Express = (await import("../src/app")).createApp();
@@ -592,7 +591,7 @@ describe("v3.9 — seven fixes, executed and verified in the database", () => {
     // The host may not resolve in tests; what matters is the branch state gate,
     // which is asserted directly below.
 
-    // RULE 7.9.2 — suspension blocks the branch worker's login.
+    // RULE 7.9.2 â€” suspension blocks the branch worker's login.
     const susp = await request(app)
       .post(`/api/v1/branches/${branchId}/status`)
       .set("Authorization", `Bearer ${md}`)
@@ -605,7 +604,7 @@ describe("v3.9 — seven fixes, executed and verified in the database", () => {
       const b = await db.query<{ status: string }>(`SELECT status FROM branches WHERE id=$1`, [branchId]);
       expect(b.rows[0]!.status).toBe("suspended");
 
-      // RULE 7.9.4 — the state change is audited and the MD notified.
+      // RULE 7.9.4 â€” the state change is audited and the MD notified.
       const a = await db.query<{ n: string }>(
         `SELECT count(*)::text n FROM audit_logs
           WHERE entity_type='branches' AND entity_id=$1 AND action='suspend'`, [branchId]
@@ -626,7 +625,7 @@ describe("v3.9 — seven fixes, executed and verified in the database", () => {
     expect(react.status).toBe(200);
     expect(react.body.status).toBe("active");
 
-    // RULE 7.9.3 — closing blocks new customers, loans and workers; records stay.
+    // RULE 7.9.3 â€” closing blocks new customers, loans and workers; records stay.
     const close = await request(app)
       .post(`/api/v1/branches/${branchId}/status`)
       .set("Authorization", `Bearer ${md}`)
@@ -661,7 +660,7 @@ describe("v3.9 — seven fixes, executed and verified in the database", () => {
     void okLogin;
   });
 
-  // AUDIT FIX — RULE 7.2.2 / prohibition #16: branch-world roles must never
+  // AUDIT FIX â€” RULE 7.2.2 / prohibition #16: branch-world roles must never
   // enter the password-free Branch Workplace.
   it("AUDIT branch-world roles are refused the Branch Workplace", async () => {
     const app: Express = (await import("../src/app")).createApp();
@@ -682,7 +681,7 @@ describe("v3.9 — seven fixes, executed and verified in the database", () => {
     expect(ok.status).toBe(200);
   });
 
-  // AUDIT FIX — RULE 3.3.3 / 14.4.3: a suspended or in-setup company admits
+  // AUDIT FIX â€” RULE 3.3.3 / 14.4.3: a suspended or in-setup company admits
   // no login at all.
   it("AUDIT a non-active company refuses every login", async () => {
     const app: Express = (await import("../src/app")).createApp();
@@ -730,7 +729,7 @@ describe("v3.9 — seven fixes, executed and verified in the database", () => {
     expect(refused.status).toBe(403);
   });
 
-  // AUDIT FIX — RULE 4.5.1 / 6.1.1: the role's world and the scope must agree.
+  // AUDIT FIX â€” RULE 4.5.1 / 6.1.1: the role's world and the scope must agree.
   it("AUDIT role world and assignment scope must agree", async () => {
     const app: Express = (await import("../src/app")).createApp();
     const w: TestWorld = await seedWorld();
@@ -779,7 +778,7 @@ describe("v3.9 — seven fixes, executed and verified in the database", () => {
     expect(branch.status).toBe(201);
   });
 
-  // AUDIT FIX — RULE 10.3.4: a rejection returned to the applicant is not a
+  // AUDIT FIX â€” RULE 10.3.4: a rejection returned to the applicant is not a
   // dead end; the application can be resubmitted into the first stage.
   it("AUDIT a returned application can be resubmitted (RULE 10.3.4)", async () => {
     const app: Express = (await import("../src/app")).createApp();
@@ -850,7 +849,7 @@ describe("v3.9 — seven fixes, executed and verified in the database", () => {
     });
   });
 
-  // AUDIT FIX — RULE 11.6.1: the Income Statement and Financial Position are
+  // AUDIT FIX â€” RULE 11.6.1: the Income Statement and Financial Position are
   // derived from the posted journal, and interest is recognised as income.
   it("AUDIT income statement and financial position derive from the journal", async () => {
     const app: Express = (await import("../src/app")).createApp();
@@ -933,8 +932,7 @@ describe("v3.9 — seven fixes, executed and verified in the database", () => {
     const ts = String(Math.floor(Date.now() / 1000));
     const sig = crypto.createHmac("sha256", "income-secret-123456").update(`${ts}.${body}`).digest("hex");
     const wh = await request(app)
-      .post("/api/v1/webhooks/payments/sandbox")
-      .set("X-Nexora-Company", "alpha-test")
+      .post(await webhookEndpointFor("alpha-test", "sandbox"))
       .set("X-Nexora-Timestamp", ts)
       .set("X-Nexora-Signature", sig)
       .set("Content-Type", "application/json")
@@ -988,7 +986,7 @@ describe("v3.9 — seven fixes, executed and verified in the database", () => {
       .toBeCloseTo(Number(position.body.totalLiabilities) + Number(position.body.totalEquity), 2);
   });
 
-  // AUDIT FIX — RULE 11.3.1: a Collection Officer has no branch or worker
+  // AUDIT FIX â€” RULE 11.3.1: a Collection Officer has no branch or worker
   // performance view, and may only read his own figures.
   it("AUDIT visibility matrix: a C.O. has no branch or worker performance view", async () => {
     const app: Express = (await import("../src/app")).createApp();
@@ -1051,7 +1049,7 @@ describe("v3.9 — seven fixes, executed and verified in the database", () => {
     expect(mdStaff.status).toBe(200);
   });
 
-  // AUDIT FIX — RULE 14.4.3 / 5.8.2: a portfolio hold kills the ALREADY-ISSUED
+  // AUDIT FIX â€” RULE 14.4.3 / 5.8.2: a portfolio hold kills the ALREADY-ISSUED
   // ACCESS token on the very next request, not merely the refresh token.
   it("AUDIT a hold invalidates the live access token immediately", async () => {
     const app: Express = (await import("../src/app")).createApp();
@@ -1106,7 +1104,7 @@ describe("v3.9 — seven fixes, executed and verified in the database", () => {
     });
   });
 
-  // AUDIT FIX — Part 1 Section 23: the Document Collection and Credit
+  // AUDIT FIX â€” Part 1 Section 23: the Document Collection and Credit
   // Assessment services existed but were never mounted, so the stage could
   // not be performed. These must work over real HTTP and persist.
   it("AUDIT the document + credit assessment API is reachable and persists", async () => {
@@ -1198,7 +1196,7 @@ describe("v3.9 — seven fixes, executed and verified in the database", () => {
     });
   });
 
-  // RULE 4.7.1 — the MD must actually RECEIVE the notifications the rule
+  // RULE 4.7.1 â€” the MD must actually RECEIVE the notifications the rule
   // requires, addressed to a real MD user, in the database.
   it("AUDIT RULE 4.7.1 MD notifications reach a real MD recipient", async () => {
     const app: Express = (await import("../src/app")).createApp();
@@ -1242,8 +1240,7 @@ describe("v3.9 — seven fixes, executed and verified in the database", () => {
       );
     });
     const bad = await request(app)
-      .post("/api/v1/webhooks/payments/sandbox")
-      .set("X-Nexora-Company", "alpha-test")
+      .post(await webhookEndpointFor("alpha-test", "sandbox"))
       .set("X-Nexora-Timestamp", String(Math.floor(Date.now() / 1000)))
       .set("X-Nexora-Signature", "deadbeefdeadbeefdeadbeefdeadbeef")
       .set("Content-Type", "application/json")
@@ -1279,7 +1276,7 @@ describe("v3.9 — seven fixes, executed and verified in the database", () => {
     });
   });
 
-  // RULE 7.8 / 7.6 — the Branch Workplace is a real period view, and a
+  // RULE 7.8 / 7.6 â€” the Branch Workplace is a real period view, and a
   // worker's full book is reachable.
   it("AUDIT branch workplace honours its period and exposes the worker book", async () => {
     const app: Express = (await import("../src/app")).createApp();
@@ -1303,7 +1300,7 @@ describe("v3.9 — seven fixes, executed and verified in the database", () => {
     expect(workers.status).toBe(200);
     expect(Array.isArray(workers.body.workers)).toBe(true);
 
-    // RULE 7.6 — a worker's full book.
+    // RULE 7.6 â€” a worker's full book.
     const coId = await withAdminValue(async (db) =>
       (await db.query(
         `SELECT u.id FROM users u WHERE u.company_id=$1 AND u.username='alice' LIMIT 1`,
@@ -1360,7 +1357,7 @@ describe("v3.9 — seven fixes, executed and verified in the database", () => {
       );
       stored = r.rows[0]?.value ?? null;
     });
-    // Stored as JSON, so the persisted value is the object that was sent —
+    // Stored as JSON, so the persisted value is the object that was sent â€”
     // not undefined, which is what the dead control used to write.
     expect(stored).not.toBeNull();
     expect(Number(JSON.parse(stored!).session_timeout_minutes)).toBe(30);
@@ -2215,7 +2212,7 @@ describe("v3.9 — seven fixes, executed and verified in the database", () => {
       )).rows[0].id as string
     );
 
-    // RULE 19.4.1 — the required application information is captured and saved.
+    // RULE 19.4.1 â€” the required application information is captured and saved.
     const product = await withAdminValue(async (db) =>
       (await db.query(`SELECT id FROM loan_products WHERE company_id=$1 LIMIT 1`, [w.companyA])).rows[0].id as string
     );
@@ -2324,7 +2321,7 @@ describe("v3.9 — seven fixes, executed and verified in the database", () => {
         [firstApplication.body.id]);
     });
 
-    // RULE 19.14.2 — a returning customer gets a new cycle, never a new customer.
+    // RULE 19.14.2 â€” a returning customer gets a new cycle, never a new customer.
     const secondApplication = await request(app)
       .post("/api/v1/loan-applications")
       .set("Authorization", `Bearer ${token}`)
@@ -2436,7 +2433,7 @@ describe("v3.9 — seven fixes, executed and verified in the database", () => {
     expect(stagePartyInformation.body.guarantor.occupation).toBe("Farmer");
     expect(stagePartyInformation.body.guarantor.guarantor_id).toBeTruthy();
 
-    // RULE 19.11.1 / 19.12.7 / 19.14.3 — the preview is the complete package.
+    // RULE 19.11.1 / 19.12.7 / 19.14.3 â€” the preview is the complete package.
     const preview = await request(app)
       .get(`/api/v1/loan-applications/${secondApplication.body.id}/preview`)
       .set("Authorization", `Bearer ${token}`);
@@ -2455,7 +2452,7 @@ describe("v3.9 — seven fixes, executed and verified in the database", () => {
     expect(preview.body.evidence.length).toBeGreaterThan(0);
     expect(preview.body.readyForSubmission).toBe(true);
 
-    // RULE 19.12.8 — Return for Information is its own auditable state.
+    // RULE 19.12.8 â€” Return for Information is its own auditable state.
     const approverRoleId = await withAdminValue(async (db) =>
       (await db.query(
         `SELECT ra.role_id FROM role_assignments ra
@@ -2523,7 +2520,7 @@ describe("v3.9 — seven fixes, executed and verified in the database", () => {
     expect(information.body.rejection_reason).toBeNull();
     expect(information.body.current_stage_order).toBe(1);
 
-    // RULE 19.12.5 — the approval workspace reports action-required counts and
+    // RULE 19.12.5 â€” the approval workspace reports action-required counts and
     // the item stays pending until a real workflow action changes it.
     const queue = await request(app)
       .get("/api/v1/loan-applications/approvals/mine")
@@ -2800,7 +2797,7 @@ describe("v3.9 — seven fixes, executed and verified in the database", () => {
     expect(Array.isArray(reconcile.body.exceptions)).toBe(true);
 
     // A payment marked posted whose allocations do not equal the verified
-    // amount is an explicit exception — never silently balanced.
+    // amount is an explicit exception â€” never silently balanced.
     const tamperedPaymentId = await withAdminValue(async (db) => {
       const created = await db.query<{ id: string }>(
         `INSERT INTO payments (company_id, branch_id, customer_id, provider, provider_txn_ref,
@@ -2958,7 +2955,7 @@ describe("v3.9 — seven fixes, executed and verified in the database", () => {
     expect(loanTypes.has("branch")).toBe(true);
     expect(fromLoan.body.complete).toBe(true);
 
-    // The same chain is reachable from the customer end — both directions.
+    // The same chain is reachable from the customer end â€” both directions.
     const fromCustomer = await request(app)
       .get(`/api/v1/traceability/chain?type=customer&id=${traceCustomerId}`)
       .set("Authorization", `Bearer ${token}`);

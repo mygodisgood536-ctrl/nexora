@@ -1,4 +1,4 @@
-// Stage 7D — Payment pipeline + webhooks HTTP routes (Part 1 §21).
+﻿// Stage 7D â€” Payment pipeline + webhooks HTTP routes (Part 1 Â§21).
 import { Router, raw } from "express";
 import { z } from "zod";
 import crypto from "node:crypto";
@@ -103,7 +103,7 @@ paymentProvidersRouter.get(
   })
 );
 
-// Vision Part 8 — the data-driven provider registry read surface: which
+// Vision Part 8 â€” the data-driven provider registry read surface: which
 // providers the platform ships with and what Nexora knows about each
 // (name, transport, VA naming, webhook expectations, capability flags).
 paymentProvidersRouter.get(
@@ -115,7 +115,7 @@ paymentProvidersRouter.get(
   })
 );
 
-// Vision Part 8 — the MD's Approvals group: provider changes awaiting
+// Vision Part 8 â€” the MD's Approvals group: provider changes awaiting
 // authorisation (registered before /:id-style routes).
 paymentProvidersRouter.get(
   "/approvals",
@@ -126,7 +126,7 @@ paymentProvidersRouter.get(
   })
 );
 
-// Vision Part 8 — real connection test; activation requires it to pass.
+// Vision Part 8 â€” real connection test; activation requires it to pass.
 paymentProvidersRouter.post(
   "/:id/test",
   requireCompleteSession,
@@ -138,7 +138,7 @@ paymentProvidersRouter.post(
   })
 );
 
-// Vision Part 8 — the MD authorises a provider change made by a non-MD user.
+// Vision Part 8 â€” the MD authorises a provider change made by a non-MD user.
 paymentProvidersRouter.post(
   "/:id/approve",
   requireCompleteSession,
@@ -251,7 +251,7 @@ paymentsRouter.get(
   })
 );
 
-// VERSION 3.2 — the C.O. Payment Allocation Queue: verified payments
+// VERSION 3.2 â€” the C.O. Payment Allocation Queue: verified payments
 // awaiting manual allocation. Registered before the /:id route.
 paymentsRouter.get(
   "/pending",
@@ -264,7 +264,7 @@ paymentsRouter.get(
   })
 );
 
-// RULE 10.5.3B — opening a pending payment shows the locked verified amount,
+// RULE 10.5.3B â€” opening a pending payment shows the locked verified amount,
 // the allocation inputs, the running total, what remains, and the financial
 // context. It is a read model: opening it never changes the payment.
 paymentsRouter.get(
@@ -285,7 +285,7 @@ const allocateVerifiedSchema = z.object({
   note: z.string().max(500).optional().default("")
 });
 
-// VERSION 3.2 — the C.O. manually allocates an already-verified payment.
+// VERSION 3.2 â€” the C.O. manually allocates an already-verified payment.
 // The verified amount is immutable; the submission must satisfy
 // Loan Repayment + Savings = Verified Payment exactly. There is no
 // endpoint anywhere that lets any human create or alter a payment.
@@ -414,7 +414,7 @@ const reconciliationActionSchema = z.object({
   note: z.string().max(500).nullable().optional(),
 });
 
-// VISION V3.2 — Finance / MD group resolves an open exception (Part 2 §39).
+// VISION V3.2 â€” Finance / MD group resolves an open exception (Part 2 Â§39).
 reconciliationItemsRouter.post(
   "/:id/resolve",
   requireCompleteSession,
@@ -428,7 +428,7 @@ reconciliationItemsRouter.post(
   })
 );
 
-// VISION V3.2 — Finance / MD group dismisses an open exception as benign.
+// VISION V3.2 â€” Finance / MD group dismisses an open exception as benign.
 reconciliationItemsRouter.post(
   "/:id/dismiss",
   requireCompleteSession,
@@ -467,58 +467,42 @@ export async function handlePaymentWebhook(
   next: NextFunction
 ): Promise<void> {
 try {
-    const { withBypass, withTenant } = await import("../../db/repo");
+    const { withTenant } = await import("../../db/repo");
   const { insertNotificationsToMds } = await import("../notifications/service");
     const { resolveWebhookEndpoint } = await import("./service");
 
     const endpointToken = req.params.token ? String(req.params.token) : null;
-    let provider: string;
-    let companyId: string | null;
     let endpointBranchId: string | null = null;
 
-    if (endpointToken) {
-      // RULE 8.5.1 / 8.5.2 - the endpoint resolves the tenant, branch and
-      // provider. A caller cannot name any of them.
-      const endpoint = await resolveWebhookEndpoint(endpointToken);
-      if (!endpoint) {
-        res.status(404).json({ error: "unknown webhook endpoint" });
-        return;
-      }
-      companyId = endpoint.companyId;
-      endpointBranchId = endpoint.branchId;
-      provider = endpoint.provider;
-    } else {
-      const providerParam = String(req.params.provider ?? "");
-      if (!/^[a-z0-9_-]{2,40}$/i.test(providerParam)) {
-        res.status(400).json({ error: "invalid provider name" });
-        return;
-      }
-      provider = providerParam;
-      const companySlug = req.header("x-nexora-company");
-      if (!companySlug) {
-        res.status(400).json({ error: "missing X-Nexora-Company header" });
-        return;
-      }
-      companyId = await withBypass(async (db) => {
-        const r = await db.query<{ id: string }>(
-          `SELECT id FROM companies WHERE slug=$1`, [companySlug]
-        );
-        return (r.rowCount ?? 0) > 0 ? r.rows[0]!.id : null;
+    // RULE 8.6.1-1 - "a manually typed webhook URL, or a screen that lets a
+    // person choose which branch a webhook belongs to" is a hard prohibition.
+    //
+    // This route used to accept /payments/{provider} with the tenant chosen by
+    // an X-Nexora-Company header, which is exactly that prohibition: the caller
+    // named the tenant. Migration 0090 issued a real non-guessable endpoint to
+    // EVERY provider configuration including all pre-existing rows, so no
+    // legitimate integration was ever dependent on the header form. The header
+    // path is removed rather than deprecated: leaving a caller-selectable tenant
+    // reachable is the vulnerability, not the feature.
+    if (!endpointToken) {
+      res.status(404).json({
+        error:
+          "unknown webhook endpoint. Webhooks are accepted only at the system-generated " +
+          "endpoint configured on the payment provider, never at a provider-named path."
       });
-      if (!companyId) {
-        res.status(400).json({ error: "unknown company" });
-        return;
-      }
-      // RULE 8.6.1-1 - this path lets a caller name the tenant, so record its
-      // use. Nothing is published to operators here.
-      await withTenant(companyId, null, async (db) => {
-        await db.query(
-          `INSERT INTO audit_logs (company_id, action, entity_type, entity_id, reason)
-           VALUES ($1,'webhook.legacy_endpoint_used','payment_provider_configs',NULL,$2)`,
-          [companyId, `provider=${provider} ip=${req.ip ?? "unknown"}`]
-        );
-      });
+      return;
     }
+
+    // RULE 8.5.1 / 8.5.2 - the endpoint resolves the tenant, branch and
+    // provider. A caller cannot name any of them.
+    const endpoint = await resolveWebhookEndpoint(endpointToken);
+    if (!endpoint) {
+      res.status(404).json({ error: "unknown webhook endpoint" });
+      return;
+    }
+    const companyId: string = endpoint.companyId;
+    endpointBranchId = endpoint.branchId;
+    const provider: string = endpoint.provider;
 
     const signature = req.header("x-nexora-signature") ?? "";
     if (!signature) {
@@ -557,7 +541,7 @@ try {
                    NULL, $2)`,
           [companyId, `provider=${provider} from ${req.ip ?? "unknown"}`]
         );
-        // RULE 4.7.1 — a webhook failure is an MD-level event.
+        // RULE 4.7.1 â€” a webhook failure is an MD-level event.
         await insertNotificationsToMds(db, companyId, "webhook.failure", {
           provider,
           exception_type: "invalid_signature",
@@ -760,21 +744,6 @@ const companySlug = await withTenant(companyId, null, async (db) => {
  */
 webhookRouter.post(
   "/payments/endpoint/:token",
-  raw({ type: "*/*", limit: "1mb" }),
-  handlePaymentWebhook
-);
-
-/**
- * Legacy ingress retained for providers configured before migration 0090.
- *
- * RULE 8.6.1-1 prohibits a webhook whose tenant is chosen by a person. The
- * header below lets the caller name the company, so this path is deprecated and
- * MUST NOT be presented to operators; the generated endpoint is what the product
- * publishes. Every use is audit-logged so any remaining dependency on it is
- * visible, and it is removed once all configurations carry a generated endpoint.
- */
-webhookRouter.post(
-  "/payments/:provider",
   raw({ type: "*/*", limit: "1mb" }),
   handlePaymentWebhook
 );

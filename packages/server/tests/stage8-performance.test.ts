@@ -11,7 +11,7 @@ import { describe, expect, it, beforeAll, afterAll } from "vitest";
 import request from "supertest";
 import crypto from "node:crypto";
 import type { Express } from "express";
-import { seedWorld, withAdmin } from "./fixtures";
+import { seedWorld, webhookEndpointFor, withAdmin } from "./fixtures";
 import { activateProvider, staffLogin } from "./platform-helpers";
 import {
   getPerformanceSummary,
@@ -33,10 +33,10 @@ function hmacSig(secret: string, ts: string, bodyString: string): string {
   return crypto.createHmac("sha256", secret).update(`${ts}.${bodyString}`).digest("hex");
 }
 
-function postWebhook(app: Express, body: object): request.Test {
+async function postWebhook(app: Express, body: object): Promise<request.Test> {
+  // RULE 8.5.1 / 8.6.1-1 - the generated endpoint carries the tenant binding.
   const req = request(app)
-    .post("/api/v1/webhooks/payments/sandbox")
-    .set("X-Nexora-Company", "alpha-test")
+    .post(await webhookEndpointFor("alpha-test", "sandbox"))
     .set("Content-Type", "application/json");
   const ts = String(Math.floor(Date.now() / 1000));
   req.set("X-Nexora-Timestamp", ts);

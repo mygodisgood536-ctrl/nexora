@@ -7,7 +7,7 @@ import request from "supertest";
 import crypto from "node:crypto";
 import http from "node:http";
 import type { Express } from "express";
-import { seedWorld, withAdmin } from "./fixtures";
+import { seedWorld, webhookEndpointFor, withAdmin } from "./fixtures";
 import { staffLogin } from "./platform-helpers";
 
 const ALPHA_HOST = "alpha-test.localhost";
@@ -45,8 +45,7 @@ async function postWebhook(
   }
 ): Promise<request.Response> {
   const req = request(app)
-    .post(`/api/v1/webhooks/payments/${opts.provider}`)
-    .set("X-Nexora-Company", opts.companySlug)
+    .post(await webhookEndpointFor(opts.companySlug, opts.provider))
     .set("Content-Type", "application/json");
   if (opts.timestamp !== null && opts.timestamp !== undefined) {
     req.set("X-Nexora-Timestamp", opts.timestamp);

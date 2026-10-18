@@ -1,12 +1,12 @@
-// Tenant Audit Trail explorer (Part 1 §25). The trail is append-only; this
+﻿// Tenant Audit Trail explorer (Part 1 Â§25). The trail is append-only; this
 // suite proves the read surface: full field set with actor identity, the
 // filtering surface, and the transaction-reference link that traces a payment
-// back to its source webhook (v2.1 change list item 6 — reachable by FK/ref,
+// back to its source webhook (v2.1 change list item 6 â€” reachable by FK/ref,
 // not report-time string-guessing).
 import { afterAll, describe, expect, it } from "vitest";
 import request from "supertest";
 import crypto from "node:crypto";
-import { seedWorld, withAdmin, type TestWorld } from "./fixtures";
+import { seedWorld, webhookEndpointFor, withAdmin, type TestWorld } from "./fixtures";
 import { activateProvider, staffLogin } from "./platform-helpers";
 
 const ALPHA_HOST = "alpha-test.localhost";
@@ -93,7 +93,7 @@ describe("stage 7E - audit trail explorer", () => {
   afterAll(async () => {
     await cleanupAuditArtifacts();
   });
-  it("lists audit entries with the full Part 1 §25 field set and actor identity", async () => {
+  it("lists audit entries with the full Part 1 Â§25 field set and actor identity", async () => {
     const app = (await import("../src/app")).createApp();
     const w: TestWorld = await seedWorld();
     const { token } = await staffLogin(app, ALPHA_HOST, "alice");
@@ -216,7 +216,7 @@ describe("stage 7E - audit trail explorer", () => {
     expect(malformed.status).toBe(400);
   });
 
-  it("links a payment to its webhook via transaction_ref (Part 1 §25 traceability)", async () => {
+  it("links a payment to its webhook via transaction_ref (Part 1 Â§25 traceability)", async () => {
     const app = (await import("../src/app")).createApp();
     const w: TestWorld = await seedWorld();
     const { token } = await staffLogin(app, ALPHA_HOST, "amy");
@@ -233,8 +233,7 @@ describe("stage 7E - audit trail explorer", () => {
     const ts = String(Math.floor(Date.now() / 1000));
     const sig = crypto.createHmac("sha256", SECRET_A).update(`${ts}.${JSON.stringify(body)}`).digest("hex");
     const webhook = await request(app)
-      .post("/api/v1/webhooks/payments/sandbox")
-      .set("X-Nexora-Company", "alpha-test")
+      .post(await webhookEndpointFor("alpha-test", "sandbox"))
       .set("X-Nexora-Timestamp", ts)
       .set("X-Nexora-Signature", sig)
       .send(JSON.stringify(body));
@@ -255,7 +254,7 @@ describe("stage 7E - audit trail explorer", () => {
     expect(received.entityType).toBe("payments");
     expect(received.entityId).toBeTruthy();
     expect(received.transactionRef).toBe(ref);
-    // The §25 traceability contract: the audit row's entityId is the actual
+    // The Â§25 traceability contract: the audit row's entityId is the actual
     // payment row created for this reference (independent of whether the
     // pipeline allocated to a loan or fell through to pure savings).
     let paymentId: string | undefined;

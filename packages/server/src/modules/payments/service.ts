@@ -179,22 +179,37 @@ export async function resolveWebhookEndpoint(
  * provider becomes Active so the endpoint is bound at that moment, and by IT's
  * technical credential flow when a secret is rotated, so a leaked endpoint can
  * be replaced without touching the provider's business configuration.
+ *
+ * Transaction-aware: it runs on a caller-supplied client so the caller controls
+ * the transaction boundary. It must never open its own connection while the
+ * caller holds a lock on the same row - a second connection trying to UPDATE a
+ * row the outer transaction has already locked will block, and the outer
+ * transaction is waiting on the inner call, so the request hangs until it times
+ * out. That is why approveProviderConfig passes its own client instead of
+ * calling the standalone wrapper below.
  */
+export async function mintWebhookEndpointOnClient(
+  db: pg.PoolClient,
+  companyId: string,
+  configId: string
+): Promise<string> {
+  const token = randomBytes(32).toString("base64url");
+  const path = `${WEBHOOK_ENDPOINT_PREFIX}${token}`;
+  await db.query(
+    `UPDATE payment_provider_configs
+        SET webhook_endpoint_token=$2, webhook_endpoint_path=$3
+      WHERE id=$1 AND company_id=$4`,
+    [configId, token, path, companyId]
+  );
+  return path;
+}
+
+/** Standalone entry point for callers that are not already inside a transaction. */
 export async function mintWebhookEndpoint(
   companyId: string,
   configId: string
 ): Promise<string> {
-  return withBypass(async (db) => {
-    const token = randomBytes(32).toString("base64url");
-    const path = `${WEBHOOK_ENDPOINT_PREFIX}${token}`;
-    await db.query(
-      `UPDATE payment_provider_configs
-          SET webhook_endpoint_token=$2, webhook_endpoint_path=$3
-        WHERE id=$1 AND company_id=$4`,
-      [configId, token, path, companyId]
-    );
-    return path;
-  });
+  return withBypass((db) => mintWebhookEndpointOnClient(db, companyId, configId));
 }
 
 export const WEBHOOK_ENDPOINT_PREFIX = "/api/v1/webhooks/payments/endpoint/";
@@ -657,7 +672,11 @@ if ((r.rowCount ?? 0) === 0) throw AppError.notFound("Provider config not found"
     // binds incoming webhooks to it automatically. Authorisation by the MD is
     // the last step before activation, so the endpoint is minted here and never
     // by a person.
-    await mintWebhookEndpoint(actor.companyId, configId);
+    //
+    // It runs on THIS transaction's client. The UPDATE above already holds a row
+    // lock on this exact row, so minting on a second connection would block on
+    // that lock while this transaction waits on the mint - a guaranteed hang.
+    await mintWebhookEndpointOnClient(db, actor.companyId, configId);
 
     await db.query(
       `INSERT INTO audit_logs (company_id, actor_user_id, action, entity_type,

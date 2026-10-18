@@ -1,22 +1,22 @@
-// VERSION 3.2 — C.O. Payment Allocation tests.
+﻿// VERSION 3.2 â€” C.O. Payment Allocation tests.
 //
 // Proves the v3.2 payment law end to end against real PostgreSQL:
-//   • A provider webhook is verified and the payment enters the responsible
-//     Collection Officer's Payment Allocation Queue — automatically verified
+//   â€¢ A provider webhook is verified and the payment enters the responsible
+//     Collection Officer's Payment Allocation Queue â€” automatically verified
 //     and recorded, but never automatically allocated.
-//   • The C.O. manually allocates the immutable verified amount with exact
+//   â€¢ The C.O. manually allocates the immutable verified amount with exact
 //     equality: Loan Repayment + Savings = Verified Payment.
-//   • Under-allocation, over-allocation, residuals, silent rounding and
+//   â€¢ Under-allocation, over-allocation, residuals, silent rounding and
 //     automatic correction are all rejected.
-//   • A posted payment leaves the pending queue and remains traceable;
+//   â€¢ A posted payment leaves the pending queue and remains traceable;
 //     loan, Savings Achieved, journal, audit and reporting state update.
-//   • No human can create a payment outside the verified provider pipeline.
+//   â€¢ No human can create a payment outside the verified provider pipeline.
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import request from "supertest";
 import crypto from "node:crypto";
 import http from "node:http";
 import type { Express } from "express";
-import { seedWorld, withAdmin } from "./fixtures";
+import { seedWorld, webhookEndpointFor, withAdmin } from "./fixtures";
 import { staffLogin } from "./platform-helpers";
 import type pg from "pg";
 
@@ -45,8 +45,7 @@ async function postWebhook(app: Express, body: object): Promise<request.Response
   const bodyString = JSON.stringify(body);
   const sig = hmacSig(SECRET, ts, bodyString);
   return request(app)
-    .post("/api/v1/webhooks/payments/sandbox")
-    .set("X-Nexora-Company", "alpha-test")
+    .post(await webhookEndpointFor("alpha-test", "sandbox"))
     .set("X-Nexora-Timestamp", ts)
     .set("X-Nexora-Signature", sig)
     .set("Content-Type", "application/json")
@@ -173,7 +172,7 @@ beforeAll(async () => {
   await loadIds();
   await cleanup();
 
-  // Vision Part 8 — a provider may only be activated after a real, successful
+  // Vision Part 8 â€” a provider may only be activated after a real, successful
   // connection test. A local HTTP endpoint is used for a genuine round trip.
   providerApiServer = http.createServer((_req, res) => {
     res.statusCode = 200;
@@ -249,7 +248,7 @@ describe("stage 8 - VERSION 3.2 payment allocation", () => {
     const ids = (queue.body.items as Array<{ id: string }>).map((i) => i.id);
     expect(ids).toContain(paymentId);
 
-    // RULE 10.5.3B/10.5.3C — opening the pending payment shows the locked
+    // RULE 10.5.3B/10.5.3C â€” opening the pending payment shows the locked
     // verified amount, what remains, and the financial context. Opening it is
     // a read: the payment is untouched and cannot be posted while a residual
     // remains.
@@ -293,7 +292,7 @@ describe("stage 8 - VERSION 3.2 payment allocation", () => {
     expect(res.status).toBe(200);
     expect(res.body.ok).toBe(true);
 
-    // Posted — off the pending queue.
+    // Posted â€” off the pending queue.
     await withAdmin(async (db) => {
       const r = await q<{ status: string }>(db,
         `SELECT status FROM payments WHERE id=$1`, [paymentId]);

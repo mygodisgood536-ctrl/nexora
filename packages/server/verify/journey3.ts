@@ -33,12 +33,27 @@ let state: Journey2State;
 let refSeq = 0;
 const nextRef = () => `J3-${Date.now().toString(36)}-${refSeq++}`;
 
-function postWebhook(app: Express, payload: unknown, secret: string) {
+// Shared admin connection so the webhook helper can resolve the real endpoint.
+let db: Awaited<ReturnType<typeof admin>>;
+
+async function postWebhook(app: Express, payload: unknown, secret: string) {
   const ts = String(Math.floor(Date.now() / 1000));
   const body = JSON.stringify(payload);
+  // RULE 8.5.1 / 8.6.1-1 - the integration posts to the system-generated
+  // endpoint, exactly as a live provider would be configured to. The tenant is
+  // resolved from the endpoint; the header-selected form is prohibited.
+  const ep = await db.query<{ webhook_endpoint_path: string }>(
+    `SELECT p.webhook_endpoint_path
+       FROM payment_provider_configs p
+       JOIN companies c ON c.id = p.company_id
+      WHERE c.slug = $1 AND p.provider = 'sandbox'
+      LIMIT 1`,
+    [state.slug]
+  );
+  const endpointPath = ep.rows[0]?.webhook_endpoint_path;
+  if (!endpointPath) throw new Error("no sandbox webhook endpoint has been minted");
   return request(app)
-    .post("/api/v1/webhooks/payments/sandbox")
-    .set("X-Nexora-Company", state.slug)
+    .post(endpointPath)
     .set("X-Nexora-Timestamp", ts)
     .set("X-Nexora-Signature", createHmac("sha256", secret).update(`${ts}.${body}`).digest("hex"))
     .set("Content-Type", "application/json")
@@ -47,7 +62,7 @@ function postWebhook(app: Express, payload: unknown, secret: string) {
 
 async function main(): Promise<void> {
   state = JSON.parse(fs.readFileSync("../../_probe_out/journey2-state.json", "utf8"));
-  const db = await admin();
+  db = await admin();
   const { createApp } = await import("../src/app");
   const app: Express = createApp();
   const coTok = state.actors.collection_officer.token;

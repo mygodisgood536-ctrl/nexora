@@ -1,4 +1,4 @@
-// Regression test for the silent automatic savings posting in the allocation
+﻿// Regression test for the silent automatic savings posting in the allocation
 // pipeline (RULE 9.1.3, RULE 10.5.1, RULE 19.6.1, Part 15 prohibition 11).
 //
 // Defect found by independent verification: when a loan had no open repayment
@@ -20,7 +20,7 @@ import crypto from "node:crypto";
 import http from "node:http";
 import type { Express } from "express";
 import type pg from "pg";
-import { seedWorld, withAdmin, withAdminValue } from "./fixtures";
+import { seedWorld, webhookEndpointFor, withAdmin, withAdminValue } from "./fixtures";
 import { staffLogin } from "./platform-helpers";
 
 const ALPHA_HOST = "alpha-test.localhost";
@@ -58,8 +58,7 @@ async function queuePayment(amount: number): Promise<string> {
     transaction: { reference: nextRef(), account_number: "1000000001", amount }
   });
   const res = await request(app)
-    .post("/api/v1/webhooks/payments/sandbox")
-    .set("X-Nexora-Company", "alpha-test")
+    .post(await webhookEndpointFor("alpha-test", "sandbox"))
     .set("X-Nexora-Timestamp", ts)
     .set("X-Nexora-Signature", hmacSig(SECRET, ts, body))
     .set("Content-Type", "application/json")
@@ -192,7 +191,7 @@ describe("allocation must never invent savings (RULE 9.1.3 / 10.5.1 / 19.6.1)", 
         `SELECT balance FROM savings_accounts WHERE customer_id=$1`,
         [customerA1]
       );
-      // Savings grew by exactly the allocated savings — the repayment portion
+      // Savings grew by exactly the allocated savings â€” the repayment portion
       // was NOT swept into savings.
       expect(Number(after[0]?.balance ?? 0) - before).toBe(1000);
     });

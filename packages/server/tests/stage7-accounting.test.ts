@@ -1,4 +1,4 @@
-// Stage 7D - Accounting posts (Part 1 §21 step [9]; Part 2 §38-39).
+﻿// Stage 7D - Accounting posts (Part 1 Â§21 step [9]; Part 2 Â§38-39).
 // Verifies that the payment pipeline writes real, balanced double-entry
 // journal records for verified payments (manual C.O. allocation with exact
 // equality, provider value dates, reversals) and provisions the company
@@ -7,7 +7,7 @@ import { describe, expect, it, beforeAll, afterAll } from "vitest";
 import request from "supertest";
 import crypto from "node:crypto";
 import type { Express } from "express";
-import { seedWorld, withAdmin } from "./fixtures";
+import { seedWorld, webhookEndpointFor, withAdmin } from "./fixtures";
 import { activateProvider, staffLogin } from "./platform-helpers";
 
 const ALPHA_HOST = "alpha-test.localhost";
@@ -28,8 +28,7 @@ async function hmacSig(secret: string, ts: string, bodyString: string): Promise<
 async function postWebhook(app: Express, body: object): Promise<request.Response> {
   const provider = "sandbox";
   const req = request(app)
-    .post(`/api/v1/webhooks/payments/${provider}`)
-    .set("X-Nexora-Company", "alpha-test")
+    .post(await webhookEndpointFor("alpha-test", provider))
     .set("Content-Type", "application/json");
   const ts = String(Math.floor(Date.now() / 1000));
   req.set("X-Nexora-Timestamp", ts);
@@ -365,7 +364,7 @@ describe("stage 7D - accounting posts (step [9])", () => {
       });
       return n;
     })();
-    // RULE 11.6.1 — the chart carries asset, liability, equity and income
+    // RULE 11.6.1 â€” the chart carries asset, liability, equity and income
     // accounts so an income statement and a financial position can be derived:
     // 1000 Collection, 1100 Loan Receivables, 2100 Customer Savings,
     // 3000 Retained Earnings, 4000 Interest Income.
@@ -399,7 +398,7 @@ describe("stage 7D - accounting posts (step [9])", () => {
       transaction: { reference: ref, account_number: "5550000001", amount: 2000 }
     });
     expect(res.status).toBe(200);
-    // VERSION 3.2 — no savings-only flow: a customer with no active loan to
+    // VERSION 3.2 â€” no savings-only flow: a customer with no active loan to
     // allocate against cannot have its payment posted, so the funds land in
     // the unallocated exception queue and never reach savings.
     expect(res.body.outcome.kind).toBe("unallocated");
@@ -459,7 +458,7 @@ describe("stage 7D - accounting posts (step [9])", () => {
     expect(webhook.body.outcome.kind).toBe("pending_allocation");
     const paymentId: string = webhook.body.outcome.paymentId;
 
-    // VERSION 3.2 — exact equality: Loan Repayment + Savings = Verified.
+    // VERSION 3.2 â€” exact equality: Loan Repayment + Savings = Verified.
     // The C.O. chose 1000 to the loan and 4000 to the customer's savings.
     const loanId = await getActiveLoanId();
     const { token } = await staffLogin(app, ALPHA_HOST, "alice");
@@ -559,7 +558,7 @@ describe("stage 7D - accounting posts (step [9])", () => {
       revEntry = r.rows[0] ?? null;
     });
     expect(revEntry).not.toBeNull();
-    // §21: the reversal links back to the original and never edits it.
+    // Â§21: the reversal links back to the original and never edits it.
     expect(revEntry!.reversal_of_entry_id).toBe(original!.id);
 
     // Mirrored lines: every debit/credit swapped, same amounts.

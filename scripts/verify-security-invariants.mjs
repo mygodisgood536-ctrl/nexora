@@ -293,6 +293,34 @@ check(
   "documented as placeholders"
 );
 
+/* ------------------------------------------------------------------
+ * 5. Webhook tenant binding (RULE 8.5.1 / 8.6.1-1).
+ *
+ * RULE 8.6.1-1 makes a caller-selectable webhook tenant a hard prohibition:
+ * "a manually typed webhook URL, or a screen that lets a person choose which
+ * branch a webhook belongs to". The ingress once accepted
+ * /payments/{provider} and read the tenant from an X-Nexora-Company header,
+ * which is precisely that shape. Only the system-generated endpoint may exist,
+ * and the endpoint must be the sole source of the company, branch and provider.
+ * ------------------------------------------------------------------ */
+check(
+  "no webhook route accepts a caller-named provider path",
+  !/webhookRouter\.post\(\s*"\/payments\/:provider"/.test(webhookRoutes),
+  "the prohibited /payments/:provider ingress must not be re-added"
+);
+check(
+  "the webhook tenant is resolved only from the generated endpoint",
+  !/header\(\s*["']x-nexora-company["']\s*\)/i.test(webhookRoutes),
+  "a header-selected webhook tenant is prohibited by RULE 8.6.1-1"
+);
+check(
+  "the generated webhook endpoint token is cryptographically random",
+  /randomBytes\(32\)/.test(
+    SRC.find((s) => s.rel.endsWith("modules/payments/service.ts"))?.text ?? ""
+  ),
+  "the endpoint token must not be guessable"
+);
+
 console.log(
   failures === 0
     ? "\nALL SECURITY INVARIANTS HELD"

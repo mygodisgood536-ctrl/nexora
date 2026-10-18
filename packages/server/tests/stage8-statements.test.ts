@@ -8,7 +8,7 @@ import { describe, expect, it, beforeAll, afterAll } from "vitest";
 import request from "supertest";
 import crypto from "node:crypto";
 import type { Express } from "express";
-import { seedWorld, withAdmin } from "./fixtures";
+import { seedWorld, webhookEndpointFor, withAdmin } from "./fixtures";
 import { activateProvider, staffLogin } from "./platform-helpers";
 
 const ALPHA_HOST = "alpha-test.localhost";
@@ -16,6 +16,9 @@ const BETA_HOST = "beta-test.localhost";
 const SECRET_A = "alpha-signing-secret-0123456789abcdef";
 
 let runCounter = 0;
+// Resolved in beforeAll from the provider the platform actually activated, so
+// these tests exercise the same endpoint a live provider would be pointed at.
+let alphaSandboxEndpoint = "";
 function nextRef(prefix: string): string {
   const code = `${Date.now().toString(36)}${runCounter++}${Math.random().toString(36).slice(2, 6)}`;
   return `${prefix}-${code}`;
@@ -26,9 +29,11 @@ function hmacSig(secret: string, ts: string, bodyString: string): string {
 }
 
 function postWebhook(app: Express, body: object): request.Test {
+  // RULE 8.5.1 / 8.6.1-1 - post to the system-generated endpoint that the
+  // provider activation minted, resolved in beforeAll. The tenant comes from the
+  // endpoint; a caller-supplied tenant header is a prohibited shape.
   const req = request(app)
-    .post("/api/v1/webhooks/payments/sandbox")
-    .set("X-Nexora-Company", "alpha-test")
+    .post(alphaSandboxEndpoint)
     .set("Content-Type", "application/json");
   const ts = String(Math.floor(Date.now() / 1000));
   req.set("X-Nexora-Timestamp", ts);
@@ -220,6 +225,7 @@ beforeAll(async () => {
     branchId: await alphaBranchA1(),
     signingSecret: SECRET_A
   });
+  alphaSandboxEndpoint = await webhookEndpointFor("alpha-test", "sandbox");
 
   // Seed the ledger this suite asserts on:
   //   A: 5000 against the active seeded loan  -> DR 1000 5000 / CR 1100 4000 / CR 2100 1000

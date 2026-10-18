@@ -190,13 +190,13 @@ const cases: Case[] = [
   { request: "/api/v1/auth/login", expected: "/api/v1/auth/login", label: "login" },
   { request: "/api/v1/auth/refresh", expected: "/api/v1/auth/refresh", label: "refresh" },
   {
-    request: "/api/v1/webhooks/payments/mobile-money",
-    expected: "/api/v1/webhooks/payments/mobile-money",
-    label: "payment webhook (multi-segment)"
+    request: "/api/v1/webhooks/payments/endpoint/abc123",
+    expected: "/api/v1/webhooks/payments/endpoint/abc123",
+    label: "generated payment webhook endpoint (multi-segment)"
   },
   {
-    request: "/api/v1/webhooks/payments/mobile-money?sig=abc123",
-    expected: "/api/v1/webhooks/payments/mobile-money?sig=abc123",
+    request: "/api/v1/webhooks/payments/endpoint/abc123?sig=abc123",
+    expected: "/api/v1/webhooks/payments/endpoint/abc123?sig=abc123",
     label: "webhook signature query survives"
   },
   {
@@ -303,12 +303,23 @@ async function main(): Promise<void> {
     `status ${login.status}`
   );
 
-  const webhook = await call("/api/v1/webhooks/payments/mobile-money");
-  check(
-    "webhook route resolved and is signature-gated",
-    webhook.status !== 404 && webhook.status !== 200,
-    `status ${webhook.status}`
-  );
+// RULE 8.5.1 / 8.6.1-1 - only the system-generated endpoint is an ingress. It
+// must resolve to the signature gate (not a 404 fall-through and not a 200 that
+// would mean the signature was not required), and the old caller-named provider
+// path must NOT resolve, because a route there would mean a person could choose
+// the tenant.
+const webhook = await call("/api/v1/webhooks/payments/endpoint/probe-token-not-real");
+check(
+  "generated webhook endpoint resolves and is signature-gated",
+  webhook.status !== 404 && webhook.status !== 200,
+  `status ${webhook.status}`
+);
+const legacyWebhook = await call("/api/v1/webhooks/payments/mobile-money");
+check(
+  "caller-named webhook ingress is gone (RULE 8.6.1-1)",
+  legacyWebhook.status === 404,
+  `status ${legacyWebhook.status}`
+);
 
   server.close();
 

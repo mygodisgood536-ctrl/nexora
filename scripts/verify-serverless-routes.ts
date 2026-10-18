@@ -99,14 +99,22 @@ async function main() {
     check("prefixed health matches plain health", prefixedHealth.status === health.status, `plain ${health.status} vs prefixed ${prefixedHealth.status}`);
 
     console.log("\n--- webhooks: raw body + signature gate ---");
-    // POST /api/v1/webhooks/payments/:provider
-    const hook = await call("/acme/api/v1/webhooks/payments/mobile-money", "nexora.vercel.app", "POST", { id: "evt_1" });
+    // RULE 8.5.1 / 8.6.1-1 - only the system-generated endpoint is an ingress.
+    const hook = await call("/acme/api/v1/webhooks/payments/endpoint/probe-token-not-real", "nexora.vercel.app", "POST", { id: "evt_1" });
     check("prefixed webhook resolves", hook.status !== 404, `status ${hook.status}`);
     check("webhook is gated, never open", hook.status !== 200, `status ${hook.status}`);
-    check("webhook rejects an unsigned body", hook.status === 400 || hook.status === 404, `status ${hook.status}`);
+    // Without a reachable database the endpoint cannot resolve, so this proves
+    // the ingress is closed to an unsigned body rather than exercising the
+    // signature comparison itself (that is covered by the DB-backed suites).
+    check("an unsigned body is never accepted", hook.status !== 200, `status ${hook.status}`);
 
-    const plainHook = await call("/api/v1/webhooks/payments/mobile-money", "nexora.vercel.app", "POST", { id: "evt_1" });
+    const plainHook = await call("/api/v1/webhooks/payments/endpoint/probe-token-not-real", "nexora.vercel.app", "POST", { id: "evt_1" });
     check("plain webhook matches prefixed webhook", plainHook.status === hook.status, `plain ${plainHook.status} vs prefixed ${hook.status}`);
+
+    // The caller-named ingress must not exist at all: a route there would mean a
+    // person could choose which company or branch a webhook belongs to.
+    const legacyHook = await call("/api/v1/webhooks/payments/mobile-money", "nexora.vercel.app", "POST", { id: "evt_1" });
+    check("caller-named webhook ingress does not exist", legacyHook.status === 404, `status ${legacyHook.status}`);
 
     console.log("\n--- platform owner console stays separate ---");
     const po = await call("/platform/v1/companies");

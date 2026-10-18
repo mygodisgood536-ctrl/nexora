@@ -1,11 +1,11 @@
-// Notification Center (Part 2 §40). Event producers write notifications;
+﻿// Notification Center (Part 2 Â§40). Event producers write notifications;
 // this suite proves the staff inbox read/workflow surface and that events
 // actually raise notifications: reconciliation exceptions notify finance-role
 // users, and the payment pipeline raises a `payment.received` notification.
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import request from "supertest";
 import crypto from "node:crypto";
-import { seedWorld, withAdmin } from "./fixtures";
+import { seedWorld, webhookEndpointFor, withAdmin } from "./fixtures";
 import { activateProvider, staffLogin } from "./platform-helpers";
 
 const ALPHA_HOST = "alpha-test.localhost";
@@ -103,7 +103,7 @@ async function seedNotifications(): Promise<{ alice: string; betaUser: string }>
 describe("stage 7D - notification center", () => {
   // Remove the artifacts this suite creates (pipeline payment + GL chart
   // provisioning, reconciliation exceptions, seeded inbox rows, finance role)
-  // so reruns and other suites stay deterministic — model.test's UNIQUE
+  // so reruns and other suites stay deterministic â€” model.test's UNIQUE
   // (company_id, code) gl_accounts probes and stage2-auth's role-count assert
   // depend on that.
   async function cleanupNotifications(): Promise<void> {
@@ -378,8 +378,7 @@ describe("stage 7D - notification center", () => {
     const ts = String(Math.floor(Date.now() / 1000));
     const sig = crypto.createHmac("sha256", SECRET_A).update(`${ts}.${JSON.stringify(body)}`).digest("hex");
     const webhook = await request(app)
-      .post("/api/v1/webhooks/payments/sandbox")
-      .set("X-Nexora-Company", "alpha-test")
+      .post(await webhookEndpointFor("alpha-test", "sandbox"))
       .set("X-Nexora-Timestamp", ts)
       .set("X-Nexora-Signature", sig)
       .send(JSON.stringify(body));
