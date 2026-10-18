@@ -321,6 +321,42 @@ check(
   "the endpoint token must not be guessable"
 );
 
+/* ------------------------------------------------------------------
+ * 6. Provider polling (RULE 8.5.6).
+ *
+ * "The platform must never rely only on webhooks: a scheduled polling or
+ * reconciliation job must periodically confirm that every provider transaction
+ * matches a recorded payment, and must raise an exception for anything found
+ * only on the provider side."
+ *
+ * The reconciliation diff existed but nothing ever called it, so every
+ * provider was webhook-only in practice. The schedule must invoke the poll,
+ * and a poll that cannot confirm must raise an exception rather than pass.
+ * ------------------------------------------------------------------ */
+const pollingSource =
+  SRC.find((s) => s.rel.endsWith("modules/payments/polling.ts"))?.text ?? "";
+const cronSource = SRC.find((s) => s.rel.endsWith("routes/cron.ts"))?.text ?? "";
+check(
+  "a scheduled provider poll exists and is invoked by the schedule",
+  /pollProviderConfig/.test(cronSource),
+  "RULE 8.5.6 requires a scheduled reconciliation job, not webhook-only ingestion"
+);
+check(
+  "a provider poll reconciles provider transactions against recorded payments",
+  /reconcileProviderTransactions/.test(pollingSource),
+  "the poll must feed the reconciliation diff"
+);
+check(
+  "a failed or unreadable poll raises an exception rather than passing silently",
+  /INSERT INTO reconciliation_items/.test(pollingSource),
+  "RULE 8.5.6: raise an exception for anything not positively confirmed"
+);
+check(
+  "the poll watermark advances only after a poll that parsed",
+  /poll_watermark\s*=\s*GREATEST/.test(pollingSource),
+  "a failed poll must not permanently skip the transactions inside its window"
+);
+
 console.log(
   failures === 0
     ? "\nALL SECURITY INVARIANTS HELD"

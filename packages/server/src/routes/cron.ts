@@ -30,6 +30,7 @@ import { runEndOfDayForCompany } from "../modules/eod/service";
 import { runCollectionWatchForCompany } from "../modules/collection-watch/service";
 import { runOverdueEscalationForCompany } from "../modules/overdue-escalation/service";
 import { expireTemporaryAssignments } from "../modules/workers/service";
+import { pollProviderConfig } from "../modules/payments/polling";
 
 export const cronRouter = Router();
 
@@ -117,6 +118,54 @@ async function schedulePrincipalFor(companyId: string): Promise<string> {
   });
 }
 
+/**
+ * RULE 8.5.6 - polls every active provider configuration in the platform and
+ * reconciles what each returns. One company's provider being unreachable is
+ * contained: pollProviderConfig records a reconciliation exception and returns
+ * rather than throwing, so every other configuration is still verified.
+ */
+async function pollActiveProviders(): Promise<JobOutcome[]> {
+  const configs = await withBypass(async (db) => {
+    const r = await db.query<{ id: string; company_id: string; provider: string }>(
+      `SELECT id, company_id, provider
+         FROM payment_provider_configs
+        WHERE is_active = true
+        ORDER BY company_id, id`
+    );
+    return r.rows;
+  });
+
+  const results: JobOutcome[] = [];
+  for (const cfg of configs) {
+    const scheduleActorId = await schedulePrincipalFor(cfg.company_id);
+    try {
+      const outcome = await pollProviderConfig(
+        { sub: scheduleActorId, companyId: cfg.company_id, branchId: null },
+        cfg.id
+      );
+      results.push({
+        company: cfg.company_id,
+        job: `provider_poll:${cfg.provider}`,
+        ok: outcome.ok,
+        detail: outcome.detail
+      });
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : String(error);
+      logger.error(
+        { providerConfigId: cfg.id, companyId: cfg.company_id, err: detail },
+        "scheduled provider poll failed"
+      );
+      results.push({
+        company: cfg.company_id,
+        job: `provider_poll:${cfg.provider}`,
+        ok: false,
+        detail
+      });
+    }
+  }
+  return results;
+}
+
 export async function runScheduledPlatformWork(): Promise<JobOutcome[]> {
   const companies = await activeCompanies();
   const outcomes: JobOutcome[] = [];
@@ -144,6 +193,12 @@ export async function runScheduledPlatformWork(): Promise<JobOutcome[]> {
       runOverdueEscalationForCompany(companyId, actorId)
     ))
   );
+  // RULE 8.5.6 - the platform must never rely only on webhooks. This is the
+  // polling half of that rule: it pulls each active provider's transactions and
+  // raises a reconciliation exception for anything the platform cannot confirm.
+  // Running it last means a provider outage still leaves ageing and escalation
+  // done for the day.
+  outcomes.push(...(await pollActiveProviders()));
 
   const failed = outcomes.filter((o) => !o.ok);
   if (failed.length > 0) {
