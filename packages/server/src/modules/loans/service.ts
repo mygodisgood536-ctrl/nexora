@@ -1947,16 +1947,23 @@ export async function getApplication(
 }
 
 export interface ApplicationTermsRow {
-  application_id: string;
-  repayment_mode: string;
-  repayment_weekday: number | null;
-  repayment_periods: number;
-  interest_percentage: string;
-  repayment_amount: string;
-  calculated_interest: string;
-  calculated_total_repayment: string;
-  tally_status: string;
-}
+    application_id: string;
+    repayment_mode: string;
+    repayment_weekday: number | null;
+    repayment_periods: number;
+    interest_percentage: string;
+    repayment_amount: string;
+    calculated_interest: string;
+    calculated_total_repayment: string;
+    tally_status: string;
+    /**
+     * RULE 19.3.8 - the monthly-equivalent duration is derived from the
+     * configured repayment period. It is a GENERATED ALWAYS column, so this is
+     * read-only everywhere: no request body can supply it and no code can write
+     * it. The C.O. never calculates or types a month duration.
+     */
+    derived_month_equivalent: string | null;
+  }
 
 export async function getApplicationTerms(
   actor: LoanActor,
@@ -1968,13 +1975,13 @@ export async function getApplicationTerms(
       [applicationId]
     );
     if ((application.rowCount ?? 0) === 0) throw AppError.notFound("Application not found");
-    const terms = await db.query<ApplicationTermsRow>(
-      `SELECT application_id, repayment_mode, repayment_weekday, repayment_periods,
-              interest_percentage, repayment_amount, calculated_interest,
-              calculated_total_repayment, tally_status
-         FROM loan_application_terms WHERE application_id=$1`,
-      [applicationId]
-    );
+const terms = await db.query<ApplicationTermsRow>(
+        `SELECT application_id, repayment_mode, repayment_weekday, repayment_periods,
+                interest_percentage, repayment_amount, calculated_interest,
+                calculated_total_repayment, tally_status, derived_month_equivalent
+           FROM loan_application_terms WHERE application_id=$1`,
+        [applicationId]
+      );
     return (terms.rowCount ?? 0) > 0 ? terms.rows[0]! : null;
   });
 }

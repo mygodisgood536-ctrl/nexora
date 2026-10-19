@@ -243,8 +243,8 @@ const applicationSchema = z.object({
   repaymentWeekday: z.number().int().min(0).max(6).nullable().optional(),
   repaymentPeriods: z.number().int().positive().optional(),
   interestPercentage: z.number().nonnegative().optional(),
-  repaymentAmount: z.number().positive().optional()
-});
+repaymentAmount: z.number().positive().optional()
+}).superRefine(rejectTypedMonthEquivalent);
 
 loanApplicationsRouter.post(
   "/",
@@ -300,6 +300,34 @@ const termsSchema = z.object({
   repaymentAmount: z.number().positive()
 });
 
+/**
+ * RULE 19.3.8 - "Where a monthly-equivalent duration is displayed, the software
+ * derives it from the configured repayment period; the C.O. does not manually
+ * calculate or type a misleading month duration."
+ *
+ * The value is a GENERATED ALWAYS column, so the database would ignore anything
+ * sent here regardless. Rejecting it explicitly means a client that tries to
+ * type a month duration is told why, instead of silently losing the field and
+ * showing a different number than the officer expected.
+ */
+function rejectTypedMonthEquivalent(
+  body: unknown,
+  ctx: z.RefinementCtx
+): void {
+  if (typeof body !== "object" || body === null) return;
+  const offered = body as Record<string, unknown>;
+  for (const key of ["derivedMonthEquivalent", "derived_month_equivalent", "monthEquivalent"]) {
+    if (key in offered) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: [key],
+        message:
+          "The monthly-equivalent duration is derived from the configured repayment period and cannot be supplied"
+      });
+    }
+  }
+}
+
 loanApplicationsRouter.put(
   "/:id/terms",
   requireCompleteSession,
@@ -307,8 +335,8 @@ loanApplicationsRouter.put(
   wrap(async (req, res) => {
     const id = String(req.params.id);
     if (!UUID_RE.test(id)) throw AppError.badRequest("Invalid application id");
-    const parsed = termsSchema.safeParse(req.body ?? {});
-    if (!parsed.success) throw AppError.unprocessable("Validation failed");
+const parsed = termsSchema.superRefine(rejectTypedMonthEquivalent).safeParse(req.body ?? {});
+  if (!parsed.success) throw AppError.unprocessable("Validation failed");
     res.json(await saveApplicationTerms(actor(req), { applicationId: id, ...parsed.data }, metaFrom(req)));
   })
 );

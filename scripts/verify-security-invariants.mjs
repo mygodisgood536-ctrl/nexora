@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Security invariants that must never regress.
  *
  * These are STATIC checks over the source. They are not a substitute for the
@@ -20,10 +20,10 @@ const REPO = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
 let failures = 0;
 const check = (label, ok, detail = "") => {
-  if (ok) console.log(`ok    ${label}${detail ? ` — ${detail}` : ""}`);
+  if (ok) console.log(`ok    ${label}${detail ? ` â€” ${detail}` : ""}`);
   else {
     failures++;
-    console.log(`FAIL  ${label}${detail ? ` — ${detail}` : ""}`);
+    console.log(`FAIL  ${label}${detail ? ` â€” ${detail}` : ""}`);
   }
 };
 
@@ -106,7 +106,7 @@ check(
 );
 
 /* ------------------------------------------------------------------ *
- * 2. Payment webhooks — the money-in path.
+ * 2. Payment webhooks â€” the money-in path.
  * ------------------------------------------------------------------ */
 console.log("\n=== payment webhooks ===");
 const webhookRoutes = SRC.find((s) => s.rel.endsWith("modules/payments/routes.ts"))?.text ?? "";
@@ -160,7 +160,7 @@ check(
 );
 
 /* ------------------------------------------------------------------ *
- * 3. Idempotency — a replayed webhook must not create a second payment.
+ * 3. Idempotency â€” a replayed webhook must not create a second payment.
  * ------------------------------------------------------------------ */
 console.log("\n=== idempotency ===");
 const migrations = readdirSync(resolve(REPO, "packages/server/src/db/migrations"))
@@ -390,6 +390,35 @@ check(
   "only approved reassignments resolve a stage",
   /status\s*=\s*'approved'/.test(reassignmentSource),
   "a requested or rejected reassignment must resolve nothing"
+);
+
+/* ------------------------------------------------------------------
+ * 8. Derived values a person must not control (RULE 19.3.8).
+ *
+ * "Where a monthly-equivalent duration is displayed, the software derives it
+ * from the configured repayment period; the C.O. does not manually calculate
+ * or type a misleading month duration."
+ *
+ * A GENERATED ALWAYS column cannot be written by INSERT, UPDATE, raw SQL or any
+ * future code, so this is enforced by the schema rather than by convention.
+ * ------------------------------------------------------------------ */
+check(
+  "the monthly-equivalent duration is a generated column, not a supplied value",
+  /derived_month_equivalent[\s\S]{0,120}GENERATED ALWAYS AS/.test(migrations),
+  "RULE 19.3.8 requires the duration to be derived, so it must be unwritable"
+);
+check(
+  "no loan terms write path supplies a month-equivalent value",
+  !/SET[^;]*derived_month_equivalent\s*=/i.test(migrations) &&
+    !/derived_month_equivalent\s*=\s*EXCLUDED/i.test(migrations),
+  "an INSERT/UPDATE of the derived duration would defeat RULE 19.3.8"
+);
+check(
+  "the terms API rejects a caller-supplied month equivalent",
+  /rejectTypedMonthEquivalent/.test(
+    SRC.find((s) => s.rel.endsWith("modules/loans/routes.ts"))?.text ?? ""
+  ),
+  "a typed duration must be refused with a reason, not silently dropped"
 );
 
 console.log(
