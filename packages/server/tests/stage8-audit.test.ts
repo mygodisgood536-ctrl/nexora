@@ -1,4 +1,4 @@
-﻿// Tenant Audit Trail explorer (Part 1 Â§25). The trail is append-only; this
+// Tenant Audit Trail explorer (Part 1 Â§25). The trail is append-only; this
 // suite proves the read surface: full field set with actor identity, the
 // filtering surface, and the transaction-reference link that traces a payment
 // back to its source webhook (v2.1 change list item 6 â€” reachable by FK/ref,

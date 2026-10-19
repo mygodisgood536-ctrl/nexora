@@ -39,6 +39,34 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_provider_config_webhook_token
   ON payment_provider_configs (webhook_endpoint_token)
   WHERE webhook_endpoint_token IS NOT NULL;
 
+-- ---------------------------------------------------------------------------
+-- Branch scoping is restored here.
+--
+-- Migration 0033 made provider configurations company-level: it dropped
+-- payment_provider_configs.branch_id and replaced the per-branch key with
+-- UNIQUE (company_id, provider). But RULE 8.4.4 and RULE 8.5.1 are explicitly
+-- per BRANCH - "the moment a provider becomes Active for a branch", and each
+-- branch must always know its own primary provider. The two indexes below are
+-- branch-scoped, so without this column the whole migration would fail on a
+-- real database with "column branch_id does not exist" and every migration after
+-- it would be blocked behind it.
+--
+-- The column is restored before the indexes and the company+provider uniqueness
+-- is replaced by a branch+provider one, so a branch may hold more than one
+-- provider while a single branch+provider pair still cannot be configured twice.
+-- This migration has never been executed against a database, so correcting it in
+-- place is safe and is preferable to leaving a known-failing migration in the
+-- chain where no later migration could repair it.
+-- ---------------------------------------------------------------------------
+ALTER TABLE payment_provider_configs
+  ADD COLUMN IF NOT EXISTS branch_id uuid REFERENCES branches(id);
+
+ALTER TABLE payment_provider_configs
+  DROP CONSTRAINT IF EXISTS payment_provider_configs_company_provider_key;
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_provider_config_branch_provider
+  ON payment_provider_configs (company_id, branch_id, provider);
+
 CREATE INDEX IF NOT EXISTS idx_provider_config_branch
   ON payment_provider_configs (company_id, branch_id, provider)
   WHERE branch_id IS NOT NULL;

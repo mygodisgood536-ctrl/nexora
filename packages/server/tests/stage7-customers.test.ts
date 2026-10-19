@@ -1,4 +1,4 @@
-﻿// Stage 7A - Customer domain tests (Part 1 Section 22).
+// Stage 7A - Customer domain tests (Part 1 Section 22).
 import { describe, expect, it } from "vitest";
 import request from "supertest";
 import { seedWorld, withAdmin } from "./fixtures";

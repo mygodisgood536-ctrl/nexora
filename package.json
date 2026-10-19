@@ -21,10 +21,11 @@
     "verify:vercel-config": "node scripts/validate-vercel-config.mjs",
     "verify:design": "node scripts/verify-design-system.mjs",
     "verify:security": "node scripts/verify-security-invariants.mjs",
+    "verify:migrations": "node scripts/verify-migration-integrity.mjs",
     "verify:vercel-routing": "npm run build:serverless && tsx scripts/verify-vercel-routing.ts",
     "verify:serverless-routes": "npm run build:serverless && tsx scripts/verify-serverless-routes.ts",
-    "verify:deploy": "npm run typecheck && npm run lint && npm run build && npm run verify:design && npm run verify:security && npm run verify:vercel-config && npm run verify:vercel-routing && npm run verify:serverless-routes",
-    "verify": "npm run typecheck && npm run lint && npm run test:offline && npm run build && npm run verify:design && npm run verify:security && npm run verify:vercel-config && npm run verify:vercel-routing && npm run verify:serverless-routes",
+    "verify:deploy": "npm run typecheck && npm run lint && npm run build && npm run verify:design && npm run verify:security && npm run verify:migrations && npm run verify:vercel-config && npm run verify:vercel-routing && npm run verify:serverless-routes",
+    "verify": "npm run typecheck && npm run lint && npm run test:offline && npm run build && npm run verify:design && npm run verify:security && npm run verify:migrations && npm run verify:vercel-config && npm run verify:vercel-routing && npm run verify:serverless-routes",
     "db:start": "powershell -ExecutionPolicy Bypass -File scripts/start-postgres.ps1",
     "db:stop": "powershell -ExecutionPolicy Bypass -File scripts/stop-postgres.ps1",
     "db:provision": "node packages/server/scripts/provision-db.mjs"

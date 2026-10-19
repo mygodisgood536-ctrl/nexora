@@ -1,4 +1,4 @@
-﻿import { describe, it, expect } from "vitest";
+import { describe, it, expect } from "vitest";
 import request from "supertest";
 import type { Express } from "express";
 import type { Response } from "supertest";

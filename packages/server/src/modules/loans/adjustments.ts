@@ -1,4 +1,4 @@
-﻿// Write-off and restructuring - Vision RULE 10.6.3, RULE 4.4.1, RULE 20.3.2.
+// Write-off and restructuring - Vision RULE 10.6.3, RULE 4.4.1, RULE 20.3.2.
 //
 // RULE 10.6.3: "Restructuring and write-off are configured processes with their
 // own approval chain; they create new records and never edit the original loan

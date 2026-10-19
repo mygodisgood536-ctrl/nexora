@@ -1,4 +1,4 @@
-﻿// Stage 7B - Group management tests (Part 2 Section 27).
+// Stage 7B - Group management tests (Part 2 Section 27).
 import { describe, expect, it } from "vitest";
 import request from "supertest";
 import type { Express } from "express";

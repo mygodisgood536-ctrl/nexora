@@ -1,4 +1,4 @@
-﻿// Stage 7D - Accounting posts (Part 1 Â§21 step [9]; Part 2 Â§38-39).
+// Stage 7D - Accounting posts (Part 1 Â§21 step [9]; Part 2 Â§38-39).
 // Verifies that the payment pipeline writes real, balanced double-entry
 // journal records for verified payments (manual C.O. allocation with exact
 // equality, provider value dates, reversals) and provisions the company

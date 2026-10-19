@@ -1,4 +1,4 @@
-﻿// Stage 7A - Customer domain (Part 1 Section 22, Part 2 Section 26).
+// Stage 7A - Customer domain (Part 1 Section 22, Part 2 Section 26).
 import type pg from "pg";
 import { withTenant, withBypass } from "../../db/repo";
 import { AppError } from "../../lib/errors";

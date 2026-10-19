@@ -1,4 +1,4 @@
-﻿// Stage 7D â€” Payment pipeline + webhooks HTTP routes (Part 1 Â§21).
+// Stage 7D â€” Payment pipeline + webhooks HTTP routes (Part 1 Â§21).
 import { Router, raw } from "express";
 import { z } from "zod";
 import crypto from "node:crypto";

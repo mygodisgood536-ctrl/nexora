@@ -1,4 +1,4 @@
-﻿import express from "express";
+import express from "express";
 import helmet from "helmet";
 import cors from "cors";
 import pinoHttp from "pino-http";

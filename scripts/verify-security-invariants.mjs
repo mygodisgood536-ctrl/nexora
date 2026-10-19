@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Security invariants that must never regress.
  *
  * These are STATIC checks over the source. They are not a substitute for the

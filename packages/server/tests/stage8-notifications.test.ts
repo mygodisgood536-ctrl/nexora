@@ -1,4 +1,4 @@
-﻿// Notification Center (Part 2 Â§40). Event producers write notifications;
+// Notification Center (Part 2 Â§40). Event producers write notifications;
 // this suite proves the staff inbox read/workflow surface and that events
 // actually raise notifications: reconciliation exceptions notify finance-role
 // users, and the payment pipeline raises a `payment.received` notification.

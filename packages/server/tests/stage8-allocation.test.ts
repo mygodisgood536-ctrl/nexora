@@ -1,4 +1,4 @@
-﻿// VERSION 3.2 â€” C.O. Payment Allocation tests.
+// VERSION 3.2 â€” C.O. Payment Allocation tests.
 //
 // Proves the v3.2 payment law end to end against real PostgreSQL:
 //   â€¢ A provider webhook is verified and the payment enters the responsible

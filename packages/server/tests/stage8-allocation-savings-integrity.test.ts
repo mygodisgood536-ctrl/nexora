@@ -1,4 +1,4 @@
-﻿// Regression test for the silent automatic savings posting in the allocation
+// Regression test for the silent automatic savings posting in the allocation
 // pipeline (RULE 9.1.3, RULE 10.5.1, RULE 19.6.1, Part 15 prohibition 11).
 //
 // Defect found by independent verification: when a loan had no open repayment
