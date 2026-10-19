@@ -52,24 +52,43 @@ CREATE INDEX IF NOT EXISTS company_domains_company_idx ON company_domains (compa
 -- Row-level security.
 --
 -- Address resolution happens BEFORE anyone is authenticated, so it runs through
--- the audited app.bypass_rls path (the same path that resolves companies.slug).
+-- the audited RLS-bypass path (the same path that resolves companies.slug).
 -- Every ordinary read still obeys tenant scoping, so a signed-in worker can only
 -- ever see their own company's domain row.
+--
+-- The policy expressions are the ones that actually exist. The tenant helper is
+-- app_current_company(), created by migration 0010, and the bypass is the
+-- app.bypass_rls session setting - there is no `app` schema and no
+-- app.bypass_rls() function, so the earlier spelling of these two policies here
+-- would have failed to create at all and taken this migration with it.
 -- ---------------------------------------------------------------------------
 ALTER TABLE company_domains ENABLE ROW LEVEL SECURITY;
+ALTER TABLE company_domains FORCE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS company_domains_tenant_read ON company_domains;
 CREATE POLICY company_domains_tenant_read ON company_domains
   FOR SELECT
-  USING (company_id = app.current_company_id());
+  USING (company_id = app_current_company());
 
 DROP POLICY IF EXISTS company_domains_bypass_all ON company_domains;
 CREATE POLICY company_domains_bypass_all ON company_domains
   FOR ALL
-  USING (app.bypass_rls)
-  WITH CHECK (app.bypass_rls);
+  USING (COALESCE(current_setting('app.bypass_rls', true), '') = 'on')
+  WITH CHECK (COALESCE(current_setting('app.bypass_rls', true), '') = 'on');
 
 COMMENT ON TABLE company_domains IS
   'Company-owned domains pointing at the same application (Vision RULE 2.3.1). Presentation only: companies.slug remains the tenant identity.';
 COMMENT ON COLUMN company_domains.verified_at IS
   'NULL until DNS ownership is proven. An unverified domain must never resolve an address.';
+
+-- ---------------------------------------------------------------------------
+-- Grants.
+--
+-- This table is created after the blanket grant loop in migration 0010, so that
+-- loop never covered it. Without an explicit grant the app role has no privilege
+-- on the table at all and every query against it fails with "permission denied"
+-- at runtime, which reads as an application bug rather than a migration defect.
+-- ---------------------------------------------------------------------------
+GRANT SELECT, INSERT, UPDATE ON company_domains TO nexora;
+-- RULE 3.7.2 - nothing deletes an identity-bearing record.
+REVOKE DELETE ON company_domains FROM nexora;

@@ -259,6 +259,59 @@ check(
   `${migrations.length} files`
 );
 
+// ---- 4. new tables must be granted to the app role -------------------------
+// Migration 0010 has a blanket grant loop for the tables that exist when it
+// runs. Anything created AFTER that point gets no privilege at all unless its
+// own migration grants it, and the symptom is a runtime "permission denied for
+// table ..." that looks like an application bug rather than a migration defect.
+const blanketGrantIndex = migrations.findIndex((m) =>
+  /GRANT SELECT, INSERT, UPDATE, DELETE ON %I TO nexora/.test(m.text)
+);
+const ungrantedTables = [];
+migrations.forEach((m, idx) => {
+  if (idx <= blanketGrantIndex) return; // covered by the blanket loop
+  for (const t of raw[idx].matchAll(CREATE_TABLE)) {
+    const table = t[1].toLowerCase();
+    const grant = new RegExp(`GRANT[^;]*\\b${escapeRe(table)}\\b[^;]*TO\\s+nexora`, "i");
+    if (!grant.test(raw[idx])) ungrantedTables.push(`${m.file}: ${table}`);
+  }
+});
+check(
+  "every table created after the blanket grant loop is granted to the app role",
+  ungrantedTables.length === 0,
+  ungrantedTables.join("; ")
+);
+
+// ---- 5. RLS policies must use helpers that exist ---------------------------
+// Migration 0010 defines app_current_company() and app_current_branch(), and
+// the bypass is the app.bypass_rls session SETTING. There is no `app` schema
+// and no app.bypass_rls() function, so a policy written as app.bypass_rls() or
+// app.current_company_id() fails to create and takes its whole migration with it.
+const knownHelpers = new Set(["app_current_company", "app_current_branch"]);
+// Session settings are referenced as the string 'app.<name>' inside
+// current_setting(), and the bare token app.<name> also appears in comments.
+// Collect the real setting names so they are never mistaken for functions.
+const appSettings = new Set(["bypass_rls"]);
+for (const text of raw) {
+  for (const s of text.matchAll(/current_setting\(\s*'app\.([a-z_][a-z0-9_]*)'/gi)) {
+    appSettings.add(s[1].toLowerCase());
+  }
+}
+const bogusHelperRefs = [];
+for (let i = 0; i < raw.length; i++) {
+  // Only a CALL is suspect: app.something(
+  for (const m of raw[i].matchAll(/\bapp\.([a-z_][a-z0-9_]*)\s*\(/gi)) {
+    const name = m[1].toLowerCase();
+    if (appSettings.has(name) || knownHelpers.has(name)) continue;
+    bogusHelperRefs.push(`${migrations[i].file}: app.${name}()`);
+  }
+}
+check(
+  "RLS policies reference only helper functions that exist",
+  bogusHelperRefs.length === 0,
+  bogusHelperRefs.join("; ")
+);
+
 // A table dropped and never recreated is not an error by itself, but it is
 // worth surfacing so it is a decision rather than an accident.
 const neverRecreated = [...droppedTables.entries()]

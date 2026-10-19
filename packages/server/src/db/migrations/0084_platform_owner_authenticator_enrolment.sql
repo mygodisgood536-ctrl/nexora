@@ -40,3 +40,12 @@ CREATE INDEX IF NOT EXISTS idx_po_auth_audit
 -- RULE 14.3.2 - security transitions are append-only; no UPDATE or DELETE is
 -- granted on this table to the application role.
 REVOKE UPDATE, DELETE ON platform_owner_authenticator_audit FROM PUBLIC;
+REVOKE UPDATE, DELETE ON platform_owner_authenticator_audit FROM nexora;
+
+-- The table is created after the blanket grant loop in migration 0010, so that
+-- loop never granted the application role any privilege here. Revoking from
+-- PUBLIC alone leaves the role with nothing at all: every write to this audit
+-- trail would fail with "permission denied". The grant is what makes the
+-- append-only story work, and the revoke immediately after it is what makes it
+-- append-only rather than merely append-capable.
+GRANT SELECT, INSERT ON platform_owner_authenticator_audit TO nexora;

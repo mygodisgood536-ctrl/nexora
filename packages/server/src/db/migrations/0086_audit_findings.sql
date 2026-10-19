@@ -78,6 +78,18 @@ CREATE POLICY rls_tenant ON audit_findings_events
 -- RULE 14.3.2 - append-only. Nothing may delete a finding or its history.
 REVOKE DELETE ON audit_findings FROM PUBLIC;
 REVOKE DELETE ON audit_findings_events FROM PUBLIC;
+REVOKE UPDATE, DELETE ON audit_findings FROM nexora;
+REVOKE UPDATE, DELETE ON audit_findings_events FROM nexora;
+
+-- Both tables are created after the blanket grant loop in migration 0010, so
+-- that loop granted the application role nothing on them. Revoking from PUBLIC
+-- alone leaves the role with no privilege at all, and every write to the
+-- findings trail would fail with "permission denied" - which presents as an
+-- application bug rather than a missing migration grant. The grant is what makes
+-- findings recordable at all; the revokes immediately above are what make the
+-- trail append-only rather than merely append-capable.
+GRANT SELECT, INSERT ON audit_findings TO nexora;
+GRANT SELECT, INSERT ON audit_findings_events TO nexora;
 
 -- The severity a company sees is its own; it is not a global semantic colour
 -- requirement, so no constraint links it to the accent (RULE 13.2).
