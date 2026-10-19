@@ -312,6 +312,40 @@ check(
   bogusHelperRefs.join("; ")
 );
 
+// ---- 6. RLS enabled must be paired with at least one policy ---------------
+// A table with RLS enabled and NO policy has an empty policy set. That does not
+// raise an error: SELECT silently returns zero rows and INSERT fails with "new
+// row violates row-level security policy". So the failure surfaces as an empty
+// screen, not as an error, and can ship undetected for a long time.
+//
+// This is not hypothetical: reconciliation_items had FORCE RLS from migration
+// 0017 and no policy anywhere in the chain, which silently killed the entire
+// reconciliation queue - including every exception the RULE 8.5.6 scheduled
+// poll raises.
+const rlsEnabled = new Map(); // table -> first migration that enabled it
+const policyTables = new Set();
+migrations.forEach((m, idx) => {
+  for (const t of raw[idx].matchAll(
+    /ALTER\s+TABLE\s+(?:ONLY\s+)?([a-z_][a-z0-9_]*)\s+(?:FORCE\s+)?ENABLE ROW LEVEL SECURITY/gi
+  )) {
+    const table = t[1].toLowerCase();
+    if (!rlsEnabled.has(table)) rlsEnabled.set(table, m.file);
+  }
+  for (const p of raw[idx].matchAll(
+    /CREATE\s+POLICY\s+[a-z_][a-z0-9_]*\s+ON\s+([a-z_][a-z0-9_]*)/gi
+  )) {
+    policyTables.add(p[1].toLowerCase());
+  }
+});
+const unpoliciedRls = [...rlsEnabled.entries()]
+  .filter(([table]) => !policyTables.has(table))
+  .map(([table, file]) => `${table} (RLS enabled in ${file})`);
+check(
+  "every RLS-enabled table has at least one policy",
+  unpoliciedRls.length === 0,
+  unpoliciedRls.join("; ")
+);
+
 // A table dropped and never recreated is not an error by itself, but it is
 // worth surfacing so it is a decision rather than an accident.
 const neverRecreated = [...droppedTables.entries()]
