@@ -346,6 +346,42 @@ check(
   unpoliciedRls.join("; ")
 );
 
+// ---- 7. NOT NULL additions must be safe against existing rows --------------
+// ALTER TABLE ... ADD COLUMN ... NOT NULL with no DEFAULT fails immediately if
+// the table already holds a single row. On a fresh database the table is empty
+// and it passes, so the defect is invisible until the day the chain is replayed
+// against a database that has data.
+//
+// The safe order is: add nullable, backfill, then SET NOT NULL. A migration that
+// adds a NOT NULL column is therefore required to backfill before constraining
+// it, which is only detectable when both statements touch the same column.
+const notNullAdds = [];
+migrations.forEach((m, idx) => {
+  for (const a of raw[idx].matchAll(
+    /ALTER\s+TABLE\s+([a-z_][a-z0-9_]*)\s+ADD\s+COLUMN\s+(?:IF\s+NOT\s+EXISTS\s+)?([a-z_][a-z0-9_]*)\s+([^,;\n]*)/gi
+  )) {
+    const [, table, column, spec] = a;
+    if (!/NOT\s+NULL/i.test(spec)) continue;
+    if (/DEFAULT/i.test(spec)) continue;
+    // Does the same file backfill this column before constraining it?
+    const backfills = new RegExp(
+      `UPDATE\\s+${escapeRe(table)}\\s+SET[^;]*\\b${escapeRe(column)}\\b`,
+      "i"
+    );
+    const constrainsLater = new RegExp(
+      `ALTER\\s+TABLE\\s+${escapeRe(table)}\\s+ALTER\\s+COLUMN\\s+${escapeRe(column)}\\s+SET\\s+NOT\\s+NULL`,
+      "i"
+    );
+    if (backfills.test(raw[idx]) && constrainsLater.test(raw[idx])) continue;
+    notNullAdds.push(`${m.file}: ${table}.${column}`);
+  }
+});
+check(
+  "NOT NULL columns are added with a default or backfilled before constraining",
+  notNullAdds.length === 0,
+  notNullAdds.join("; ")
+);
+
 // A table dropped and never recreated is not an error by itself, but it is
 // worth surfacing so it is a decision rather than an accident.
 const neverRecreated = [...droppedTables.entries()]

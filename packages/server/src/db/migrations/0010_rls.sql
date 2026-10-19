@@ -6,10 +6,18 @@ CREATE FUNCTION app_current_branch() RETURNS uuid LANGUAGE sql STABLE AS $$
   SELECT NULLIF(current_setting('app.branch_id', true), '')::uuid
 $$;
 
+-- The column is added nullable, backfilled from the parent group, and only then
+-- made NOT NULL. The original form added it as NOT NULL immediately, which only
+-- succeeds while group_members is empty; against any database that already holds
+-- memberships the ALTER fails on the spot and takes every later migration with
+-- it. The backfill UPDATE was already written below the ALTER, which shows the
+-- intended order was add-then-backfill - it was simply unreachable.
 ALTER TABLE group_members
-  ADD COLUMN company_id uuid NOT NULL REFERENCES companies(id) ON DELETE CASCADE;
+  ADD COLUMN company_id uuid REFERENCES companies(id) ON DELETE CASCADE;
 CREATE INDEX idx_group_members_company ON group_members (company_id);
 UPDATE group_members gm SET company_id = g.company_id FROM groups g WHERE gm.group_id = g.id;
+ALTER TABLE group_members
+  ALTER COLUMN company_id SET NOT NULL;
 
 DO $$
 DECLARE
