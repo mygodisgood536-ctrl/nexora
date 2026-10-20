@@ -421,6 +421,29 @@ check(
   "a typed duration must be refused with a reason, not silently dropped"
 );
 
+/* ------------------------------------------------------------------
+ * 9. Provider-specific configuration fields (RULE 8.6.1-3).
+ *
+ * "A provider form with a fixed field set that ignores the chosen provider" is
+ * prohibited. Config creation must derive its field set from the registry row
+ * (payment_providers.requirement_set) for the chosen provider and store the
+ * provider-specific values under provider_settings.
+ * ------------------------------------------------------------------ */
+const paymentsService =
+  SRC.find((s) => s.rel.endsWith("modules/payments/service.ts"))?.text ?? "";
+check(
+  "config creation derives its field set from the registry row for the provider",
+  /requirement_set/.test(paymentsService) && /provider_settings/.test(paymentsService),
+  "RULE 8.6.1-3 requires provider-specific fields, not a fixed field set"
+);
+check(
+  "deliberate cross-branch sharing is recorded explicitly",
+  /is_shared_account/.test(paymentsService) && /isSharedAccount/.test(
+    SRC.find((s) => s.rel.endsWith("modules/payments/routes.ts"))?.text ?? ""
+  ),
+  "RULE 8.6.1-2 requires the sharing fact to be recorded, not assumed"
+);
+
 console.log(
   failures === 0
     ? "\nALL SECURITY INVARIANTS HELD"

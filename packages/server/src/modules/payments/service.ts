@@ -83,6 +83,8 @@ export interface CreateProviderConfigInput {
   apiBaseUrl: string;
   apiKey: string;
   signingSecret: string;
+  /** RULE 8.6.1-2 - deliberate sharing of one merchant account across branches. */
+  isSharedAccount?: boolean;
 }
 
 export interface ProviderConfigRow {
@@ -94,6 +96,7 @@ export interface ProviderConfigRow {
   apiKey: string;
   isActive: boolean;
   mdApproved: boolean;
+  isSharedAccount: boolean;
   /**
    * RULE 8.5.1 - the system-generated webhook endpoint for this configuration.
    * It is minted by the system, is non-guessable, and is never typed by a
@@ -140,8 +143,9 @@ function toProviderConfigRow(
     mdApproved: (row as { md_approved_at: Date | null }).md_approved_at !== null,
     webhookEndpointPath:
       (row as { webhook_endpoint_path?: string | null }).webhook_endpoint_path ?? "",
-    isPrimary: (row as { is_primary?: boolean }).is_primary === true,
-    createdAt: (row as { created_at: Date }).created_at.toISOString(),
+      isPrimary: (row as { is_primary?: boolean }).is_primary === true,
+      isSharedAccount: (row as { is_shared_account?: boolean }).is_shared_account === true,
+      createdAt: (row as { created_at: Date }).created_at.toISOString(),
   };
 }
 
@@ -312,6 +316,36 @@ export async function createProviderConfig(
     // change made by anyone else waits in the MD's authorisation queue.
     const actorIsMd = await actorHoldsRole(db, actor, ["md"]);
 
+    // RULE 8.6.1-3 - the field set must come from the registry row for the
+    // chosen provider, never a fixed list that ignores it. Every required
+    // provider field must be present; provider-specific values are stored
+    // under provider_settings instead of forcing every provider onto the same
+    // apiBaseUrl / apiKey / signingSecret shape.
+    const registry = await db.query<{ requirement_set: unknown }>(
+      `SELECT requirement_set FROM payment_providers
+        WHERE code=$1 AND status='active'`,
+      [input.provider.trim()]
+    );
+    if ((registry.rowCount ?? 0) === 0) {
+      throw AppError.notFound("No active payment provider is registered for that provider");
+    }
+    const requirementSet: Array<{ key: string; label?: string; required: boolean }> =
+      (registry.rows[0]!.requirement_set as Array<{ key: string; label?: string; required: boolean }>) ?? [];
+    const standardFields = new Set(["branchId","provider","apiBaseUrl","apiKey","signingSecret"]);
+    const providerFields: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(input)) {
+      if (!standardFields.has(key)) providerFields[key] = value;
+    }
+    for (const field of requirementSet) {
+      if (field.required &&
+          (providerFields[field.key] === undefined || providerFields[field.key] === null ||
+           providerFields[field.key] === "")) {
+        throw AppError.unprocessable(
+          `${field.label ?? field.key} is required for ${input.provider.trim()}`
+        );
+      }
+    }
+
     // RULE 14.5.1 - the provider credential and the webhook signing secret are
     // encrypted at rest and bound to this company as authenticated data, so a
     // database read yields ciphertext that cannot be replayed for another
@@ -331,10 +365,10 @@ export async function createProviderConfig(
       created_at: Date;
     }>(
       `INSERT INTO payment_provider_configs
-         (company_id, provider, api_base_url, api_key, api_key_fingerprint, is_active,
-          md_approved_at, md_approved_by, connection_tested_at,
-          connection_test_ok)
-       VALUES ($1,$2,$3,$4,$5,false,$6,$7,NULL,NULL)
+         (company_id, provider, api_base_url, api_key, api_key_fingerprint,
+          is_active, md_approved_at, md_approved_by, connection_tested_at,
+          connection_test_ok, provider_settings)
+       VALUES ($1,$2,$3,$4,$5,false,$6,$7,NULL,NULL,$8,$9)
        ON CONFLICT (company_id, provider)
        DO UPDATE SET api_base_url = EXCLUDED.api_base_url,
                      api_key = EXCLUDED.api_key,
@@ -343,13 +377,18 @@ export async function createProviderConfig(
                      md_approved_at = EXCLUDED.md_approved_at,
                      md_approved_by = EXCLUDED.md_approved_by,
                      connection_tested_at = NULL,
-                     connection_test_ok = NULL
-RETURNING id, company_id, provider, api_base_url, api_key,
-   is_active, md_approved_at, created_at, webhook_endpoint_path, is_primary`,
+                     connection_test_ok = NULL,
+                     provider_settings = EXCLUDED.provider_settings,
+                     is_shared_account = EXCLUDED.is_shared_account
+ RETURNING id, company_id, provider, api_base_url, api_key,
+    is_active, md_approved_at, created_at, webhook_endpoint_path, is_primary,
+    provider_settings, is_shared_account`,
       [actor.companyId, input.provider.trim(),
        input.apiBaseUrl.trim(), encryptedApiKey, apiKeyFingerprint,
        actorIsMd ? new Date() : null,
-       actorIsMd ? actor.sub : null]
+       actorIsMd ? actor.sub : null,
+       JSON.stringify(providerFields),
+       input.isSharedAccount === true]
     );
     const row = inserted.rows[0]!;
     // Vision Part 8 — link the branch to this provider config via branch_payment_accounts.
@@ -389,7 +428,8 @@ RETURNING id, company_id, provider, api_base_url, api_key,
           api_base_url: input.apiBaseUrl.trim(),
           has_secret: true,
           md_approved: actorIsMd,
-          awaits_md_authorisation: !actorIsMd
+          awaits_md_authorisation: !actorIsMd,
+          shared_account: input.isSharedAccount === true
         }),
         meta.ip ?? null, meta.userAgent ?? null, meta.requestId ?? null
       ]

@@ -77,8 +77,9 @@ const providerConfigSchema = z.object({
   provider: z.string().min(2).max(40),
   apiBaseUrl: z.string().url(),
   apiKey: z.string().min(8).max(200),
-  signingSecret: z.string().min(16).max(200)
-});
+  signingSecret: z.string().min(16).max(200),
+  isSharedAccount: z.boolean().optional()
+}).passthrough();
 
 paymentProvidersRouter.post(
   "/",
