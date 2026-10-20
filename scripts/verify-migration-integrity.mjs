@@ -86,8 +86,6 @@ const droppedColumns = new Map(); // "table.column" -> migration
 
 const CREATE_TABLE = /CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?([a-z_][a-z0-9_]*)/gi;
 const DROP_TABLE = /DROP\s+TABLE\s+(?:IF\s+EXISTS\s+)?([a-z_][a-z0-9_]*)/gi;
-const ADD_COLUMN = /ALTER\s+TABLE\s+(?:ONLY\s+)?([a-z_][a-z0-9_]*)\s+ADD\s+COLUMN\s+(?:IF\s+NOT\s+EXISTS\s+)?([a-z_][a-z0-9_]*)/gi;
-const DROP_COLUMN = /ALTER\s+TABLE\s+(?:ONLY\s+)?([a-z_][a-z0-9_]*)\s+DROP\s+COLUMN\s+(?:IF\s+EXISTS\s+)?([a-z_][a-z0-9_]*)/gi;
 
 // CREATE TABLE column list: capture the parenthesised body after each create.
 function columnsFromCreate(text) {
@@ -121,7 +119,46 @@ function columnsFromCreate(text) {
 }
 
 const danglingColumnRefs = [];
+const uncreatedColumnRefs = [];
 const unknownTableRefs = [];
+
+// Every table.column pair any migration has ever created. Used for the inverse
+// check: a column that was never created is as broken as one that was dropped.
+const knownTables = new Set();
+const existedColumns = new Set();
+
+/**
+ * Yields "table.column" for every place a migration structurally names a column
+ * on a known table: qualified references, index/constraint column lists, and
+ * explicit ALTER TABLE ... COLUMN clauses.
+ *
+ * Deliberately does not extract every word inside an ALTER TABLE statement —
+ * SQL keywords such as SET, WITH, CONSTRAINT and ADD would otherwise be
+ * mistaken for columns and drown the signal.
+ */
+function columnNamesMentionedOnTables(text) {
+  const out = new Set();
+  for (const m of text.matchAll(/\b([a-z_][a-z0-9_]*)\s*\.\s*([a-z_][a-z0-9_]*)/gi)) {
+    out.add(`${m[1].toLowerCase()}.${m[2].toLowerCase()}`);
+  }
+  for (const m of text.matchAll(/\bON\s+([a-z_][a-z0-9_]*)\s*\(([^)]*)\)/gi)) {
+    const table = m[1].toLowerCase();
+    for (const part of m[2].split(",")) {
+      const spec = part.trim();
+      if (spec.includes("(")) continue;
+      const name = spec.split(/\s+/)[0].replace(/[^a-z0-9_]/gi, "").toLowerCase();
+      if (name && !RESERVED.has(name)) out.add(`${table}.${name}`);
+    }
+  }
+  for (const m of text.matchAll(
+    /ALTER\s+TABLE\s+(?:ONLY\s+)?([a-z_][a-z0-9_]*)[^;]*?\bCOLUMN\s+(?:IF\s+NOT\s+EXISTS\s+)?([a-z_][a-z0-9_]*)/gi
+  )) {
+    const name = m[2].toLowerCase();
+    if (RESERVED.has(name)) continue;
+    out.add(`${m[1].toLowerCase()}.${name}`);
+  }
+  return out;
+}
 
 /**
  * True when `text` names `column` in a position that is structurally about
@@ -164,10 +201,14 @@ function escapeRe(s) {
 migrations.forEach((m, idx) => {
   const text = raw[idx];
 
+  const createdInThisFile = new Set();
+
   for (const ref of columnsFromCreate(text)) {
-    createdColumns.set(ref, m.file);
+    existedColumns.add(ref);
+    createdInThisFile.add(ref);
   }
   for (const t of text.matchAll(CREATE_TABLE)) {
+    knownTables.add(t[1].toLowerCase());
     createdTables.add(t[1].toLowerCase());
     droppedTables.delete(t[1].toLowerCase());
   }
@@ -175,18 +216,27 @@ migrations.forEach((m, idx) => {
     droppedTables.set(t[1].toLowerCase(), m.file);
   }
 
-  // Dropped columns are recorded BEFORE judging this file's own references, so a
-  // file that drops and recreates a column in the same migration is not flagged.
-  const droppedHere = [];
-  for (const c of text.matchAll(DROP_COLUMN)) {
-    const key = `${c[1].toLowerCase()}.${c[2].toLowerCase()}`;
-    droppedColumns.set(key, m.file);
-    droppedHere.push(key);
-  }
-  for (const c of text.matchAll(ADD_COLUMN)) {
-    const key = `${c[1].toLowerCase()}.${c[2].toLowerCase()}`;
-    createdColumns.set(key, m.file);
-    droppedColumns.delete(key);
+  // Dropped and added columns are recorded BEFORE judging this file's own
+  // references, so a file that drops and recreates a column in the same
+  // migration is not flagged. Several ADD/DROP COLUMN clauses can be
+  // comma-separated in a single ALTER TABLE, so track the table each clause
+  // belongs to rather than requiring ALTER TABLE before every clause.
+  let currentTable = null;
+  const alterOrColumn = /(ALTER\s+TABLE\s+(?:ONLY\s+)?([a-z_][a-z0-9_]*))|((?:ADD|DROP)\s+COLUMN\s+(?:IF\s+(?:NOT\s+)?EXISTS\s+)?([a-z_][a-z0-9_]*))/gi;
+  for (const c of text.matchAll(alterOrColumn)) {
+    if (c[2] !== undefined) {
+      currentTable = c[2].toLowerCase();
+    } else if (c[4] !== undefined && currentTable) {
+      const key = `${currentTable}.${c[4].toLowerCase()}`;
+      if (/^ADD/i.test(c[3])) {
+        createdColumns.set(key, m.file);
+        existedColumns.add(key);
+        createdInThisFile.add(key);
+        droppedColumns.delete(key);
+      } else {
+        droppedColumns.set(key, m.file);
+      }
+    }
   }
 
   // Any column dropped earlier and not re-added must not be referenced here.
@@ -205,6 +255,25 @@ migrations.forEach((m, idx) => {
       }
       danglingColumnRefs.push(`${m.file} uses ${key}, dropped by ${droppedIn}`);
     }
+  }
+
+  // A column that no migration ever added is a typo or a rename that was never
+  // written. This is the inverse of the check above and catches a different
+  // mistake: not "this used to exist", but "this never did".
+  for (const key of columnNamesMentionedOnTables(text)) {
+    const [table, column] = key.split(".");
+    if (!knownTables.has(table)) continue;
+    if (existedColumns.has(key)) continue;
+    if (createdInThisFile.has(key)) continue;
+    if (
+      new RegExp(
+        `ADD\\s+COLUMN\\s+(?:IF\\s+NOT\\s+EXISTS\\s+)?${escapeRe(column)}\\b`,
+        "i"
+      ).test(text)
+    ) {
+      continue;
+    }
+    uncreatedColumnRefs.push(`${m.file} uses ${key}, which no migration creates`);
   }
 
   // PL/pgSQL identifiers that look like tables but are local variables declared
@@ -240,6 +309,13 @@ check(
   "no migration uses a column an earlier migration dropped",
   danglingColumnRefs.length === 0,
   danglingColumnRefs.slice(0, 6).join("; ")
+);
+
+const uncreatedUnique = [...new Set(uncreatedColumnRefs)];
+check(
+  "no migration uses a column no migration creates",
+  uncreatedUnique.length === 0,
+  uncreatedUnique.slice(0, 8).join("; ")
 );
 
 // This check is ADVISORY, not a gate. Distinguishing a relation from a function
