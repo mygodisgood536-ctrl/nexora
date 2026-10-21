@@ -1,13 +1,11 @@
 import type { Request, Response } from "express";
 import pg from "pg";
 import { readdirSync, readFileSync } from "node:fs";
-import { join, dirname } from "node:path";
-import { fileURLToPath } from "node:url";
+import { join } from "node:path";
 
-const MIGRATIONS_DIR = join(dirname(fileURLToPath(import.meta.url)), "..", "packages", "server", "src", "db", "migrations");
+const MIGRATIONS_DIR = join(process.cwd(), "packages", "server", "src", "db", "migrations");
 
 export default async function handler(_req: Request, res: Response): Promise<void> {
-  // Require cron secret for safety
   if (_req.headers.authorization !== `Bearer ${process.env.CRON_SECRET}`) {
     res.status(401).json({ error: "unauthorized" });
     return;
@@ -30,7 +28,9 @@ export default async function handler(_req: Request, res: Response): Promise<voi
       )
     `);
     const applied = new Set(
-      (await client.query<{ filename: string }>("SELECT filename FROM _migrations")).rows.map((r) => r.filename)
+      (await client.query<{ filename: string }>("SELECT filename FROM _migrations")).rows.map(
+        (r) => r.filename
+      )
     );
     const files = readdirSync(MIGRATIONS_DIR)
       .filter((f) => f.endsWith(".sql"))
@@ -53,7 +53,8 @@ export default async function handler(_req: Request, res: Response): Promise<voi
     res.status(200).json({
       applied: executed.length,
       migrations: executed,
-      message: executed.length > 0 ? `applied ${executed.length} migration(s)` : "already up to date",
+      message:
+        executed.length > 0 ? `applied ${executed.length} migration(s)` : "already up to date",
     });
   } catch (err) {
     res.status(500).json({
