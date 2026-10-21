@@ -72,6 +72,14 @@ export async function resetDatabase(adminDatabaseUrl: string): Promise<void> {
     await admin.query("DROP SCHEMA public CASCADE");
     await admin.query("CREATE SCHEMA public");
 
+    // Extensions installed INTO the public schema are dropped by the CASCADE
+    // above. Migration 0090 calls gen_random_bytes(), which lives in pgcrypto,
+    // so a reset that does not restore the extension leaves the chain unable to
+    // run at all: "function gen_random_bytes(integer) does not exist". It is
+    // restored here, before any migration runs, so a reset database and a
+    // fresh one behave identically.
+    await admin.query("CREATE EXTENSION IF NOT EXISTS pgcrypto");
+
     // Does the application role exist at all? Granting to a missing role errors.
     const exists = await admin.query("SELECT 1 FROM pg_roles WHERE rolname = $1", [appRole]);
     if (exists.rowCount === 0) {
