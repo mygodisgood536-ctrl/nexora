@@ -32,6 +32,8 @@ export default async function handler(_req: Request, res: Response): Promise<voi
         END IF;
       END $$;
     `);
+    // pgcrypto extension required by migration 0090 (gen_random_bytes)
+    await client.query(`CREATE EXTENSION IF NOT EXISTS pgcrypto`);
     const applied = new Set(
       (await client.query<{ filename: string }>("SELECT filename FROM _migrations")).rows.map(
         (r) => r.filename
