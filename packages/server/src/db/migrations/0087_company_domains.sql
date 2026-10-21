@@ -21,11 +21,11 @@ CREATE TABLE IF NOT EXISTS company_domains (
   domain        text NOT NULL,
   is_primary    boolean NOT NULL DEFAULT true,
   -- Ownership is proven by a DNS TXT record before the address is trusted.
-  verified_at   timestamz,
+  verified_at   timestamptz,
   verification_token text,
   created_by_platform_owner uuid REFERENCES platform_owners(id),
-  created_at    timestamz NOT NULL DEFAULT now(),
-  updated_at    timestamz NOT NULL DEFAULT now(),
+  created_at    timestamptz NOT NULL DEFAULT now(),
+  updated_at    timestamptz NOT NULL DEFAULT now(),
 
   -- A registrable host: letters, digits, hyphens and dots. Punycode is allowed
   -- so an IDN company domain can be stored in its ASCII form.
