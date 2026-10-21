@@ -23,6 +23,15 @@ export default async function handler(_req: Request, res: Response): Promise<voi
         applied_at timestamptz NOT NULL DEFAULT now()
       )
     `);
+    // Ensure the nexora application role exists (required by early migrations)
+    await client.query(`
+      DO $$
+      BEGIN
+        IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'nexora') THEN
+          CREATE ROLE nexora LOGIN;
+        END IF;
+      END $$;
+    `);
     const applied = new Set(
       (await client.query<{ filename: string }>("SELECT filename FROM _migrations")).rows.map(
         (r) => r.filename
