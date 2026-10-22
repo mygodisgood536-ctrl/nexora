@@ -87,10 +87,6 @@ const DB_SLUG_PATTERN = /^[a-z0-9-]*[a-z0-9][a-z0-9-]*$/;
  */
 const PART_SLUG_PATTERN = /^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/;
 
-function isLocalHost(host: string): boolean {
-  return host === "localhost" || host.endsWith(".localhost") || /^\d{1,3}(\.\d{1,3}){3}$/.test(host);
-}
-
 /**
  * Splits a label into company/branch candidates, longest company first.
  *
@@ -134,9 +130,19 @@ export function parsePortalHost(hostHeader: string | undefined | null): HostCand
  * Resolves a Host header to an address.
  *
  * A host under the configured platform apex (`acme.nexora.app`) yields slug
- * candidates. Any other multi-label host is treated as a COMPANY DOMAIN and is
- * only accepted when a verified row exists for it — an unregistered domain
- * therefore cannot resolve, and the apex itself resolves to nothing.
+ * candidates. A host under `.localhost` is the LOCAL DEVELOPMENT equivalent of
+ * the same form - `acme.localhost` is `acme.nexora.app` pointed at the
+ * developer's machine - and yields the same candidates. Any other multi-label
+ * host is treated as a COMPANY DOMAIN and is only accepted when a verified row
+ * exists for it, so an unregistered domain cannot resolve, and the apex itself
+ * resolves to nothing.
+ *
+ * The `.localhost` form is not a weakening of any rule. Like the apex form, the
+ * label is only a LOOKUP KEY: it is resolved against real `companies` rows
+ * before a single credential is checked, so a forged label resolves to nothing
+ * and grants exactly what the apex form would have granted. It exists so that
+ * the platform can be exercised on a machine that has no wildcard DNS, which is
+ * also what the automated suite relies on.
  */
 export function parsePortalAddressFromHost(hostHeader: string | undefined | null): PortalAddress {
   const EMPTY: PortalAddress = { candidates: [], customDomain: null, empty: true };
@@ -144,13 +150,23 @@ export function parsePortalAddressFromHost(hostHeader: string | undefined | null
 
   const host = hostHeader.split(":")[0]!.toLowerCase().replace(/\.$/, "");
   if (!host) return EMPTY;
-  if (isLocalHost(host)) return EMPTY;
+  // The bare localhost and a bare IP address are not company addresses.
+  if (host === "localhost" || /^\d{1,3}(\.\d{1,3}){3}$/.test(host)) return EMPTY;
 
   const apex = env.PLATFORM_APEX.trim().toLowerCase().replace(/^\.+|\.+$/g, "");
 
   if (apex && host.endsWith(`.${apex}`)) {
     const label = host.slice(0, -(apex.length + 1));
     // The bare apex, and any deeper nesting, are not company addresses.
+    if (!label || label.includes(".")) return EMPTY;
+    return { candidates: splitSlugCandidates(label), customDomain: null, empty: false };
+  }
+
+  // Local development: `acme.localhost` is the platform-hostname form pointed at
+  // this machine. The label resolves against real company rows exactly as the
+  // apex form does, so it authorises nothing the apex form would not.
+  if (host.endsWith(".localhost")) {
+    const label = host.slice(0, -".localhost".length);
     if (!label || label.includes(".")) return EMPTY;
     return { candidates: splitSlugCandidates(label), customDomain: null, empty: false };
   }

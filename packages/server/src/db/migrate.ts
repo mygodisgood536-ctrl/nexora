@@ -22,6 +22,12 @@ export async function runMigrations(databaseUrl: string): Promise<string[]> {
         applied_at timestamptz NOT NULL DEFAULT now()
       )
     `);
+    // Migration 0090 calls gen_random_bytes(), which lives in pgcrypto. A fresh
+    // database has no extension installed, and a database that was reset had the
+    // extension dropped with the schema, so the chain cannot reach 0090 without
+    // this. It is created here, before any migration runs, so every entry point
+    // - fresh database, reset database, restored backup - behaves identically.
+    await admin.query("CREATE EXTENSION IF NOT EXISTS pgcrypto");
     const applied = new Set(
       (await admin.query<{ filename: string }>("SELECT filename FROM _migrations")).rows.map((r) => r.filename)
     );

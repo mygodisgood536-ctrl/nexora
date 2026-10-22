@@ -1,5 +1,6 @@
 import { config } from "dotenv";
 import pg from "pg";
+import { fileURLToPath } from "node:url";
 
 /**
  * Vitest global setup.
@@ -18,7 +19,12 @@ import pg from "pg";
 const TEST_DB = process.env.UNIT_TEST_DATABASE ?? "nexora_unittest";
 
 export async function setup(): Promise<void> {
-  config({ path: new URL("../.env", import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, "$1") });
+  // fileURLToPath, not URL.pathname: a pathname keeps the percent-encoding, so
+  // a checkout path containing a space ("C:/Users/Me And Myself/...") resolves
+  // to a file that does not exist. dotenv then fails silently, every variable
+  // falls back to its default, and the suite silently runs against
+  // localhost:5432 instead of the database it was pointed at.
+  config({ path: fileURLToPath(new URL("../.env", import.meta.url)) });
 
   process.env.NODE_ENV ??= "test";
 
@@ -43,6 +49,18 @@ export async function setup(): Promise<void> {
       // eslint-disable-next-line no-console -- setup diagnostics
       console.log(`[vitest] created isolated test database ${TEST_DB}`);
     }
+  } catch (err) {
+    // A MANAGED database (Neon, RDS) commonly forbids CREATE DATABASE for the
+    // application role, because the cluster owner provisions databases out of
+    // band. When the target already exists this is not a failure - the suite
+    // simply runs against the database it was pointed at, which is exactly what
+    // UNIT_TEST_DATABASE selects.
+    const message = (err as Error).message;
+    if (!/already exists|permission denied|not authorized|must be owner/i.test(message)) {
+      throw err;
+    }
+    // eslint-disable-next-line no-console -- setup diagnostics
+    console.log(`[vitest] using pre-provisioned database ${TEST_DB}`);
   } finally {
     await admin.end();
   }
@@ -61,7 +79,16 @@ export async function setup(): Promise<void> {
   // resetDatabase() drops/recreates the schema and re-grants table, sequence and
   // default privileges to the application role, so every table a migration
   // creates afterwards is genuinely usable by the app while still obeying RLS.
+  //
+  // SKIP_DB_RESET=1 runs the suite against a database that is ALREADY
+  // provisioned and migrated. A managed database (Neon, RDS) cannot always be
+  // reset by the role the suite runs as, and a full DROP SCHEMA CASCADE over a
+  // network link is slow enough to be killed mid-flight. When the schema is
+  // already at the right version, the migrations below are a no-op and the
+  // suite is correct either way.
   const { resetDatabase, runMigrations, adminUrlFor } = await import("../src/db/migrate");
-  await resetDatabase(adminUrlFor(appDbUrl.toString()));
+  if (process.env.SKIP_DB_RESET !== "1") {
+    await resetDatabase(adminUrlFor(appDbUrl.toString()));
+  }
   await runMigrations(adminUrlFor(appDbUrl.toString()));
 }

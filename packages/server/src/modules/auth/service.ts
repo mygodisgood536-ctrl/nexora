@@ -420,15 +420,31 @@ export async function login(
     // same neutral message as a bad password, so the endpoint never becomes an
     // oracle for who works where.
     if (ctx.branchId) {
+      // A branch is covered by a company-wide or head-office assignment, or by
+      // an assignment that names that branch.
+      //
+      // NOTE: role_assignments has NO branch_id column. The branch mapping for
+      // a scoped assignment lives in role_assignment_branches, and the scope
+      // kind lives in role_assignments.scope_type. The previous form read
+      // ra.branch_id directly, which made PostgreSQL raise
+      // "column ra.branch_id does not exist" - a 500 on EVERY branch-URL login,
+      // not a subtle misbehaviour. The shape below is the same one the
+      // approval-stage resolver already uses.
       const holdsBranchAssignment = await db.query<{ id: string }>(
         `SELECT ra.id
            FROM role_assignments ra
           WHERE ra.user_id = $1
             AND ra.company_id = $2
             AND ra.status = 'active'
-            AND (ra.branch_id = $3 OR ra.branch_id IS NULL)
             AND (ra.assignment_type = 'permanent'
-                 OR (ra.starts_at <= now() AND (ra.ends_at IS NULL OR ra.ends_at > now())))`,
+                 OR (ra.starts_at <= now() AND (ra.ends_at IS NULL OR ra.ends_at > now())))
+            AND (
+              ra.scope_type IN ('company_wide','head_office')
+              OR EXISTS (
+                SELECT 1 FROM role_assignment_branches rab
+                 WHERE rab.assignment_id = ra.id AND rab.branch_id = $3
+              )
+            )`,
         [user.id, ctx.companyId, ctx.branchId]
       );
       if ((holdsBranchAssignment.rowCount ?? 0) === 0) {

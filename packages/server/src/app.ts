@@ -236,32 +236,6 @@ export function createApp(): express.Express {
   // tenant transaction.
   app.use("/cron", cronRouter);
 
-  // TEMPORARY: migration runner - remove after migrations are applied
-  app.use("/migrate", async (_req: Request, res: Response) => {
-    if (_req.headers.authorization !== `Bearer ${process.env.CRON_SECRET}`) {
-      res.status(401).json({ error: "unauthorized" });
-      return;
-    }
-    const databaseUrl = process.env.DATABASE_URL;
-    if (!databaseUrl) {
-      res.status(500).json({ error: "DATABASE_URL not configured" });
-      return;
-    }
-    try {
-      const { runMigrations } = await import("../packages/server/src/db/migrate");
-      const applied = await runMigrations(databaseUrl);
-      res.status(200).json({
-        applied: applied.length,
-        migrations: applied,
-        message: applied.length > 0 ? `applied ${applied.length} migration(s)` : "already up to date",
-      });
-    } catch (err) {
-      res.status(500).json({
-        error: err instanceof Error ? err.message : String(err),
-      });
-    }
-  });
-
   app.use(notFoundHandler);
   app.use(errorHandler);
 
