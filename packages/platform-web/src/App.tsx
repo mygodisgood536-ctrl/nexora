@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react";
-import { Navigate, Route, Routes, useNavigate } from "react-router-dom";
+import { Navigate, Route, Routes, useNavigate, useParams } from "react-router-dom";
 import { ToastProvider, ErrorState, LoadingRow, Button } from "@nexora/ui";
 import { api, getToken, platformLogout, setToken } from "./lib/api";
 import { Shell, useUnreadCount } from "./shell/Shell";
@@ -8,6 +8,7 @@ import { DashboardPage } from "./pages/DashboardPage";
 import { CompaniesPage } from "./pages/CompaniesPage";
 import { CreateCompanyPage } from "./pages/CreateCompanyPage";
 import { CompanyDetailPage } from "./pages/CompanyDetailPage";
+import { AiConfigurationPage } from "./pages/AiConfigurationPage";
 import { DraftsPage } from "./pages/DraftsPage";
 import { UsagePage } from "./pages/UsagePage";
 import { HealthPage } from "./pages/HealthPage";
@@ -111,6 +112,54 @@ function Guarded({ children }: { children: ReactNode }) {
   return <>{children}</>;
 }
 
+/**
+ * RULE 3.6.4 / 3.6.5 - the AI provider/model configuration is operated for ONE
+ * explicitly identified company at a time. The company is resolved from the
+ * route and confirmed against the platform API before the page renders, so the
+ * page can never show a stale or mismatched company's identity. The server
+ * resolves and validates the company again on every write, so the frontend
+ * never gets to decide which company it is configuring.
+ */
+function CompanyAiConfigurationRoute() {
+  const { id } = useParams();
+  const [company, setCompany] = useState<{ name: string } | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!id) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const detail = await api<{ company: { name: string } }>(`/companies/${id}/detail`);
+        if (!cancelled) setCompany({ name: detail.company.name });
+      } catch (err) {
+        if (!cancelled) setError((err as Error).message);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [id]);
+
+  if (error) {
+    return (
+      <div className="nx-main">
+        <ErrorState title="Could not load this company" detail={error} />
+      </div>
+    );
+  }
+  if (!company || !id) {
+    return (
+      <div className="nx-main">
+        <div className="nx-card nx-card--pad">
+          <LoadingRow text="Loading the company…" />
+        </div>
+      </div>
+    );
+  }
+  return <AiConfigurationPage companyId={id} companyName={company.name} />;
+}
+
 function PageRoutes() {
   return (
     <Routes>
@@ -119,6 +168,12 @@ function PageRoutes() {
       <Route path="/companies" element={<CompaniesPage />} />
       <Route path="/companies/new" element={<CreateCompanyPage />} />
       <Route path="/companies/:id" element={<CompanyDetailPage />} />
+      <Route
+        path="/companies/:id/ai-configuration"
+        element={
+          <CompanyAiConfigurationRoute />
+        }
+      />
       <Route path="/drafts" element={<DraftsPage />} />
       <Route path="/usage" element={<UsagePage />} />
       <Route path="/health" element={<HealthPage />} />

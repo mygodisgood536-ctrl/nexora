@@ -321,6 +321,87 @@ function parseModelLines(stdout: string): OpenCodeModelRef[] {
   return out;
 }
 
+/**
+ * How a provider is authenticated, as OpenCode itself reports it.
+ *
+ * - `api`   the provider needs a user-supplied API key
+ * - `oauth` the provider needs a linked account (an interactive login), not a key
+ * - `none`  OpenCode serves the provider itself and no credential is needed
+ * - `unknown` OpenCode did not report a mechanism for it
+ */
+export type OpenCodeAuthMechanism = "api" | "oauth" | "none" | "unknown";
+
+export interface OpenCodeProviderAuth {
+  /** The provider id, as OpenCode names it. */
+  id: string;
+  mechanism: OpenCodeAuthMechanism;
+  /** True when a credential for this provider is already configured. */
+  configured: boolean;
+}
+
+/**
+ * The per-provider authentication mechanism, read from OpenCode's OWN provider
+ * configuration.
+ *
+ * RULE 21.2.3 / the AI MODEL interface contract require the API-key field to
+ * appear only when the selected provider genuinely needs one. That has to come
+ * from the supported provider configuration and authentication mechanism, not
+ * from a hand-maintained list of provider names, which would be wrong the
+ * moment OpenCode adds a provider.
+ *
+ * `opencode providers list` (aliased `auth`) reports the configured
+ * credentials and the mechanism of each - `api` for a key, `oauth` for a linked
+ * account. The platform's own free provider is served by OpenCode and needs no
+ * credential at all, so its mechanism is `none`.
+ *
+ * A provider that OpenCode lists in its catalogue but has no configured
+ * credential is reported as `unknown` rather than guessed: an unconfigured
+ * provider may or may not need a key, and claiming to know would be a guess.
+ */
+export async function openCodeProviderAuth(): Promise<OpenCodeProviderAuth[]> {
+  const catalogue = await openCodeCatalogue();
+  const mechanismByProvider = new Map<string, OpenCodeAuthMechanism>();
+
+  let listed = { code: null as number | null, stdout: "", timedOut: false };
+  try {
+    listed = await spawnOpenCode(["providers", "list"], { timeoutMs: 30_000 });
+  } catch {
+    // The catalogue is still authoritative for WHICH providers exist; only the
+    // mechanism is unknown.
+  }
+
+  if (!listed.timedOut && listed.code === 0) {
+    for (const raw of listed.stdout.split(/\r?\n/)) {
+      const line = raw.replace(/[^\x20-\x7E]/g, " ").trim();
+      // Format: "●  OpenRouter api" / "●  GitHub Copilot oauth"
+      const m = /^●\s+(.+?)\s+(api|oauth|none)$/i.exec(line);
+      if (!m) continue;
+      const name = m[1]!.trim();
+      const mechanism = m[2]!.toLowerCase() as OpenCodeAuthMechanism;
+      // OpenCode's own provider ids are lowercase and hyphenated; match the
+      // display name to a catalogue id case-insensitively.
+      const match = catalogue.providers.find(
+        (p) => p.id.toLowerCase() === name.toLowerCase() || name.toLowerCase().includes(p.id.toLowerCase())
+      );
+      const id = match?.id ?? name.toLowerCase();
+      mechanismByProvider.set(id, mechanism);
+    }
+  }
+
+  return catalogue.providers.map((provider) => {
+    if (provider.id === OPENCODE_FREE_PROVIDER) {
+      // OpenCode serves its own free provider; no credential is involved.
+      return { id: provider.id, mechanism: "none" as const, configured: true };
+    }
+    const mechanism = mechanismByProvider.get(provider.id);
+    return {
+      id: provider.id,
+      mechanism: mechanism ?? ("unknown" as const),
+      configured: mechanism !== undefined
+    };
+  });
+}
+
 let catalogueCache: { at: number; value: OpenCodeCatalogue } | null = null;
 
 /**

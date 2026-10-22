@@ -278,6 +278,53 @@ check(
   unstyled.length ? `unstyled: ${unstyled.join(", ")}` : `${usedClasses.size} classes all styled`
 );
 
+/* ------------------------------------------------------------------ *
+ * 9. RULE 21.2.1 - the AI MODEL interface contract.
+ *
+ * The section order is the contract: FREE MODELS first, then API PROVIDER
+ * directly below it, then the API KEY only when the provider needs one, then
+ * MODEL last. A page that reorders them is not a different page, it is a
+ * different product, so the order is asserted rather than trusted.
+ * ------------------------------------------------------------------ */
+console.log("\n=== RULE 21.2 AI MODEL interface ===");
+const aiPage = read("packages/platform-web/src/pages/AiConfigurationPage.tsx");
+const aiOrder = [
+  aiPage.indexOf('title="FREE MODELS'),
+  aiPage.indexOf('title="API Provider"'),
+  aiPage.indexOf('title="API Key"'),
+  aiPage.indexOf('title="Model"')
+];
+check(
+  "the AI MODEL page exists as a page of its own",
+  aiPage.length > 0,
+  "packages/platform-web/src/pages/AiConfigurationPage.tsx"
+);
+check(
+  "RULE 21.2.1 - the sections appear in the fixed order",
+  aiOrder.every((i) => i >= 0) && aiOrder.every((v, i) => i === 0 || v > aiOrder[i - 1]),
+  `offsets ${aiOrder.join(" < ")}`
+);
+check(
+  "RULE 21.2.5 - free models and provider selection are separate paths",
+  /chooseFreeModel/.test(aiPage) && /chooseProvider/.test(aiPage),
+  "a free model can be chosen without selecting an unrelated provider"
+);
+check(
+  "RULE 21.2.3 - the API key field is conditional on the provider's own auth mechanism",
+  /mechanism === "api"/.test(aiPage) && /mechanism === "oauth"/.test(aiPage),
+  "the field is shown from the reported mechanism, not a hard-coded provider list"
+);
+check(
+  "RULE 21.2.4 - the model list is cleared and refreshed when the provider changes",
+  /setModel\(""\)/.test(aiPage) && /loadProvider/.test(aiPage),
+  "a stale model can never remain selected"
+);
+check(
+  "the AI MODEL page never hard-codes a model or provider name",
+  !/opencode\/[a-z0-9-]+\/free/i.test(aiPage) && !/Space Bunny|Big Pickle|MiMo|Nemotron/i.test(aiPage),
+  "the catalogue must come from OpenCode"
+);
+
 console.log(
   failures === 0 ? "\nALL DESIGN-SYSTEM CHECKS PASSED" : `\n${failures} DESIGN-SYSTEM CHECK(S) FAILED`
 );

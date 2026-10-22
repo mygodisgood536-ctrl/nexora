@@ -114,6 +114,24 @@ export async function listProviders(): Promise<{
   return { providers: catalogue.providers, fetchedAt: catalogue.fetchedAt, source: "opencode" };
 }
 
+/**
+ * The per-provider authentication mechanism, as OpenCode reports it.
+ *
+ * The AI MODEL interface contract requires the API-key field to appear only
+ * when the selected provider genuinely needs one, determined from the supported
+ * provider configuration rather than a hand-maintained list. This is that
+ * source, read live from OpenCode.
+ */
+export async function listProviderAuth(): Promise<{
+  providers: Array<{ id: string; mechanism: string; configured: boolean }>;
+  fetchedAt: string;
+  source: "opencode";
+}> {
+  const { openCodeProviderAuth } = await import("../../lib/opencode");
+  const providers = await openCodeProviderAuth();
+  return { providers, fetchedAt: new Date().toISOString(), source: "opencode" };
+}
+
 /** RULE 21.2.4 - the live model list for the selected provider. */
 export async function listProviderModels(
   provider: string

@@ -38,6 +38,7 @@ import {
   listCompanyConfigurations,
   listFreeModels as listAiFreeModels,
   listProviderModels as listAiProviderModels,
+  listProviderAuth as listAiProviderAuth,
   listProviders as listAiProviders,
   revokeConfiguration,
   verifyConfiguration
@@ -460,6 +461,26 @@ platformRouter.get("/ai/free-models", authed(async (_po, _req, res) => {
 platformRouter.get("/ai/providers", authed(async (_po, _req, res) => {
   void _po;
   res.json(await listAiProviders());
+}));
+
+/**
+ * RULE 21.2.3 / the AI MODEL interface contract - the API-key field appears
+ * only when the selected provider genuinely requires one. That requirement is
+ * read from OpenCode's own provider configuration, so it is never a
+ * hand-maintained list of provider names.
+ */
+platformRouter.get("/ai/providers/:providerId/auth", authed(async (_po, req, res) => {
+  void _po;
+  const providerId = String(req.params.providerId);
+  const all = await listAiProviderAuth();
+  const found = all.providers.find((p) => p.id === providerId) ?? null;
+  res.json({
+    provider: providerId,
+    mechanism: found?.mechanism ?? "unknown",
+    configured: found?.configured ?? false,
+    fetchedAt: all.fetchedAt,
+    source: all.source
+  });
 }));
 
 platformRouter.get("/ai/providers/:providerId/models", authed(async (_po, req, res) => {

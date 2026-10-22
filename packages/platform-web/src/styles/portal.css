@@ -191,6 +191,35 @@
 
 .nxp-swatch[aria-pressed="true"] { outline: 2px solid var(--nx-color-accent); outline-offset: 2px; }
 
+/* Selectable choice card - used by the AI MODEL provider / model / free-model
+   pickers (RULE 21.2). It is a button, so it is keyboard reachable and carries
+   aria-pressed for the selected state. */
+.nx-pick {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  text-align: left;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--nx-border);
+  background: var(--nx-surface);
+  color: var(--nx-text);
+  font: inherit;
+  cursor: pointer;
+  transition: border-color 120ms ease, background-color 120ms ease;
+}
+
+.nx-pick:hover { border-color: var(--nx-border-strong); background: var(--nx-surface-alt); }
+
+.nx-pick--active {
+  border-color: var(--nx-color-accent);
+  background: var(--nx-color-accent-tint);
+  box-shadow: inset 0 0 0 1px var(--nx-color-accent);
+}
+
+.nx-pick:focus-visible { outline: 2px solid var(--nx-color-accent-ring); outline-offset: 2px; }
+
 /* Wizard steps */
 .nxp-steps { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 20px; }
 

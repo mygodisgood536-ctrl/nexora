@@ -10,8 +10,6 @@ import {
   ErrorState,
   Field,
   IconBuilding,
-  IconCheck,
-  IconKey,
   Input,
   KV,
   LoadingRow,
@@ -176,7 +174,7 @@ export function CompanyDetailPage() {
     }
   }
 
-  if (loading) return <LoadingRow text="Loading company…" />;
+  if (loading) return <LoadingRow text="Loading companyâ€¦" />;
   if (error || !detail) {
     return (
       <div className="nx-stack">
@@ -197,7 +195,7 @@ export function CompanyDetailPage() {
     { key: "code", header: "Code", render: (b) => <strong className="nx-num">{b.code}</strong> },
     { key: "name", header: "Branch", render: (b) => b.name },
     { key: "status", header: "Status", render: (b) => <StatusBadge status={b.status} /> },
-    { key: "url", header: "Portal", hideBelow: "760px", render: (b) => <span className="nx-faint" style={{ fontSize: "var(--nx-text-xs)" }}>{b.portalUrl ?? "—"}</span> }
+    { key: "url", header: "Portal", hideBelow: "760px", render: (b) => <span className="nx-faint" style={{ fontSize: "var(--nx-text-xs)" }}>{b.portalUrl ?? "â€”"}</span> }
   ];
 
   const staffColumns: Column<Detail["staffByCategory"][number]>[] = [
@@ -464,7 +462,6 @@ export function CompanyDetailPage() {
       )}
 
       {tab === "ai" && <AiTab companyId={id} initial={detail.aiConfiguration} onSaved={() => void load()} />}
-
       <ConfirmDialog
         open={statusPrompt !== null}
         onClose={() => { setStatusPrompt(null); setReason(""); }}
@@ -496,145 +493,34 @@ export function CompanyDetailPage() {
   );
 }
 
-function AiTab({ companyId, initial, onSaved }: { companyId: string; initial: unknown; onSaved: () => void }) {
-  const toast = useToast();
-  const [configs, setConfigs] = useState<Json[]>([]);
-  const [providers, setProviders] = useState<Json[]>([]);
-  const [provider, setProvider] = useState("");
-  const [model, setModel] = useState("");
-  const [apiKey, setApiKey] = useState("");
-  const [models, setModels] = useState<Json[]>([]);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    void (async () => {
-      try {
-        const [c, p] = await Promise.all([
-          api<unknown>(`/companies/${companyId}/ai-configuration`),
-          api<unknown>("/ai/providers")
-        ]);
-        setConfigs(itemsOf<Json>(c));
-        setProviders(itemsOf<Json>(p));
-      } catch (err) {
-        setError((err as Error).message);
-      }
-    })();
-  }, [companyId, initial]);
-
-  useEffect(() => {
-    if (!provider) {
-      setModels([]);
-      return;
-    }
-    void (async () => {
-      try {
-        setModels(itemsOf<Json>(await api(`/ai/providers/${encodeURIComponent(provider)}/models`)));
-      } catch {
-        setModels([]);
-      }
-    })();
-  }, [provider]);
-
-  async function createConfig() {
-    setBusy(true);
-    try {
-      await api(`/companies/${companyId}/ai-configuration`, {
-        method: "POST",
-        json: { provider, model, apiKey: apiKey || null }
-      });
-      toast({ title: "Configuration saved", text: "Verify it, then activate (RULE 21.1.9).", tone: "success" });
-      setApiKey("");
-      setConfigs(itemsOf<Json>(await api(`/companies/${companyId}/ai-configuration`)));
-      onSaved();
-    } catch (err) {
-      toast({ title: "Could not save", text: (err as Error).message, tone: "danger" });
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function act(path: string, label: string) {
-    setBusy(true);
-    try {
-      await api(path, { method: "POST" });
-      toast({ title: label, tone: "success" });
-      setConfigs(itemsOf<Json>(await api(`/companies/${companyId}/ai-configuration`)));
-      onSaved();
-    } catch (err) {
-      toast({ title: "Action failed", text: (err as Error).message, tone: "danger" });
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  const configColumns: Column<Json>[] = [
-    { key: "provider", header: "Provider", render: (r) => <strong>{String(r.provider ?? "—")}</strong> },
-    { key: "model", header: "Model", render: (r) => String(r.model ?? "—") },
-    { key: "state", header: "State", render: (r) => <StatusBadge status={String(r.state ?? r.status ?? "unknown")} /> },
-    {
-      key: "actions",
-      header: "",
-      width: "220px",
-      render: (r) => {
-        const cid = String(r.id ?? "");
-        return (
-          <div className="nx-row" style={{ gap: 6, justifyContent: "flex-end" }}>
-            <Button size="sm" onClick={() => void act(`/ai-configuration/${cid}/verify`, "Verification requested")}>Verify</Button>
-            <Button size="sm" variant="primary" onClick={() => void act(`/ai-configuration/${cid}/activate`, "Configuration activated")}>Activate</Button>
-          </div>
-        );
-      }
-    }
-  ];
-
+/**
+ * RULE 3.6.4 / 21.2.1 - the AI provider and model configuration is a page of
+ * its own, in the Platform Owner's own workplace, with the exact section order
+ * the Vision fixes. It is not a panel inside the company detail, because the
+ * interface is a contract: free models first, then the provider, then the API
+ * key only when the provider needs one, then the model last.
+ */
+function AiTab({ companyId, onSaved }: { companyId: string; initial: unknown; onSaved: () => void }) {
+  void onSaved;
   return (
-    <div className="nx-grid nx-grid--2">
-      <Card title="Configurations for this tenant">
-        {error && <ErrorState title="AI configuration unavailable" detail={error} />}
-        {!error && configs.length === 0 ? (
-          <EmptyState icon={<IconKey size={24} />} title="No AI provider configured" text="Pick a provider and model below. The platform stores the choice; company users cannot change it (RULE 21.1.9)." />
-        ) : (
-          <Table columns={configColumns} rows={configs} rowKey={(r) => String(r.id ?? r.model ?? "")} />
-        )}
-      </Card>
-      <Card title="Add a configuration">
-        <div className="nx-stack">
-          <Field label="Provider" htmlFor="ai-provider" required>
-            <Select id="ai-provider" value={provider} onChange={(e) => { setProvider(e.target.value); setModel(""); }}>
-              <option value="">Select a provider…</option>
-              {providers.map((p) => (
-                <option key={String(p.id ?? p.name)} value={String(p.id ?? p.name)}>{String(p.name ?? p.id)}</option>
-              ))}
-              {providers.length === 0 && <option value="opencode">opencode (default)</option>}
-            </Select>
-          </Field>
-          <Field label="Model" htmlFor="ai-model" required>
-            {models.length > 0 ? (
-              <Select id="ai-model" value={model} onChange={(e) => setModel(e.target.value)}>
-                <option value="">Select a model…</option>
-                {models.map((m) => (
-                  <option key={String(m.id ?? m.name)} value={String(m.id ?? m.name)}>{String(m.name ?? m.id)}</option>
-                ))}
-              </Select>
-            ) : (
-              <Input id="ai-model" value={model} onChange={(e) => setModel(e.target.value)} placeholder="model id" />
-            )}
-          </Field>
-          <Field label="API key" htmlFor="ai-key" hint="Stored encrypted; never displayed again after saving">
-            <Input id="ai-key" type="password" value={apiKey} onChange={(e) => setApiKey(e.target.value)} placeholder="optional for local gateways" />
-          </Field>
-          <div className="nx-row">
-            <Button variant="primary" onClick={() => void createConfig()} loading={busy} disabled={!provider || !model} icon={<IconCheck size={15} />}>
-              Save configuration
-            </Button>
-          </div>
-          <p className="nx-faint" style={{ fontSize: "var(--nx-text-xs)" }}>
-            The OpenCode runtime must be installed in production for verification to succeed; in
-            this environment verification reports honestly rather than pretending.
-          </p>
+    <Card title="AI provider and model">
+      <div className="nx-stack">
+        <p className="nx-faint" style={{ fontSize: "var(--nx-text-sm)" }}>
+          This company&apos;s AI provider and model are configured on their own page, in the order
+          the Vision fixes: free models first, then the API provider, then the API key only when
+          that provider genuinely needs one, and the model last.
+        </p>
+        <div>
+          <Button
+            variant="primary"
+            onClick={() => {
+              window.location.href = `/companies/${companyId}/ai-configuration`;
+            }}
+          >
+            Open the AI MODEL configuration
+          </Button>
         </div>
-      </Card>
-    </div>
+      </div>
+    </Card>
   );
 }
