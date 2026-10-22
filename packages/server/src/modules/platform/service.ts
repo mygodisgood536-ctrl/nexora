@@ -1,6 +1,7 @@
 import bcrypt from "bcryptjs";
 import crypto from "node:crypto";
 import jwt from "jsonwebtoken";
+import type pg from "pg";
 import { env } from "../../config/env";
 import { withTenantSession } from "../../db/pool";
 import { withBypass } from "../../db/repo";
@@ -449,6 +450,57 @@ function slugify(name: string): string {
   return name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40);
 }
 
+/**
+ * Records a company's own custom domain, UNVERIFIED.
+ *
+ * RULE 3.3.1 - the domain is optional, and "If left empty, the system's
+ * generated company URL is used and a custom domain can be attached later."
+ * RULE 2.3.1 - the domain "is pointed at the same application and never changes
+ * the internal slug": the company's slug remains its immutable tenant identity
+ * and the domain is only a pointer.
+ *
+ * The row is written with `verified_at` NULL and a verification token, because
+ * DNS ownership has not been proven yet. An unverified domain must never
+ * resolve: the address-resolution path only accepts a domain whose row is
+ * marked verified, so recording it here cannot let anyone reach the company by
+ * an address nobody has proven they own.
+ *
+ * A domain already claimed by another company is rejected outright, because the
+ * uniqueness index on company_domains is what stops two companies claiming one
+ * address.
+ */
+async function recordCompanyDomain(
+  db: pg.PoolClient,
+  poEmail: string,
+  companyId: string,
+  domain: string | undefined | null
+): Promise<void> {
+  const value = (domain ?? "").trim().toLowerCase();
+  if (!value) return;
+
+  const taken = await db.query<{ id: string }>(
+    `SELECT id FROM company_domains WHERE lower(domain) = $1`,
+    [value]
+  );
+  if ((taken.rowCount ?? 0) > 0) {
+    throw new AppError(409, "DOMAIN_TAKEN", "That domain is already in use by another company");
+  }
+
+  // One primary domain per company, so the previous primary is released first
+  // rather than left to collide with the partial unique index.
+  await db.query(
+    `DELETE FROM company_domains WHERE company_id = $1 AND is_primary`,
+    [companyId]
+  );
+  await db.query(
+    `INSERT INTO company_domains
+       (company_id, domain, is_primary, verification_token, created_by_platform_owner)
+     VALUES ($1, $2, true, encode(gen_random_bytes(24), 'base64url'),
+             (SELECT id FROM platform_owners WHERE email = $3))`,
+    [companyId, value, poEmail]
+  );
+}
+
 export async function createCompany(
   poEmail: string,
   input: {
@@ -471,6 +523,12 @@ export async function createCompany(
     mdEmail?: string;
     mdBirthDay?: number;
     mdBirthMonth?: number;
+    /**
+     * RULE 3.3.1 - the company's own optional domain. Recorded UNVERIFIED:
+     * DNS ownership is proven out of band, and until it is, the address must
+     * never resolve.
+     */
+    domain?: string;
   },
   opts?: {
     /**
@@ -574,6 +632,12 @@ export async function createCompany(
     await db.query(`SELECT set_config('app.company_id', $1::text, true)`, [companyId]);
     await db.query(`SELECT set_config('app.branch_id', '', true)`);
     await db.query(`SELECT set_config('app.branch_restricted', 'off', true)`);
+
+    // RULE 3.3.1 - the company's own optional domain, recorded UNVERIFIED.
+    // A domain is a pointer to the same application and never changes the
+    // company's immutable slug, so this cannot alter who the tenant is.
+    await recordCompanyDomain(db, poEmail, companyId, input.domain);
+
 
     // Skeleton rows are written with ON CONFLICT guards so the same path
     // serves both a fresh company and one completing a saved draft (the draft
@@ -877,6 +941,7 @@ export interface CompanyDraftInput {
   codePrefix?: string;
   contactEmail?: string;
   planTier?: string;
+  domain?: string;
   branding?: {
     primaryColor?: string;
     secondaryColor?: string;
@@ -956,7 +1021,11 @@ export async function saveCompanyDraft(
           subdomainCompanyUrl(slug)
         ]
       );
-      if (input.branding) await applyThemeUpdate(db, draftId, input.branding);
+  if (input.branding) await applyThemeUpdate(db, draftId, input.branding);
+  // RULE 3.3.1 - the domain is optional and can be attached later, so a draft
+  // records it unverified alongside everything else the wizard has collected.
+  await recordCompanyDomain(db, poEmail, draftId, input.domain);
+
 
       await audit(
         db, poEmail, "draft_saved", "companies", draftId,
@@ -1404,6 +1473,8 @@ export async function getCompanyDetail(companyId: string): Promise<{
     slug: string;
     codePrefix: string;
     portalUrl: string | null;
+    domain: string | null;
+    domainVerified: boolean;
     contactEmail: string | null;
     status: string;
     planTier: string | null;
@@ -1485,18 +1556,31 @@ export async function getCompanyDetail(companyId: string): Promise<{
       [companyId]
     );
 
-    const { listCompanyConfigurations } = await import("../company-ai/config-service");
-    const ai = await listCompanyConfigurations("company-detail", companyId);
+  const { listCompanyConfigurations } = await import("../company-ai/config-service");
+  const ai = await listCompanyConfigurations("company-detail", companyId);
+
+  // RULE 3.3.1 / 2.3.1 - the company's own domain, if one was supplied. It is
+  // a pointer to the same application and never changes the immutable slug, so
+  // it is reported alongside the slug rather than replacing it.
+  const domainRow = await db.query<{ domain: string; verified_at: Date | null }>(
+    `SELECT domain, verified_at FROM company_domains
+      WHERE company_id=$1 AND is_primary ORDER BY created_at ASC LIMIT 1`,
+    [companyId]
+  );
+  const primaryDomain = domainRow.rows[0];
+
 
     return {
-      company: {
-        id: c.id,
-        name: c.name,
-        slug: c.slug,
-        codePrefix: c.code_prefix,
-        portalUrl: c.portal_url,
-        address: companyAddressSet(c.slug),
-        contactEmail: c.contact_email,
+    company: {
+      id: c.id,
+      name: c.name,
+      slug: c.slug,
+      codePrefix: c.code_prefix,
+      portalUrl: c.portal_url,
+      address: companyAddressSet(c.slug),
+      domain: primaryDomain?.domain ?? null,
+      domainVerified: primaryDomain?.verified_at !== null && primaryDomain !== undefined,
+      contactEmail: c.contact_email,
         status: c.status,
         planTier: c.plan_tier,
         createdAt: c.created_at.toISOString(),

@@ -27,6 +27,8 @@ interface WizardState {
   contactEmail: string;
   planTier: string;
   brand: Branding;
+  /** Optional custom company domain (RULE 3.3.1). */
+  domain: string | null;
   mdFullName: string;
   mdPhone: string;
   mdEmail: string;
@@ -43,25 +45,25 @@ interface CreateResult {
   md?: { username: string; initial_password: string; credential_state: string; expires_at: string; worker_code: string };
 }
 
-const STEPS = ["Company", "Branding", "Managing director", "Roles", "Review"];
-
-const SWATCHES = ["#0f7b4f", "#1f6feb", "#7c3aed", "#b45309", "#be123c", "#0f766e", "#334155", "#111111"];
+const STEPS = ["Company", "Identity", "Managing director", "Roles", "Review"];
 
 const emptyState: WizardState = {
   name: "",
   codePrefix: "",
   contactEmail: "",
   planTier: "standard",
-  // The seeded brand. `fontFamily` names the display face the company portal
-  // will use on its brand surfaces; it must be one the product actually loads,
-  // so it tracks @nexora/ui's display stack rather than a retired font.
+  // The stored brand record still carries the company's own identity colours for
+  // its brand surfaces (logo tile, sign-in panel), but it no longer drives the
+  // workspace accent: there is ONE Nexora brand system (change of direction,
+  // 2026-10-22, recorded in packages/shared/src/theme.ts).
   brand: {
-    primaryColor: "#0f7b4f",
+    primaryColor: "#2f56d9",
     secondaryColor: "#0b3d29",
-    accentColor: "#0f7b4f",
+    accentColor: "#2f56d9",
     navyColor: "#101418",
     fontFamily: "Fraunces"
   },
+  domain: null,
   mdFullName: "",
   mdPhone: "",
   mdEmail: "",
@@ -91,7 +93,13 @@ export function CreateCompanyPage() {
     void (async () => {
       try {
         const detail = await api<{
-          company: { name: string; slug: string; codePrefix: string; portalUrl: string | null };
+          company: {
+            name: string;
+            slug: string;
+            codePrefix: string;
+            portalUrl: string | null;
+            domain: string | null;
+          };
           branding: Branding;
         }>(`/companies/${draftId}/detail`);
         if (cancelled) return;
@@ -99,6 +107,7 @@ export function CreateCompanyPage() {
           ...s,
           name: detail.company.name ?? "",
           codePrefix: detail.company.codePrefix ?? "",
+          domain: detail.company.domain ?? null,
           brand: { ...s.brand, ...detail.branding }
         }));
         setDraftSaved(true);
@@ -146,6 +155,7 @@ export function CreateCompanyPage() {
         codePrefix: /^[A-Za-z]{3,6}$/.test(state.codePrefix) ? state.codePrefix : undefined,
         contactEmail: state.contactEmail.trim() || undefined,
         planTier: state.planTier || undefined,
+        domain: state.domain?.trim() || undefined,
         branding: state.brand
       };
       const saved = draftId
@@ -192,6 +202,7 @@ export function CreateCompanyPage() {
         mdEmail: state.mdEmail.trim() || undefined,
         mdBirthDay: state.mdBirthDay ? Number(state.mdBirthDay) : undefined,
         mdBirthMonth: state.mdBirthMonth ? Number(state.mdBirthMonth) : undefined,
+        domain: state.domain?.trim() || undefined,
         branding: state.brand,
         enabledRoleKeys: state.roleKeys
       };
@@ -265,29 +276,29 @@ export function CreateCompanyPage() {
 
         {step === 1 && (
           <div className="nx-grid nx-grid--2">
-            <Card title="Branding (company colour = highlighter)">
+            <Card title="Company identity">
               <div className="nx-stack">
-                <BrandField label="Accent / primary" value={state.brand.accentColor ?? ""} onChange={(v) => patch({ brand: { ...state.brand, accentColor: v, primaryColor: v } })} />
-                <BrandField label="Secondary" value={state.brand.secondaryColor ?? ""} onChange={(v) => patch({ brand: { ...state.brand, secondaryColor: v } })} />
-                <BrandField label="Navy / text" value={state.brand.navyColor ?? ""} onChange={(v) => patch({ brand: { ...state.brand, navyColor: v } })} />
-                <Field label="Logo URL" htmlFor="c-logo" hint="https:// or root-relative path">
+                <Field label="Logo URL" htmlFor="c-logo" hint="https:// or root-relative path. Shown in the company login, sidebar and reports.">
                   <Input id="c-logo" value={state.brand.logoUrl ?? ""} onChange={(e) => patch({ brand: { ...state.brand, logoUrl: e.target.value || null } })} placeholder="/logo.svg" />
                 </Field>
-                <Field label="Font family" htmlFor="c-font" hint="Available web fonts only; Poppins is the default">
-                  <Select id="c-font" value={state.brand.fontFamily ?? "Poppins"} onChange={(e) => patch({ brand: { ...state.brand, fontFamily: e.target.value } })}>
-                    <option value="Poppins">Poppins</option>
-                    <option value="Inter">Inter</option>
-                    <option value="Manrope">Manrope</option>
-                    <option value="Source Sans 3">Source Sans 3</option>
-                  </Select>
+                <Field label="Custom domain" htmlFor="c-domain" hint="Optional. Leave empty to use the generated company URL. Verified before it resolves.">
+                  <Input id="c-domain" value={state.domain ?? ""} onChange={(e) => patch({ domain: e.target.value || null })} placeholder="loans.example.com" />
                 </Field>
+                <div className="nx-row" style={{ gap: 10, marginTop: 4, fontSize: "var(--nx-text-sm)" }}>
+                  <Badge tone="accent">ONE BRAND</Badge>
+                  <span className="nx-muted">
+                    Every company uses the Nexora brand system. There is no per-company colour or
+                    theme to choose: the company&apos;s identity is its name, its logo and its domain.
+                  </span>
+                </div>
               </div>
             </Card>
             <Card title="Live preview (RULE 3.3.2)">
               <BrandPreview brand={state.brand} companyName={state.name} />
               <p className="nx-faint" style={{ fontSize: "var(--nx-text-xs)", marginTop: 10 }}>
-                Illustrative preview. The real sign-in page applies these tokens before first paint,
-                and semantic colours (success, danger, warning) are never branded (RULE 13.3).
+                Illustrative preview. The real sign-in page applies the Nexora brand tokens before
+                first paint, and semantic colours (success, danger, warning) are never branded
+                (RULE 13.3).
               </p>
             </Card>
           </div>
@@ -438,29 +449,6 @@ export function CreateCompanyPage() {
         </div>
       </form>
     </div>
-  );
-}
-
-function BrandField({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
-  return (
-    <Field label={label} hint="#RRGGBB">
-      <div className="nx-row" style={{ gap: 8 }}>
-        <div className="nxp-swatch-row">
-          {SWATCHES.map((c) => (
-            <button
-              key={c}
-              type="button"
-              className="nxp-swatch"
-              style={{ background: c }}
-              aria-pressed={value.toLowerCase() === c.toLowerCase()}
-              aria-label={`Use ${c}`}
-              onClick={() => onChange(c)}
-            />
-          ))}
-        </div>
-        <Input value={value} onChange={(e) => onChange(e.target.value)} placeholder="#0f7b4f" style={{ width: 110 }} maxLength={7} />
-      </div>
-    </Field>
   );
 }
 

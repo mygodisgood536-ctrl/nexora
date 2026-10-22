@@ -203,7 +203,18 @@ const companySchema = z.object({
   mdBirthMonth: z.number().int().min(1).max(12).optional(),
   branding: brandingSchema.optional(),
   enabledRoleKeys: z.array(z.string()).optional(),
-  // RULE 3.3.3 — completing a previously saved draft.
+  // RULE 3.3.1 - the company's own optional domain. It is recorded as
+  // UNVERIFIED: DNS ownership is proven out of band, and until then the address
+  // must never resolve. A domain that is already claimed is rejected.
+  domain: z
+    .string()
+    .max(253)
+    .regex(
+      /^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$/,
+      "domain must be a valid hostname such as loans.example.com"
+    )
+    .optional(),
+  // RULE 3.3.3 - completing a previously saved draft.
   draftId: z.string().uuid().optional()
 });
 
@@ -214,7 +225,15 @@ const draftSchema = z.object({
   codePrefix: z.string().regex(/^[A-Za-z]{3,6}$/).optional(),
   contactEmail: z.string().email().optional(),
   planTier: z.string().max(40).optional(),
-  branding: brandingSchema.optional()
+  branding: brandingSchema.optional(),
+  domain: z
+    .string()
+    .max(253)
+    .regex(
+      /^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$/,
+      "domain must be a valid hostname such as loans.example.com"
+    )
+    .optional()
 });
 
 // RULE 3.6.6 - search, filter, sort and paginate the Companies workspace.

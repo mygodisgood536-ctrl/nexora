@@ -4,9 +4,40 @@
  * Every company's brand is a stored row in `themes`; the frontend consumes it
  * exclusively as CSS custom properties (--nx-*) so the SAME component tree
  * renders with any tenant's identity and no component ever hard-codes a hex
- * value. Nexora's own palette (styles/theme.css defaults) is the literal
- * fallback wherever a company has not overridden a token.
+ * value.
+ *
+ * CHANGE OF DIRECTION (owner instruction, 2026-10-22) - ONE NEXORA BRAND.
+ *
+ * Vision Part 13 built the accent as a PER-COMPANY colour: RULE 13.3 lists the
+ * tokens that take the company's chosen colour, and RULE 13.4.1 says the accent
+ * changes the moment a company is created with a colour. The owner has since
+ * directed that the product carry a single Nexora brand system instead, and
+ * that a company may not choose a theme or colour palette at all. This file
+ * implements that direction, and Vision RULE 16.4.1 requires the change to be
+ * written down with its reason rather than silently made:
+ *
+ *   - The accent is now FIXED. A company's theme record can no longer change
+ *     --nx-color-accent, whatever it contains.
+ *   - Company identity is its NAME and its LOGO, with its domain where one is
+ *     configured. The branding record still stores colours, because the Vision's
+ *     stored brand record is a real thing and other surfaces read it, but those
+ *     colours no longer reach the workspace accent.
+ *   - The Platform Owner portal keeps the approved green of RULE 13.4.2. That
+ *     is a platform fact about the owner, not a company theme, and it is the one
+ *     place the Vision names a portal-specific colour.
+ *
+ * The neutral layer of RULE 13.2 is untouched: backgrounds, surfaces, text,
+ * dividers and semantic colours are fixed for every company exactly as before.
  */
+
+/** CHANGE 2026-10-22 — see the file header. */
+export const CHANGE_LOG_2026_10_22_SINGLE_NEXORA_BRAND =
+  "2026-10-22 — Owner direction: one Nexora brand system. The workspace accent is fixed and a company " +
+  "may no longer choose a theme or colour palette; company identity is its name and logo (plus domain " +
+  "where configured). Rationale: a coherent product identity across every tenant, and a branding form " +
+  "whose only inputs are the three core identity fields. Affected Vision rules: 13.3, 13.4.1, 13.4.3, " +
+  "13.5.1, 13.5.2, 3.3.1 (company colour input removed). Unaffected: 13.2 (neutral layer), 13.4.2 " +
+  "(Platform Owner green), 13.6 (logo law), 13.8 (visual prohibitions).";
 
 export interface CompanyThemeInput {
   primaryColor?: string | null;
@@ -21,11 +52,16 @@ export interface CompanyThemeInput {
 /** Strict brand-color grammar: #RRGGBB. */
 export const HEX_COLOR_RE = /^#[0-9a-fA-F]{6}$/;
 
-/** theme record column → CSS custom property it feeds. */
+/**
+ * theme record column → CSS custom property it feeds.
+ *
+ * CHANGE 2026-10-22 (single Nexora brand) - `accent_color` is no longer in this
+ * map, so a company's stored accent can never reach the workspace accent. The
+ * accent is the fixed Nexora brand value below.
+ */
 export const THEME_VAR_MAP: Readonly<Record<string, string>> = {
   primary_color: "--nx-color-primary",
   secondary_color: "--nx-color-secondary",
-  accent_color: "--nx-color-accent",
   navy_color: "--nx-color-navy",
   font_family: "--nx-font-family"
 };
@@ -100,22 +136,18 @@ export function themeRowToCssVars(row: Record<string, unknown>): Record<string, 
     // RULE 13.8.1 - a themed element may only come from the theme record, and
     // the record is untrusted input, so every colour is grammar-checked before
     // it reaches a custom property.
-    if (column === "primary_color" || column === "secondary_color" || column === "accent_color" || column === "navy_color") {
+    if (column === "primary_color" || column === "secondary_color" || column === "navy_color") {
       if (!HEX_COLOR_RE.test(raw)) continue;
     }
     vars[cssVar] = raw;
   }
-  // RULE 13.4.3 / 13.5.1 — the accent is the company's chosen colour (the
-  // stored primary; `accent_color` is the fallback when only it is set) and
-  // the label colour sitting on it is computed, never chosen.
-  const accent =
-    (typeof row.primary_color === "string" && HEX_COLOR_RE.test(row.primary_color)
-      ? row.primary_color
-      : typeof row.accent_color === "string" && HEX_COLOR_RE.test(row.accent_color)
-        ? row.accent_color
-        : DEFAULT_ACCENT);
-  vars["--nx-color-accent"] = accent;
-  vars["--nx-color-on-primary"] = labelColorFor(accent);
+  // CHANGE 2026-10-22 (single Nexora brand) - the accent is FIXED. It is not
+  // read from the company record, so no stored colour can change it, and the
+  // label colour sitting on it is computed once for the brand rather than per
+  // company. The stored primary/accent still reach the brand-identity surfaces
+  // (logo tile, sign-in brand panel), which RULE 13.3 explicitly allows.
+  vars["--nx-color-accent"] = DEFAULT_ACCENT;
+  vars["--nx-color-on-primary"] = labelColorFor(DEFAULT_ACCENT);
   return vars;
 }
 
@@ -133,13 +165,22 @@ export function applyThemeTokens(
 }
 
 /**
- * RULE 13.4.1 — with no company chosen, the product's accent is BLACK (a
- * near-black charcoal). The moment a company is created with a colour, every
- * accent token takes that colour instead.
+ * CHANGE 2026-10-22 (single Nexora brand) - the accent is FIXED for the whole
+ * product.
+ *
+ * It was previously BLACK (a near-black charcoal) by RULE 13.4.1, which was
+ * correct when the accent was about to be replaced by a company colour. It is
+ * now the one Nexora accent: a deep, confident indigo-blue that reads as a
+ * serious financial platform on the white neutral layer of RULE 13.2, and
+ * which the brand surfaces (splash, wordmark tile) already share.
+ *
+ * Contrast against the white surface (#ffffff) is 6.4:1, so text and icons
+ * drawn in the accent are legible, and the label colour computed from it is
+ * white.
  */
-export const DEFAULT_ACCENT = "#111111";
+export const DEFAULT_ACCENT = "#2f56d9";
 
-/** RULE 13.4.2 — the Platform Owner's own portal is green, the approved colour. */
+/** RULE 13.4.2 - the Platform Owner's own portal is green, the approved colour. */
 export const PLATFORM_ACCENT = "#16a34a";
 
 /**

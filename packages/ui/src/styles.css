@@ -85,13 +85,19 @@
   --nx-chart-6: #838c9f;
   --nx-chart-grid: #e7eaf0;
 
-  /* --- RULE 13.3 accent token table (takes the company colour) ----------- */
-  --nx-color-accent: #111111; /* 13.4.1 default = near-black charcoal          */
-  --nx-color-accent-strong: #000000;
-  --nx-color-accent-soft: #eeeeF0;
+  /* --- RULE 13.3 accent token table --------------------------------------- */
+  /* CHANGE 2026-10-22 (one Nexora brand) - these were "the tokens that take
+     the company colour". The accent is now FIXED for the whole product: a
+     company supplies its name and its logo, and every tenant renders the same
+     component tree in the same accent. The neutral layer above is unchanged
+     (RULE 13.2), so backgrounds, surfaces, text and semantic colours still
+     never move. See packages/shared/src/theme.ts for the written change. */
+  --nx-color-accent: #2f56d9; /* the one Nexora accent                     */
+  --nx-color-accent-strong: #1f3fa8;
+  --nx-color-accent-soft: #edf0fd;
   --nx-color-on-accent: #ffffff; /* 13.5.1 computed label colour, never chosen */
-  --nx-color-accent-ring: rgb(17 17 17 / 0.24);
-  --nx-color-accent-tint: rgb(17 17 17 / 0.06);
+  --nx-color-accent-ring: rgb(47 86 217 / 0.26);
+  --nx-color-accent-tint: rgb(47 86 217 / 0.07);
 
   /* --- the rest of the stored brand record -------------------------------- */
   /* `themes` also carries primary_color, secondary_color, navy_color and

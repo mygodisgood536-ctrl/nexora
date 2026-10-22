@@ -11,11 +11,23 @@ import {
 } from "@nexora/shared";
 
 describe("v3.9 Part 13 — colour, contrast and token law", () => {
-  it("RULE 13.4.1 — with no company chosen the accent is near-black", () => {
+  it("RULE 13.4.1 — the accent is one fixed brand colour, whatever a company stores", () => {
+    // CHANGE 2026-10-22 (one Nexora brand) — the accent was near-black under
+    // RULE 13.4.1 because it was about to be replaced by a company colour.
+    // There is no company colour any more, so the accent is the single Nexora
+    // brand value: a defined, legible colour, identical for every company.
     const lum = relativeLuminance(DEFAULT_ACCENT)!;
-    expect(lum).toBeLessThan(0.05);
-    // Near-black means the computed label is white.
+    expect(lum).toBeGreaterThan(0.02);
+    expect(lum).toBeLessThan(0.25);
+    // It is dark enough that the computed label is white.
     expect(labelColorFor(DEFAULT_ACCENT)).toBe("#ffffff");
+    // And it is identical whatever a company record contains.
+    expect(themeRowToCssVars({ primary_color: "#ff0000" })["--nx-color-accent"]).toBe(
+      DEFAULT_ACCENT
+    );
+    expect(themeRowToCssVars({ accent_color: "#00ff00" })["--nx-color-accent"]).toBe(
+      DEFAULT_ACCENT
+    );
   });
 
   it("RULE 13.4.2 — the Platform Owner portal accent is green", () => {
@@ -55,10 +67,13 @@ describe("v3.9 Part 13 — colour, contrast and token law", () => {
     expect(dark["--nx-color-primary"]).toBe("#101828");
     expect(dark["--nx-color-on-primary"]).toBe("#ffffff");
 
+    // CHANGE 2026-10-22 (one Nexora brand) - the label on the accent is
+    // computed from the FIXED accent, so it is the same for every company.
     const light = themeRowToCssVars({ primary_color: "#f5e663" });
-    expect(light["--nx-color-on-primary"]).toBe("#111111");
+    expect(light["--nx-color-on-primary"]).toBe("#ffffff");
+    expect(light["--nx-color-accent"]).toBe(DEFAULT_ACCENT);
 
-    // With no company colour the default black accent and white label apply.
+    // With no company record at all the fixed accent and its computed label apply.
     const none = themeRowToCssVars({});
     expect(none["--nx-color-accent"]).toBe(DEFAULT_ACCENT);
     expect(none["--nx-color-on-primary"]).toBe("#ffffff");

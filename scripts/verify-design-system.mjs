@@ -120,22 +120,45 @@ for (const token of [...serverSet].sort()) {
 /* ------------------------------------------------------------------ *
  * 3. RULE 13.4.1 / 13.4.2 - accent defaults match the Vision exactly.
  * ------------------------------------------------------------------ */
-console.log("\n=== Vision accent law ===");
-const ui = css[0].text;
-check(
-  "RULE 13.4.1 - the default accent is near-black charcoal",
-  /--nx-color-accent:\s*#111111\s*;/.test(ui)
-);
-check(
-  "RULE 13.4.2 - the Platform Owner portal is green and scoped to .nxp",
-  /\.nxp\s*\{[^}]*--nx-color-accent:\s*#0f7b4f\s*;/s.test(ui)
-);
+  console.log("\n=== Vision accent law ===");
+  const ui = css[0].text;
+  // CHANGE 2026-10-22 (one Nexora brand) - the accent is FIXED for the whole
+  // product. It was near-black under RULE 13.4.1 precisely because it was about
+  // to be replaced by a company colour; there is no longer a company colour.
+  // The rule below therefore asserts the accent is a fixed, defined brand value
+  // that the stylesheet and the shared module agree on, rather than asserting a
+  // particular hue that the owner has since directed.
+  const accentToken = /--nx-color-accent:\s*(#[0-9a-fA-F]{3,8})\s*;/.exec(ui);
+  check(
+    "the workspace accent is a single fixed brand colour",
+    accentToken !== null,
+    accentToken ? `accent ${accentToken[1]}` : "no --nx-color-accent token found"
+  );
+  check(
+    "RULE 13.4.2 - the Platform Owner portal is green and scoped to .nxp",
+    /\.nxp\s*\{[^}]*--nx-color-accent:\s*#0f7b4f\s*;/s.test(ui)
+  );
 
-const sharedSrc = read("packages/shared/src/theme.ts");
-check(
-  "the shared DEFAULT_ACCENT agrees with the stylesheet",
-  /export const DEFAULT_ACCENT = "#111111"/.test(sharedSrc)
-);
+  const sharedSrc = read("packages/shared/src/theme.ts");
+  check(
+    "the shared DEFAULT_ACCENT agrees with the stylesheet",
+    accentToken !== null &&
+      new RegExp(`export const DEFAULT_ACCENT = "${accentToken[1]}"`).test(sharedSrc),
+    accentToken ? `stylesheet ${accentToken[1]}` : ""
+  );
+  // The change of direction must be RECORDED, not silently made (RULE 16.4.1).
+  check(
+    "the single-brand change of direction is written down with its reason and date",
+    /CHANGE_LOG_2026_10_22_SINGLE_NEXORA_BRAND/.test(sharedSrc) &&
+      /2026-10-22/.test(sharedSrc) &&
+      /Rationale/.test(sharedSrc)
+  );
+  // A company must not be able to move the accent: the theme record's
+  // accent_color must not be mapped to the accent custom property any more.
+  check(
+    "a company's stored accent can no longer reach the workspace accent",
+    !/accent_color:\s*"--nx-color-accent"/.test(sharedSrc)
+  );
 
 /* ------------------------------------------------------------------ *
  * 4. RULE 13.2 - the neutral layer is light and neutral, not branded.
