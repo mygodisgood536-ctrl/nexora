@@ -9,6 +9,12 @@ import crypto from "node:crypto";
 import { generateTotpSecret, otpauthUri } from "../src/lib/totp.js";
 
 const [email, password] = process.argv.slice(2);
+
+/**
+ * RULE 3.1 - the Platform Owner's full name is "Cornelius Adedeji Victor", and
+ * it is the name the owner console shows for the account.
+ */
+const OWNER_FULL_NAME = "Cornelius Adedeji Victor";
 if (!email || !password || password.length < 10) {
   console.error("usage: node scripts/bootstrap-platform-owner.mjs <email> <password(>=10 chars)>");
   process.exit(1);
@@ -36,11 +42,11 @@ const wrapped = crypto
   .toString("hex");
 const encrypted = Buffer.from(secret).toString("base64") + "." + wrapped.slice(0, 16);
 
-await client.query(
-  `INSERT INTO platform_owners (email, password_hash, totp_enabled, totp_secret_encrypted)
-   VALUES ($1,$2,true,$3)`,
-  [email, hash, encrypted]
-);
+  await client.query(
+    `INSERT INTO platform_owners (email, full_name, password_hash, totp_enabled, totp_secret_encrypted)
+     VALUES ($1,$2,$3,true,$4)`,
+    [email, OWNER_FULL_NAME, hash, encrypted]
+  );
 await client.end();
 
 console.log("platform owner created:", email);

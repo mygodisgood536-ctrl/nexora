@@ -20,8 +20,10 @@ import {
   IconSettings,
   IconShield,
   IconTrend,
+  IconUser,
   IconUsers,
   IconX,
+  NexoraMark,
   cx,
   Menu
 } from "@nexora/ui";
@@ -88,11 +90,11 @@ export function Shell({
     <div className={cx("nx-app", collapsed && "nx-app--collapsed")}>
       <aside className={cx("nx-sidebar", mobileOpen && "is-open")} style={mobileOpen ? { display: "flex" } : undefined}>
         <div className="nx-sidebar__brand">
-          <span className="nx-sidebar__logo" aria-hidden="true">NX</span>
+          <NexoraMark size={28} />
           {!collapsed && (
             <div style={{ minWidth: 0 }}>
-              <div className="nx-sidebar__brand-name">Nexora Platform</div>
-              <div className="nx-sidebar__brand-sub">Owner console</div>
+              <div className="nx-sidebar__brand-name">Nexora</div>
+              <div className="nx-sidebar__brand-sub">Platform Owner</div>
             </div>
           )}
           <div className="nx-grow" />
@@ -145,17 +147,25 @@ export function Shell({
         </div>
 
         <div className="nx-sidebar__footer">
-          <Avatar name={ownerEmail} size="sm" />
-          {!collapsed && (
-            <div style={{ minWidth: 0 }} className="nx-grow">
-              <div style={{ fontSize: "var(--nx-text-sm)", fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis" }}>
-                Platform Owner
+          <button
+            type="button"
+            className="nx-row"
+            style={{ background: "none", border: 0, padding: 0, cursor: "pointer", minWidth: 0, flex: 1, textAlign: "left" }}
+            onClick={() => navigate("/profile")}
+            title="Your account"
+          >
+            <Avatar name={ownerEmail} size="sm" />
+            {!collapsed && (
+              <div style={{ minWidth: 0 }} className="nx-grow">
+                <div style={{ fontSize: "var(--nx-text-sm)", fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis" }}>
+                  Platform Owner
+                </div>
+                <div className="nx-faint" style={{ fontSize: "var(--nx-text-xs)", overflow: "hidden", textOverflow: "ellipsis" }}>
+                  {ownerEmail}
+                </div>
               </div>
-              <div className="nx-faint" style={{ fontSize: "var(--nx-text-xs)", overflow: "hidden", textOverflow: "ellipsis" }}>
-                {ownerEmail}
-              </div>
-            </div>
-          )}
+            )}
+          </button>
           <IconButton aria-label="Sign out" onClick={onLogout} title="Sign out">
             <IconLogout size={16} />
           </IconButton>
@@ -209,6 +219,15 @@ export function Shell({
                   <div className="nx-faint" style={{ fontSize: "var(--nx-text-xs)" }}>{ownerEmail}</div>
                 </div>
                 <div className="nx-menu__sep" />
+                <button
+                  className="nx-menu__item"
+                  onClick={() => {
+                    close();
+                    navigate("/profile");
+                  }}
+                >
+                  <IconUser size={16} /> Your account
+                </button>
                 <button className="nx-menu__item" onClick={() => { close(); onLogout(); }}>
                   <IconLogout size={16} /> Sign out
                 </button>

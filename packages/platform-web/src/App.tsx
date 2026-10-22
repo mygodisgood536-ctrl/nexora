@@ -20,6 +20,7 @@ import { GlobalSettingsPage } from "./pages/GlobalSettingsPage";
 import { ConfigurationPage } from "./pages/ConfigurationPage";
 import { AiInsightsPage } from "./pages/AiInsightsPage";
 import { AuditTrailPage } from "./pages/AuditTrailPage";
+import { ProfilePage } from "./pages/ProfilePage";
 
 type Session =
   | { state: "checking" }
@@ -185,6 +186,7 @@ function PageRoutes() {
       <Route path="/configuration" element={<ConfigurationPage />} />
       <Route path="/ai" element={<AiInsightsPage />} />
       <Route path="/audit" element={<AuditTrailPage />} />
+      <Route path="/profile" element={<ProfilePage />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

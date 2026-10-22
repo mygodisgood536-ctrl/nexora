@@ -18,6 +18,7 @@ import {
   listSupportSessions,
   openSupportSession,
   poAuthenticatorStatus,
+  getPlatformOwnerAccount,
   poBeginAuthenticatorSetup,
   poLogin,
   poLogout,
@@ -171,6 +172,19 @@ platformRouter.get("/auth/authenticator/status", wrap(async (req, res) => {
 platformRouter.get("/me", authed(async (po, _req, res) => {
   void _req;
   res.json({ ownerId: po.sub, email: po.email });
+}));
+
+/**
+ * The Platform Owner's own account details.
+ *
+ * RULE 3.2.1 - the owner console must contain everything it needs, and this is
+ * the owner's own surface: who they are, whether their authenticator is
+ * working, when they last signed in, and what state their account is in. It is
+ * the OWNER's record only - the owner may read their own account, and no
+ * company data is reachable from here.
+ */
+platformRouter.get("/me/account", authed(async (po, _req, res) => {
+  res.json(await getPlatformOwnerAccount(po.email));
 }));
 
 const hexColor = z.string().regex(/^#[0-9a-fA-F]{6}$/, "must be #RRGGBB");

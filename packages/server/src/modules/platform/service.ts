@@ -315,6 +315,57 @@ export async function poAuthenticatorStatus(email: string): Promise<{ enrolled: 
   });
 }
 
+/**
+ * The Platform Owner's own account details.
+ *
+ * RULE 3.2.1 - the owner console must contain everything it needs. This is the
+ * owner's OWN surface: who they are, whether their authenticator is working,
+ * when they last signed in, and whether their account is locked. It is the
+ * OWNER's record only; no company data is reachable from here, which is
+ * RULE 3.6.2.
+ */
+export async function getPlatformOwnerAccount(email: string): Promise<{
+  email: string;
+  fullName: string;
+  authenticatorEnrolled: boolean;
+  authenticatorVerified: boolean;
+  lastLoginAt: string | null;
+  locked: boolean;
+  lockedUntil: string | null;
+  createdAt: string;
+}> {
+  return withBypass(async (db) => {
+    const found = await db.query<{
+      email: string;
+      full_name: string | null;
+      totp_enrolled_at: Date | null;
+      totp_secret_encrypted: string | null;
+      totp_enabled: boolean;
+      last_login_at: Date | null;
+      locked_until: Date | null;
+      created_at: Date;
+    }>(
+      `SELECT email, full_name, totp_enrolled_at, totp_secret_encrypted, totp_enabled,
+              last_login_at, locked_until, created_at
+         FROM platform_owners WHERE email=$1`,
+      [email]
+    );
+    if (found.rowCount === 0) throw AppError.notFound("Account not found");
+    const po = found.rows[0]!;
+    const now = Date.now();
+    return {
+      email: po.email,
+      fullName: po.full_name ?? "Cornelius Adedeji Victor",
+      authenticatorEnrolled: po.totp_enrolled_at !== null && !isLegacySecret(po.totp_secret_encrypted),
+      authenticatorVerified: po.totp_enabled,
+      lastLoginAt: po.last_login_at ? po.last_login_at.toISOString() : null,
+      locked: po.locked_until !== null && po.locked_until.getTime() > now,
+      lockedUntil: po.locked_until ? po.locked_until.toISOString() : null,
+      createdAt: po.created_at.toISOString()
+    };
+  });
+}
+
 async function registerFailedAttempt(
   db: PoolClientLike & { query: (sql: string, params?: unknown[]) => Promise<{ rows: Record<string, unknown>[]; rowCount: number | null }> },
   po: { id: string; failed_attempts?: number }
