@@ -21,6 +21,7 @@ import { ConfigurationPage } from "./pages/ConfigurationPage";
 import { AiInsightsPage } from "./pages/AiInsightsPage";
 import { AuditTrailPage } from "./pages/AuditTrailPage";
 import { ProfilePage } from "./pages/ProfilePage";
+import { PoSplash } from "./auth/PoSplash";
 
 type Session =
   | { state: "checking" }
@@ -73,7 +74,6 @@ export default function App() {
       </div>
     );
   }
-
   if (bootError) {
     return (
       <div className="nx-main" style={{ maxWidth: 720, paddingTop: 80 }}>
@@ -92,6 +92,7 @@ export default function App() {
   if (session.state === "anon") {
     return (
       <ToastProvider>
+        <PoSplash />
         <Routes>
           <Route path="/login" element={<LoginPage onSignedIn={() => void check()} />} />
           <Route path="*" element={<Navigate to="/login" replace />} />
@@ -102,6 +103,7 @@ export default function App() {
 
   return (
     <ToastProvider>
+      <PoSplash />
       <Shell ownerEmail={session.email} onLogout={() => void logout()} unread={unread}>
         <PageRoutes />
       </Shell>

@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { Button, Field, Input, IconLock, IconShield, IconCheck, useToast } from "@nexora/ui";
+import { Button, Field, Input, IconLock, IconShield, IconCheck, NexoraMark, useToast } from "@nexora/ui";
 import {
   platformLogin,
   beginAuthenticatorSetup,
@@ -101,10 +101,10 @@ export function LoginPage({ onSignedIn }: { onSignedIn: () => void }) {
         <span className="nxp-login__bg nxp-login__bg--a" aria-hidden="true" />
         <span className="nxp-login__bg nxp-login__bg--b" aria-hidden="true" />
 
-        <div className="nxp-login__identity">
-          <span className="nxp-login__mark" aria-hidden="true">NX</span>
-          <strong style={{ fontSize: "1.05rem", letterSpacing: "-0.01em" }}>Nexora Platform</strong>
-        </div>
+      <div className="nxp-login__identity">
+        <NexoraMark size={44} />
+        <strong style={{ fontSize: "1.05rem", letterSpacing: "-0.01em" }}>Nexora</strong>
+      </div>
 
         <div className="nx-stack" style={{ gap: "var(--nx-space-4)" }}>
           <div>

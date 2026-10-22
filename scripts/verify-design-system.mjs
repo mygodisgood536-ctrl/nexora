@@ -325,6 +325,49 @@ check(
   "the catalogue must come from OpenCode"
 );
 
+/* ------------------------------------------------------------------ *
+ * 10. The Platform Owner entry experience.
+ *
+ * The owner console is not the company workspace, so its opening experience
+ * carries the SOFTWARE's identity - not a tenant's, and no company-login
+ * choice - and it must never obstruct or delay the sign-in.
+ * ------------------------------------------------------------------ */
+console.log("\n=== Platform Owner entry ===");
+const poSplash = read("packages/platform-web/src/auth/PoSplash.tsx");
+const poApp = read("packages/platform-web/src/App.tsx");
+const poLogin = read("packages/platform-web/src/pages/LoginPage.tsx");
+check(
+  "the Platform Owner console has its own opening experience",
+  poSplash.length > 0 && /PoSplash/.test(poApp),
+  "packages/platform-web/src/auth/PoSplash.tsx"
+);
+check(
+  "the owner splash is skipped under prefers-reduced-motion",
+  /prefers-reduced-motion/.test(poSplash),
+  "a user who asks for less motion gets less motion"
+);
+check(
+  "the owner splash never blocks the sign-in",
+  /sessionStorage/.test(poSplash) && /DWELL_MS/.test(poSplash),
+  "it is an overlay that clears itself, never a gate"
+);
+check(
+  "the owner splash carries the software identity, not a company's",
+  /NexoraMark/.test(poSplash) && !/companyName|companyLogo/.test(poSplash),
+  "a company employee never reaches this console"
+);
+check(
+  "the owner sign-in offers no company-login choice",
+  !/Company\s+Login|company login/i.test(poLogin),
+  "owner sign-in lives only on this console"
+);
+check(
+  "the console shows the real Nexora mark, not a text placeholder",
+  /NexoraMark/.test(poLogin) && /NexoraMark/.test(read("packages/platform-web/src/shell/Shell.tsx")) &&
+    !/>\s*NX\s*</.test(poLogin),
+  "the authorised mark replaces the placeholder"
+);
+
 console.log(
   failures === 0 ? "\nALL DESIGN-SYSTEM CHECKS PASSED" : `\n${failures} DESIGN-SYSTEM CHECK(S) FAILED`
 );
